@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Layers, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { TopBar } from '../shared/TopBar';
+import { Timeline } from './Timeline';
 import { DrumGrid } from './DrumGrid';
 import { BassGuitarPanel, PianoPanel } from './PianoRollPanel';
 import { Mixer } from './Mixer';
@@ -26,9 +27,6 @@ export function BeatmakerScreen() {
   const setLyrics = useGameStore((s) => s.setLyrics);
   const loadBasicPattern = useGameStore((s) => s.loadBasicPattern);
   const clearSection = useGameStore((s) => s.clearSection);
-  const addToArrangement = useGameStore((s) => s.addToArrangement);
-  const removeFromArrangement = useGameStore((s) => s.removeFromArrangement);
-  const moveArrangement = useGameStore((s) => s.moveArrangement);
   const handleRelease = useGameStore((s) => s.handleRelease);
   const [releasing, setReleasing] = useState(false);
   const [releaseError, setReleaseError] = useState('');
@@ -60,34 +58,7 @@ export function BeatmakerScreen() {
     <div>
       <TopBar character={character} />
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 24px 60px' }}>
-        <div className="me-panel" style={{ marginBottom: 20 }}>
-          <div className="me-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Layers size={18} style={{ color: '#4FD1C5' }} /> 곡 구조
-          </div>
-          <div style={{ fontSize: 11, color: '#8B8496', marginBottom: 10 }}>섹션을 추가해 순서를 짜세요. 같은 종류의 섹션은 같은 패턴을 공유합니다.</div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-            {SECTION_TYPES.map((t) => (
-              <button key={t} className="me-btn-ghost" onClick={() => addToArrangement(t)}>+ {t}</button>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14, minHeight: 34 }}>
-            {draft.arrangement.length === 0 && <span style={{ fontSize: 12, color: '#6B6577' }}>아직 구조가 비어있습니다. 위 버튼으로 섹션을 추가하세요.</span>}
-            {draft.arrangement.map((key, idx) => (
-              <div key={idx} className="me-chip" onClick={() => setEditingSection(key)} style={draft.editingSection === key ? { borderColor: '#E8A33D' } : {}}>
-                <span>{idx + 1}. {key}</span>
-                <button onClick={(e) => { e.stopPropagation(); moveArrangement(idx, -1); }}>◀</button>
-                <button onClick={(e) => { e.stopPropagation(); moveArrangement(idx, 1); }}>▶</button>
-                <button onClick={(e) => { e.stopPropagation(); removeFromArrangement(idx); }}>×</button>
-              </div>
-            ))}
-          </div>
-          <button
-            className="me-btn-primary" style={{ padding: '10px 18px' }} disabled={draft.arrangement.length === 0}
-            onClick={() => (isPlaying && playingId === 'draft-full') ? stop() : play(combinedDraft, draft.bpm, 'draft-full')}
-          >
-            {(isPlaying && playingId === 'draft-full') ? '■ 정지' : '▶ 전체 곡 재생'}
-          </button>
-        </div>
+        <Timeline />
 
         <div className="me-panel" style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>

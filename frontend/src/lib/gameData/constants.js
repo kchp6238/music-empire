@@ -3,6 +3,13 @@ import { clamp } from '../utils';
 export const GENRES = ['발라드', '팝', '힙합', 'R&B', 'EDM', '록', '인디', '재즈', '트로트'];
 export const MOODS = ['감성적', '신남', '우울', '강렬', '로맨틱', '몽환적', '편안함', '실험적'];
 export const SECTION_TYPES = ['인트로', '벌스', '코러스', '브릿지', '아웃트로'];
+export const SECTION_COLORS = {
+  인트로: '#8B7FD1',
+  벌스: '#4FD1C5',
+  코러스: '#E8A33D',
+  브릿지: '#E893A6',
+  아웃트로: '#5FBF8F',
+};
 
 export const DRUM_INSTRUMENTS = [
   { key: 'kick', label: '킥', color: '#E8A33D' },

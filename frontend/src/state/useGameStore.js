@@ -181,6 +181,30 @@ export const useGameStore = create((set, get) => ({
     [arr[idx], arr[ni]] = [arr[ni], arr[idx]];
     return { draft: { ...s.draft, arrangement: arr } };
   }),
+  // Direct drag-and-drop reorder (Timeline.jsx) — moves the clip at fromIdx
+  // to sit at toIdx, unlike moveArrangement's adjacent-swap.
+  reorderArrangement: (fromIdx, toIdx) => set((s) => {
+    if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0 || fromIdx >= s.draft.arrangement.length || toIdx >= s.draft.arrangement.length) return {};
+    const arr = [...s.draft.arrangement];
+    const [moved] = arr.splice(fromIdx, 1);
+    arr.splice(toIdx, 0, moved);
+    return { draft: { ...s.draft, arrangement: arr } };
+  }),
+  // Resize a specific section's length directly (Timeline drag-resize), not
+  // necessarily the currently-editing one. length must stay a multiple of 16
+  // (basicPatternForLength's tiling assumes bar-aligned lengths).
+  setSectionLengthFor: (sectionKey, length) => set((s) => {
+    const sec = s.draft.sections[sectionKey];
+    const resize = (arr, fill) => { const out = arr.slice(0, length); while (out.length < length) out.push(fill); return out; };
+    const newDrums = {};
+    Object.keys(sec.drums).forEach((k) => { newDrums[k] = resize(sec.drums[k], false); });
+    return {
+      draft: {
+        ...s.draft,
+        sections: { ...s.draft.sections, [sectionKey]: { ...sec, length, drums: newDrums, bass: resize(sec.bass, null), piano: resize(sec.piano, null), guitar: resize(sec.guitar, null) } },
+      },
+    };
+  }),
 
   setMixerVol: (key, v) => set((s) => {
     const mixer = { ...s.mixer, [key]: { ...s.mixer[key], vol: v } };
@@ -216,7 +240,13 @@ export const useGameStore = create((set, get) => ({
   play: async (pattern, bpm, id) => {
     const { mixer, fx } = get();
     set({ isPlaying: true, playingId: id, currentStep: -1 });
-    await engine.playPattern(pattern, bpm, mixer, fx, (idx) => set({ currentStep: idx }));
+    // queueMicrotask: Tone.Draw can invoke the very first step's callback
+    // synchronously inside Transport.start() (called from this same click
+    // handler), which raced with React's in-flight render of the components
+    // now subscribed to currentStep (Timeline's playhead) — "Cannot update a
+    // component while rendering a different component". Deferring the store
+    // update by one microtask guarantees it lands after the current render.
+    await engine.playPattern(pattern, bpm, mixer, fx, (idx) => queueMicrotask(() => set({ currentStep: idx })));
   },
   stop: () => {
     engine.stopPattern();
