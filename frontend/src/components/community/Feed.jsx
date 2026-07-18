@@ -12,6 +12,7 @@ export function Feed() {
   const stop = useGameStore((s) => s.stop);
   const followedArtists = useGameStore((s) => s.followedArtists);
   const toggleFollow = useGameStore((s) => s.toggleFollow);
+  const isFollowing = (s) => followedArtists.some((f) => f.followed_type === s.artist_type && f.followed_id === s.artist_id);
 
   const [items, setItems] = useState(null);
   const [error, setError] = useState('');
@@ -59,8 +60,8 @@ export function Feed() {
               <div style={{ fontWeight: 700, fontSize: 13 }}>{s.artist_name}</div>
               <div style={{ fontSize: 11, color: '#8B8496' }}>· {s.title}</div>
               <div className="me-mono" style={{ fontSize: 12, color: TIER_COLOR[s.tier] }}>{s.tier} · {Math.round(s.overall_score)}</div>
-              <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 11, marginLeft: 'auto' }} onClick={() => toggleFollow(s.artist_name)}>
-                {followedArtists.includes(s.artist_name) ? '팔로잉' : '+ 팔로우'}
+              <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 11, marginLeft: 'auto' }} onClick={() => toggleFollow(s.artist_type, s.artist_id)}>
+                {isFollowing(s) ? '팔로잉' : '+ 팔로우'}
               </button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

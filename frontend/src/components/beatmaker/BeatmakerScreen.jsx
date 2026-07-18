@@ -5,6 +5,7 @@ import { TopBar } from '../shared/TopBar';
 import { DrumGrid } from './DrumGrid';
 import { BassGuitarPanel, PianoPanel } from './PianoRollPanel';
 import { Mixer } from './Mixer';
+import { CollabInvitePanel } from './CollabInvitePanel';
 import { SECTION_TYPES } from '../../lib/gameData/constants';
 import { buildCombinedPattern, analyzeCombinedPattern, sectionHasContent } from '../../lib/patterns';
 import { useGameStore } from '../../state/useGameStore';
@@ -144,6 +145,8 @@ export function BeatmakerScreen() {
         </div>
 
         <Mixer />
+
+        <CollabInvitePanel />
 
         <div className="me-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ fontSize: 11, color: releaseError ? '#C4576B' : canRelease ? '#4FD1C5' : '#C4576B' }}>

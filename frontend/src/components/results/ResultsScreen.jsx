@@ -9,6 +9,11 @@ import { useGameStore } from '../../state/useGameStore';
 const TIER_ICON = { love: Heart, good: Smile, meh: Meh, bad: Frown, awful: Frown };
 const TIER_NAME_BY_KEY = { love: '대박', good: '성공', meh: '무난', bad: '부진', awful: '참패' };
 
+const REVENUE_LABELS = {
+  streaming: '스트리밍', performance: '공연', ad: '광고',
+  fanclub: '팬클럽', album: '앨범 판매', license: '라이선스',
+};
+
 export function ResultsScreen() {
   const navigate = useNavigate();
   const character = useGameStore((s) => s.character);
@@ -97,6 +102,42 @@ export function ResultsScreen() {
             <div style={{ fontSize: 16, color: lastResult.fameDelta >= 0 ? '#4FD1C5' : '#C4576B' }}>{lastResult.fameDelta >= 0 ? '+' : ''}{lastResult.fameDelta}</div>
           </div>
         </div>
+
+        {lastResult.newlyUnlocked && lastResult.newlyUnlocked.length > 0 && (
+          <div className="me-panel" style={{ marginBottom: 20, borderColor: '#E8A33D', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+            <Star size={16} style={{ color: '#E8A33D' }} />
+            <span style={{ fontSize: 13, fontWeight: 700 }}>업적 달성!</span>
+            {lastResult.newlyUnlocked.map((a) => (
+              <span key={a.id} className="me-mono" style={{ fontSize: 12, color: '#E8A33D', border: '1px solid #E8A33D', borderRadius: 999, padding: '3px 10px' }}>{a.name}</span>
+            ))}
+          </div>
+        )}
+
+        {lastResult.revenueBreakdown && (
+          <div className="me-panel" style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>수익 내역</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {Object.keys(REVENUE_LABELS).map((k) => (
+                <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0' }}>
+                  <span style={{ color: '#8B8496' }}>{REVENUE_LABELS[k]}</span>
+                  <span className="me-mono" style={{ color: '#4FD1C5' }}>+{won(lastResult.revenueBreakdown[k] || 0)}</span>
+                </div>
+              ))}
+            </div>
+            {lastResult.revenueBreakdown.expenses > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <span style={{ color: '#8B8496' }}>지출 (제작·보컬)</span>
+                <span className="me-mono" style={{ color: '#C4576B' }}>−{won(lastResult.revenueBreakdown.expenses)}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+              <span>합계</span>
+              <span className="me-mono" style={{ color: lastResult.revenueBreakdown.net >= 0 ? '#4FD1C5' : '#C4576B' }}>
+                {lastResult.revenueBreakdown.net >= 0 ? '+' : ''}{won(lastResult.revenueBreakdown.net)}
+              </span>
+            </div>
+          </div>
+        )}
 
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}><Users size={15} style={{ color: '#8B7FD1' }} /> 팬 반응</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>

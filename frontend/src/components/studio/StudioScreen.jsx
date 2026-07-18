@@ -2,6 +2,9 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Music2, TrendingUp, Sparkles } from 'lucide-react';
 import { TopBar } from '../shared/TopBar';
 import { MiniBar } from '../shared/MiniBar';
+import { TrendBanner } from '../shared/TrendBanner';
+import { OfflineSummaryToast } from '../shared/OfflineSummaryToast';
+import { AchievementsPanel } from '../shared/AchievementsPanel';
 import { GENRES, MOODS, CHORD_PRESETS, TIER_COLOR } from '../../lib/gameData/constants';
 import { useGameStore } from '../../state/useGameStore';
 
@@ -21,7 +24,11 @@ export function StudioScreen() {
   return (
     <div>
       <TopBar character={character} />
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 24px 20px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20 }}>
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '20px 24px 0' }}>
+        <OfflineSummaryToast />
+        <TrendBanner />
+      </div>
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '8px 24px 20px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20 }}>
         <div className="me-panel">
           <div className="me-display" style={{ fontSize: 20, fontWeight: 800, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Music2 size={20} style={{ color: '#E8A33D' }} /> 곡 기본 정보
@@ -104,6 +111,11 @@ export function StudioScreen() {
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}><Sparkles size={15} style={{ color: '#E8A33D' }} /> 재능</div>
             {Object.entries(character.talent).map(([k, v]) => (<MiniBar key={k} label={k} value={v} color="#E8A33D" />))}
           </div>
+          <div className="me-panel" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: '#8B8496' }}>누적 스트리밍</span>
+            <span className="me-mono" style={{ fontSize: 14, color: '#4FD1C5' }}>{(character.totalStreams || 0).toLocaleString('ko-KR')}</span>
+          </div>
+          <div style={{ marginBottom: 16 }}><AchievementsPanel /></div>
           {character.songs.length > 0 && (
             <div className="me-panel">
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>발매 기록</div>

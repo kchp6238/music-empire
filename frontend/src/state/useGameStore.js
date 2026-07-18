@@ -4,6 +4,8 @@ import { emptySections, emptySection, basicPatternForLength, buildCombinedPatter
 import * as engine from '../lib/audio/engine';
 import * as charactersApi from '../lib/api/characters';
 import * as songsApi from '../lib/api/songs';
+import * as communityApi from '../lib/api/community';
+import * as collabApi from '../lib/api/collab';
 
 const FAN_PERSONAS_BY_ID = Object.fromEntries(FAN_PERSONAS.map((p) => [p.id, p]));
 
@@ -18,6 +20,7 @@ function mapCharacter(apiChar) {
     fame: apiChar.fame,
     money: apiChar.money,
     fansCount: apiChar.fans_count,
+    totalStreams: apiChar.total_streams ?? 0,
     songs: [],
   };
 }
@@ -53,7 +56,9 @@ export const useGameStore = create((set, get) => ({
   currentStep: -1,
   playingId: null,
   communityTab: 'feed',
-  followedArtists: [],
+  followedArtists: [],   // list of {followed_type, followed_id}
+  offlineSummary: null,  // offline fan-drift / passive income since last login
+  persistedDraftId: null, // set once a draft is saved server-side for collaboration
 
   setArtistNameInput: (v) => set({ artistNameInput: v }),
 
@@ -68,22 +73,43 @@ export const useGameStore = create((set, get) => ({
 
   // Called once on app load to restore the session's character (and
   // released songs) after a refresh — see docs/mvp-plan.md DoD #1.
+  // GET /characters/me also settles offline fan drift + passive income.
   loadCharacter: async () => {
     try {
-      const apiChar = await charactersApi.getMyCharacter();
-      const character = mapCharacter(apiChar);
+      const res = await charactersApi.getMyCharacter();
+      const character = mapCharacter(res.character);
       try {
         const songs = await songsApi.listMySongs();
         character.songs = songs.map(mapSong);
       } catch {
         // no songs yet, or listing failed — character itself still loaded
       }
-      set({ character, characterLoaded: true });
+      let followedArtists = [];
+      try {
+        followedArtists = await communityApi.getFollows();
+      } catch {
+        // ignore
+      }
+      set({ character, characterLoaded: true, offlineSummary: res.offline_summary || null, followedArtists });
     } catch {
       set({ character: null, characterLoaded: true });
     }
   },
-  resetCharacterLoaded: () => set({ character: null, characterLoaded: false }),
+  resetCharacterLoaded: () => set({ character: null, characterLoaded: false, offlineSummary: null, followedArtists: [] }),
+  dismissOfflineSummary: () => set({ offlineSummary: null }),
+
+  // Re-pull the character (money/fame/fans) after an action that changes it
+  // server-side — company/concert/marketplace spending. Preserves loaded songs.
+  refreshCharacter: async () => {
+    try {
+      const res = await charactersApi.getMyCharacter();
+      set((state) => ({
+        character: { ...mapCharacter(res.character), songs: state.character ? state.character.songs : [] },
+      }));
+    } catch {
+      // ignore
+    }
+  },
 
   setDraftField: (field, value) => set((s) => ({ draft: { ...s.draft, [field]: value } })),
 
@@ -165,9 +191,19 @@ export const useGameStore = create((set, get) => ({
     return { fx };
   }),
 
-  toggleFollow: (id) => set((s) => ({
-    followedArtists: s.followedArtists.includes(id) ? s.followedArtists.filter((x) => x !== id) : [...s.followedArtists, id],
-  })),
+  // Follows are keyed by (followed_type, followed_id) and persisted server-side.
+  isFollowing: (type, id) => get().followedArtists.some((f) => f.followed_type === type && f.followed_id === id),
+  toggleFollow: async (type, id) => {
+    const following = get().isFollowing(type, id);
+    // optimistic update, then confirm with the server
+    if (following) {
+      set((s) => ({ followedArtists: s.followedArtists.filter((f) => !(f.followed_type === type && f.followed_id === id)) }));
+      try { await communityApi.unfollow(type, id); } catch { /* revert on failure */ set((s) => ({ followedArtists: [...s.followedArtists, { followed_type: type, followed_id: id }] })); }
+    } else {
+      set((s) => ({ followedArtists: [...s.followedArtists, { followed_type: type, followed_id: id }] }));
+      try { await communityApi.follow(type, id); } catch { set((s) => ({ followedArtists: s.followedArtists.filter((f) => !(f.followed_type === type && f.followed_id === id)) })); }
+    }
+  },
   setCommunityTab: (tab) => set({ communityTab: tab }),
 
   play: async (pattern, bpm, id) => {
@@ -183,24 +219,48 @@ export const useGameStore = create((set, get) => ({
   // Server-authoritative: the draft is saved and re-scored by
   // backend/app/services/scoring.py — see docs/server-architecture.md §3.
   // Nothing computed client-side (computeRelease.js) is trusted or sent.
+  // Save the current draft server-side (so collaborators can be invited to it)
+  // and remember its id. Release reuses this id instead of creating a new draft.
+  saveDraftForCollab: async () => {
+    const s = get();
+    if (s.persistedDraftId) return s.persistedDraftId;
+    const lyrics = Object.fromEntries(Object.keys(s.draft.sections).map((k) => [k, s.draft.sections[k].lyrics]));
+    const draftRow = await songsApi.createDraft({
+      title: s.draft.title, bpm: s.draft.bpm, genre_tags: s.draft.genres, mood_tags: s.draft.moods,
+      chord_preset_id: s.draft.chordPresetId, production_mode: s.draft.productionMode,
+      vocal_source: s.draft.vocalSource, structure: s.draft.arrangement, pattern: s.draft.sections, lyrics,
+    });
+    set({ persistedDraftId: draftRow.id });
+    return draftRow.id;
+  },
+
+  inviteCollaborator: async (inviteeCharacterId, role, contributionPct) => {
+    const draftId = await get().saveDraftForCollab();
+    return collabApi.invite(draftId, inviteeCharacterId, role, contributionPct);
+  },
+
   handleRelease: async () => {
     const s = get();
     if (s.isPlaying) get().stop();
 
-    const lyrics = Object.fromEntries(Object.keys(s.draft.sections).map((k) => [k, s.draft.sections[k].lyrics]));
-    const draftRow = await songsApi.createDraft({
-      title: s.draft.title,
-      bpm: s.draft.bpm,
-      genre_tags: s.draft.genres,
-      mood_tags: s.draft.moods,
-      chord_preset_id: s.draft.chordPresetId,
-      production_mode: s.draft.productionMode,
-      vocal_source: s.draft.vocalSource,
-      structure: s.draft.arrangement,
-      pattern: s.draft.sections,
-      lyrics,
-    });
-    const result = await songsApi.releaseSong(draftRow.id);
+    let draftId = s.persistedDraftId;
+    if (!draftId) {
+      const lyrics = Object.fromEntries(Object.keys(s.draft.sections).map((k) => [k, s.draft.sections[k].lyrics]));
+      const draftRow = await songsApi.createDraft({
+        title: s.draft.title,
+        bpm: s.draft.bpm,
+        genre_tags: s.draft.genres,
+        mood_tags: s.draft.moods,
+        chord_preset_id: s.draft.chordPresetId,
+        production_mode: s.draft.productionMode,
+        vocal_source: s.draft.vocalSource,
+        structure: s.draft.arrangement,
+        pattern: s.draft.sections,
+        lyrics,
+      });
+      draftId = draftRow.id;
+    }
+    const result = await songsApi.releaseSong(draftId);
     const song = result.song;
     const combined = buildCombinedPattern(song.pattern, song.structure);
 
@@ -227,6 +287,8 @@ export const useGameStore = create((set, get) => ({
         reached: r.reached,
         reactionScore: r.reaction_score,
       })),
+      revenueBreakdown: result.revenue_breakdown,
+      newlyUnlocked: result.newly_unlocked || [],
       songTitle: song.title,
       songId: song.id,
       pattern: combined,
@@ -242,9 +304,10 @@ export const useGameStore = create((set, get) => ({
         songs: [...state.character.songs, mapSong(song)],
       },
       lastResult,
+      persistedDraftId: null,
     }));
     return lastResult;
   },
 
-  nextSong: () => set({ draft: initialDraft() }),
+  nextSong: () => set({ draft: initialDraft(), persistedDraftId: null }),
 }));
