@@ -1,0 +1,32 @@
+{
+  "character": {
+    "stats": { "composing": 60, "lyrics": 50, "arrangement": 55, "vocal": 50, "production": 55, "mixing": 50, "business": 30, "marketing": 40 },
+    "talent": { "genius": 60, "creativity": 60, "ear": 55, "charisma": 50, "effort": 50, "leadership": 40, "luck": 50 },
+    "fame": 40,
+    "personaLoyalty": { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0 }
+  },
+  "draft": {
+    "genres": ["팝"],
+    "moods": ["신남"],
+    "bpm": 150,
+    "chordPresetId": "p1",
+    "productionMode": "beginner",
+    "vocalSource": "self",
+    "arrangement": ["인트로"],
+    "lyricsBySection": { "인트로": "hello world test" }
+  },
+  "combined": {
+    "drums": {
+      "kick": [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false],
+      "snare": [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
+      "hihatClosed": [true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false],
+      "hihatOpen": [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+      "clap": [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+      "tom": [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+      "crash": [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]
+    },
+    "bass": ["C2", null, null, null, null, null, "E2", null, "G2", null, null, null, null, null, "E2", null],
+    "piano": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+    "guitar": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
+  }
+}

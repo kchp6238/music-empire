@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: music_empire
+      POSTGRES_PASSWORD: music_empire
+      POSTGRES_DB: music_empire
+    ports:
+      - "5432:5432"
+    volumes:
+      - music_empire_pgdata:/var/lib/postgresql/data
+
+volumes:
+  music_empire_pgdata:

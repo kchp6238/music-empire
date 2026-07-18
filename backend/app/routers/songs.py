@@ -1,0 +1,40 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
+from app.deps import get_current_user
+from app.models.user import User
+from app.models.character import Character
+from app.schemas.song import SongDraftCreate, SongDraftUpdate, SongOut, ReleaseResult
+from app.services import characters_service, songs_service
+
+router = APIRouter(prefix="/songs", tags=["songs"])
+
+
+def get_current_character(db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> Character:
+    character = characters_service.get_by_user(db, user.id)
+    if character is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No character for this user")
+    return character
+
+
+@router.post("", response_model=SongOut, status_code=status.HTTP_201_CREATED)
+def create_draft(payload: SongDraftCreate, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    return songs_service.create_draft(db, character, payload.model_dump())
+
+
+@router.get("/{song_id}", response_model=SongOut)
+def get_draft(song_id: str, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    return songs_service.get_owned_draft(db, song_id, character)
+
+
+@router.patch("/{song_id}", response_model=SongOut)
+def update_draft(song_id: str, payload: SongDraftUpdate, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    song = songs_service.get_owned_draft(db, song_id, character)
+    return songs_service.update_draft(db, song, payload.model_dump(exclude_unset=True))
+
+
+@router.post("/{song_id}/release", response_model=ReleaseResult)
+def release_song(song_id: str, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    song = songs_service.get_owned_draft(db, song_id, character)
+    return songs_service.release_song(db, song, character)

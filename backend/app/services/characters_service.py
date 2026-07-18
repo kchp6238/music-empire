@@ -1,0 +1,54 @@
+import random
+
+from sqlalchemy.orm import Session
+
+from app.models.character import Character
+from app.models.fan import FanPersona, CharacterFanLoyalty
+from app.services.game_data import BACKGROUNDS, BACKGROUNDS_BY_ID
+from app.services.js_math import js_round
+
+
+def _jitter(obj: dict, lo: float, hi: float, floor: float, ceil: float) -> dict:
+    return {k: js_round(max(floor, min(ceil, v + random.uniform(lo, hi)))) for k, v in obj.items()}
+
+
+def resolve_background(background_id: str) -> dict:
+    if background_id != "random":
+        return BACKGROUNDS_BY_ID[background_id]
+    base = random.choice(BACKGROUNDS)
+    return {
+        "id": "random",
+        "name": f"랜덤 인생 ({base['name']} 기반)",
+        "stats": _jitter(base["stats"], -15, 15, 5, 95),
+        "talent": _jitter(base["talent"], -15, 15, 5, 95),
+        "fame": js_round(max(0, min(100, base["fame"] + random.uniform(-10, 10)))),
+        "money": js_round(max(100, min(50000, base["money"] + random.uniform(-300, 300)))),
+    }
+
+
+def create_character(db: Session, user_id: str, artist_name: str, background_id: str) -> Character:
+    resolved = resolve_background(background_id)
+    character = Character(
+        user_id=user_id,
+        artist_name=artist_name.strip() or "무명",
+        background_id=resolved["id"],
+        background_name=resolved["name"],
+        stats=dict(resolved["stats"]),
+        talent=dict(resolved["talent"]),
+        fame=resolved["fame"],
+        money=resolved["money"],
+        fans_count=js_round(resolved["fame"] * 8 + 30),
+    )
+    db.add(character)
+    db.flush()
+
+    for persona in db.query(FanPersona).all():
+        db.add(CharacterFanLoyalty(character_id=character.id, persona_id=persona.id, loyalty_score=0))
+
+    db.commit()
+    db.refresh(character)
+    return character
+
+
+def get_by_user(db: Session, user_id: str) -> Character | None:
+    return db.query(Character).filter(Character.user_id == user_id).first()
