@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&family=Gaegu:wght@400;700&display=swap');
+@import 'tailwindcss';
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+#root { min-height: 100svh; }
+
+.me-root{ min-height:100vh; background:#12101A; background-image: radial-gradient(circle at 15% 0%, rgba(232,163,61,0.10), transparent 45%), radial-gradient(circle at 85% 100%, rgba(79,209,197,0.08), transparent 45%); color:#EDE9F0; font-family:'Inter',sans-serif; }
+.me-display{ font-family:'Bricolage Grotesque', sans-serif; }
+.me-mono{ font-family:'JetBrains Mono', monospace; }
+.me-topbar{ display:flex; align-items:center; justify-content:space-between; padding:12px 24px; background:rgba(20,18,28,0.9); border-bottom:1px solid rgba(255,255,255,0.08); position:sticky; top:0; z-index:10; flex-wrap:wrap; gap:10px; }
+.me-panel{ background:#1C1926; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:20px; }
+.me-card{ background:#1C1926; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px; cursor:pointer; transition:border-color .2s, transform .15s; }
+.me-card:hover{ border-color:#E8A33D; transform:translateY(-2px); }
+.me-card.selected{ border-color:#4FD1C5; box-shadow:0 0 0 1px #4FD1C5; }
+.me-pill{ display:inline-flex; align-items:center; padding:7px 15px; border-radius:999px; border:1px solid rgba(255,255,255,0.15); font-size:13px; cursor:pointer; transition:all .15s; background:rgba(255,255,255,0.03); color:#EDE9F0; }
+.me-pill.active{ background:#E8A33D; border-color:#E8A33D; color:#12101A; font-weight:600; }
+.me-pill.small{ padding:5px 12px; font-size:12px; }
+.me-btn-primary{ background:#E8A33D; color:#12101A; font-weight:700; border:none; border-radius:10px; padding:13px 22px; cursor:pointer; transition:filter .15s; font-size:14px; }
+.me-btn-primary:hover{ filter:brightness(1.08); }
+.me-btn-primary:disabled{ opacity:0.3; cursor:not-allowed; }
+.me-btn-ghost{ background:transparent; color:#EDE9F0; border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:9px 16px; cursor:pointer; font-size:12px; }
+.me-btn-ghost:hover{ border-color:#4FD1C5; }
+.me-btn-ghost:disabled{ opacity:0.3; cursor:not-allowed; }
+.me-chip{ display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:8px; background:#1C1926; border:1px solid rgba(255,255,255,0.1); font-size:12px; cursor:pointer; white-space:nowrap; }
+.me-chip:hover{ border-color:#4FD1C5; }
+.me-chip button{ background:none; border:none; color:#8B8496; cursor:pointer; font-size:11px; padding:0 2px; }
+.me-chip button:hover{ color:#EDE9F0; }
+.me-fader-col{ display:flex; flex-direction:column; align-items:center; gap:8px; width:64px; }
+.me-fader-track{ position:relative; width:14px; height:170px; background:#0E0C14; border-radius:7px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; }
+.me-fader-fill{ position:absolute; bottom:0; left:0; width:100%; border-radius:7px; transition:height 1s cubic-bezier(.2,.8,.2,1); }
+.me-fader-cap{ position:absolute; left:-4px; width:22px; height:6px; border-radius:3px; background:#EDE9F0; box-shadow:0 0 8px rgba(255,255,255,0.6); transition:bottom 1s cubic-bezier(.2,.8,.2,1); }
+input[type=range].me-slider{ -webkit-appearance:none; width:100%; height:4px; background:rgba(255,255,255,0.15); border-radius:2px; }
+input[type=range].me-slider::-webkit-slider-thumb{ -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:#E8A33D; cursor:pointer; }
+.me-scroll::-webkit-scrollbar{ height:6px; width:6px; }
+.me-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.15); border-radius:3px; }
+.me-notebook{ background: repeating-linear-gradient(#1C1926 0px, #1C1926 27px, rgba(255,255,255,0.08) 28px), #1C1926; border:1px solid rgba(255,255,255,0.08); border-radius:10px; position:relative; padding:14px 14px 14px 40px; }
+.me-notebook::before{ content:''; position:absolute; left:26px; top:0; bottom:0; width:1px; background:rgba(196,87,107,0.35); }
+.me-notebook textarea{ background:transparent; border:none; outline:none; width:100%; min-height:170px; resize:vertical; color:#EDE9F0; font-family:'Gaegu',sans-serif; font-size:17px; line-height:28px; box-sizing:border-box; }
