@@ -5,6 +5,10 @@ from app.models.song import Song
 from app.models.fan import FanPersona, CharacterFanLoyalty, SongReaction
 from app.models.npc import NpcArtist, NpcSong
 from app.models.community import Follow, SongLike, SongComment
+from app.models.achievement import CharacterAchievement
+from app.models.collab import CollabInvite, SongCollaborator
+from app.models.company import Company, Trainee, Group
+from app.models.online import Concert, ConcertTicket, MarketplaceListing
 
 __all__ = [
     "Base",
@@ -19,4 +23,13 @@ __all__ = [
     "Follow",
     "SongLike",
     "SongComment",
+    "CharacterAchievement",
+    "CollabInvite",
+    "SongCollaborator",
+    "Company",
+    "Trainee",
+    "Group",
+    "Concert",
+    "ConcertTicket",
+    "MarketplaceListing",
 ]

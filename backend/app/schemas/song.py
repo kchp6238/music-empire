@@ -53,6 +53,7 @@ class SongOut(BaseModel):
     fans_delta: int | None
     money_delta: float | None
     fame_delta: float | None
+    revenue_breakdown: dict | None = None
     released_at: datetime | None
     created_at: datetime
 
@@ -78,10 +79,18 @@ class ReleaseBreakdown(BaseModel):
     fan_affinity_match: float
 
 
+class UnlockedAchievement(BaseModel):
+    id: str
+    name: str
+    desc: str
+
+
 class ReleaseResult(BaseModel):
     song: SongOut
     reactions: list[SongReactionOut]
     breakdown: ReleaseBreakdown
+    revenue_breakdown: dict
+    newly_unlocked: list[UnlockedAchievement] = []
     character_fame: float
     character_money: float
     character_fans_count: int

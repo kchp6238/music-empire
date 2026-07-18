@@ -21,6 +21,11 @@ def chart(db: Session = Depends(get_db)):
     return community_service.get_chart(db)
 
 
+@router.get("/follows")
+def follows(db: Session = Depends(get_db), character=Depends(get_current_character)):
+    return community_service.list_follows(db, character.id)
+
+
 @router.post("/follow", status_code=204)
 def follow(payload: FollowCreate, db: Session = Depends(get_db), character=Depends(get_current_character)):
     community_service.follow(db, character.id, payload.followed_type, payload.followed_id)

@@ -20,6 +20,10 @@ class Character(Base):
     fame: Mapped[float] = mapped_column(Numeric, nullable=False)
     money: Mapped[float] = mapped_column(Numeric, nullable=False)
     fans_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    total_streams: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Last time the offline fan-drift / passive-income batch ran for this
+    # character — see docs/core-loop.md §3/§5 and services/fan_simulation.py.
+    last_simulated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)

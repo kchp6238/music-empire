@@ -6,8 +6,10 @@ from sqlalchemy.orm import Session
 from app.models.character import Character
 from app.models.song import Song
 from app.models.fan import FanPersona, CharacterFanLoyalty, SongReaction
+from app.models.collab import SongCollaborator
 from app.services.patterns import build_combined_pattern
-from app.services import scoring
+from app.services import scoring, economy, achievements
+from app.services.trends import trend_multiplier
 
 
 def list_released(db: Session, character: Character) -> list[Song]:
@@ -77,7 +79,13 @@ def release_song(db: Session, song: Song, character: Character) -> dict:
         "chord_preset_id": song.chord_preset_id, "production_mode": song.production_mode,
         "vocal_source": song.vocal_source, "structure": song.structure, "lyrics": song.lyrics,
     }
-    result = scoring.compute_release(character, song_input, combined, fan_personas, persona_loyalty)
+    tmult = trend_multiplier(song.genre_tags, song.mood_tags)
+    result = scoring.compute_release(character, song_input, combined, fan_personas, persona_loyalty, trend_multiplier=tmult)
+
+    breakdown_money = economy.compute_revenue_breakdown(
+        result["overall_score"], character.fame, character.fans_count,
+        song.vocal_source, song.production_mode == "expert", result["money_delta"],
+    )
 
     song.craft = result["attributes"]["craft"]
     song.originality = result["attributes"]["originality"]
@@ -90,6 +98,7 @@ def release_song(db: Session, song: Song, character: Character) -> dict:
     song.fans_delta = result["fans_delta"]
     song.money_delta = result["money_delta"]
     song.fame_delta = result["fame_delta"]
+    song.revenue_breakdown = breakdown_money
     song.released_at = datetime.now(timezone.utc)
 
     for r in result["persona_results"]:
@@ -99,8 +108,17 @@ def release_song(db: Session, song: Song, character: Character) -> dict:
         ))
 
     character.fame = max(0, min(100, float(character.fame) + result["fame_delta"]))
-    character.money = max(0, float(character.money) + result["money_delta"])
     character.fans_count = max(0, character.fans_count + result["fans_delta"])
+
+    # Revenue split (GDD §10): if this song has confirmed collaborators, split
+    # money_delta by contribution %; otherwise the owner keeps it all.
+    collaborators = db.query(SongCollaborator).filter(SongCollaborator.song_id == song.id).all()
+    if collaborators:
+        for collab in collaborators:
+            share = round(result["money_delta"] * float(collab.contribution_pct) / 100)
+            collab.character.money = max(0, float(collab.character.money) + share)
+    else:
+        character.money = max(0, float(character.money) + result["money_delta"])
 
     loyalty_by_persona = {row.persona_id: row for row in loyalty_rows}
     for persona_id, score in result["new_loyalty"].items():
@@ -111,10 +129,14 @@ def release_song(db: Session, song: Song, character: Character) -> dict:
     db.commit()
     db.refresh(song)
 
+    newly_unlocked = achievements.check_and_unlock(db, character)
+
     return {
         "song": song,
         "reactions": db.query(SongReaction).filter(SongReaction.song_id == song.id).all(),
         "breakdown": result["breakdown"],
+        "revenue_breakdown": breakdown_money,
+        "newly_unlocked": newly_unlocked,
         "character_fame": float(character.fame),
         "character_money": float(character.money),
         "character_fans_count": character.fans_count,

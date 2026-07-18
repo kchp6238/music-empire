@@ -18,7 +18,7 @@ def rand(lo: float, hi: float) -> float:
     return random.uniform(lo, hi)
 
 
-def compute_release(character, song_input: dict, combined_pattern: dict, fan_personas: list[dict], persona_loyalty: dict) -> dict:
+def compute_release(character, song_input: dict, combined_pattern: dict, fan_personas: list[dict], persona_loyalty: dict, trend_multiplier: float = 1.0) -> dict:
     stats = character.stats
     talent = character.talent
     chord = CHORD_PRESETS_BY_ID[song_input["chord_preset_id"]]
@@ -72,7 +72,10 @@ def compute_release(character, song_input: dict, combined_pattern: dict, fan_per
 
     luck_factor = 1 + (talent["luck"] - 50) / 250 + rand(-0.15, 0.15)
     exposure_base = float(character.fame) * 0.55 + stats["marketing"] * 0.35 + (12 if vocal_source == "npc" else 0)
-    exposure = clamp(float(exposure_base) * luck_factor, 3, 100)
+    # trend_multiplier (>1 when the song's tags match this week's trend) boosts
+    # reach only — see services/trends.py. Defaults to 1.0 (no trend), which
+    # keeps the JS/Python scoring parity fixture unchanged.
+    exposure = clamp(float(exposure_base) * luck_factor * trend_multiplier, 3, 100)
 
     persona_results = []
     for p in fan_personas:

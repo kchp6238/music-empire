@@ -35,6 +35,10 @@ class Song(Base):
     fans_delta: Mapped[int | None] = mapped_column(Integer, nullable=True)
     money_delta: Mapped[float | None] = mapped_column(Numeric, nullable=True)
     fame_delta: Mapped[float | None] = mapped_column(Numeric, nullable=True)
+    # Per-source revenue snapshot at release, e.g.
+    # {"streaming": .., "performance": .., "ad": .., "fanclub": .., "album": .., "license": ..}
+    # See docs/economy.md and services/economy.py.
+    revenue_breakdown: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     released_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))

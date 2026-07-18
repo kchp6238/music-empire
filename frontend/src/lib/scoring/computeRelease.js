@@ -7,7 +7,7 @@ import { analyzeCombinedPattern, lyricsWordCount } from '../patterns';
  * backend/app/services/scoring.py and that result is the one persisted.
  * See docs/server-architecture.md §3.
  */
-export function computeRelease(character, draft, combined) {
+export function computeRelease(character, draft, combined, trendMultiplier = 1.0) {
   const { stats, talent } = character;
   const chord = CHORD_PRESETS.find((c) => c.id === draft.chordPresetId);
   const isExpert = draft.productionMode === 'expert';
@@ -46,7 +46,8 @@ export function computeRelease(character, draft, combined) {
 
   const luckFactor = 1 + (talent.luck - 50) / 250 + rand(-0.15, 0.15);
   const exposureBase = character.fame * 0.55 + stats.marketing * 0.35 + (draft.vocalSource === 'npc' ? 12 : 0);
-  const exposure = clamp(exposureBase * luckFactor, 3, 100);
+  // trendMultiplier defaults to 1.0 — mirror of backend scoring.py (trends.py).
+  const exposure = clamp(exposureBase * luckFactor * trendMultiplier, 3, 100);
 
   const personaResults = FAN_PERSONAS.map((p) => {
     const gVals = draft.genres.map((g) => p.genrePref[g] || 0);

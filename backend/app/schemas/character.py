@@ -19,7 +19,20 @@ class CharacterOut(BaseModel):
     fame: float
     money: float
     fans_count: int
+    total_streams: int
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class OfflineSummary(BaseModel):
+    elapsed_days: float
+    fans_delta: int
+    streaming_income: float
+    new_streams: int
+
+
+class CharacterMeResponse(BaseModel):
+    character: CharacterOut
+    offline_summary: OfflineSummary | None = None

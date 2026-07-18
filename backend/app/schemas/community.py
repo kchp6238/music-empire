@@ -5,6 +5,8 @@ class FeedSongItem(BaseModel):
     id: str
     title: str
     artist_name: str
+    artist_id: str
+    artist_type: str  # "character" | "npc"
     tier: str | None
     overall_score: float | None
     source: str  # "user" | "npc"
@@ -16,6 +18,8 @@ class ChartEntry(BaseModel):
     id: str
     title: str
     artist_name: str
+    artist_id: str
+    artist_type: str
     tier: str | None
     overall_score: float | None
     source: str
