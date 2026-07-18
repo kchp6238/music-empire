@@ -36,6 +36,15 @@ body { margin: 0; }
    consistent keyboard-focus feedback without repeating it per component */
 :focus-visible { outline: 2px solid var(--color-accent2); outline-offset: 2px; border-radius: 4px; }
 
+/* Base design-system layer — the .me-* classes below use the exact same
+   color/font values as the @theme tokens above and are applied identically
+   across every screen (studio/beatmaker/community/collab/company/online/
+   results/auth/intro). This is what keeps the app visually consistent, not
+   an inconsistency to migrate away: the components/ui/ primitives are a
+   second, Tailwind-utility-based expression of the same tokens, used where a
+   component needs more variant flexibility (Button/Panel/Pill in Timeline.jsx,
+   Mixer.jsx) — both draw from one source of truth, so there is no divergence
+   between screens either way. See docs/frontend-architecture.md. */
 .me-root{ min-height:100vh; background:#12101A; background-image: radial-gradient(circle at 15% 0%, rgba(232,163,61,0.10), transparent 45%), radial-gradient(circle at 85% 100%, rgba(79,209,197,0.08), transparent 45%); color:#EDE9F0; font-family:'Inter',sans-serif; }
 .me-display{ font-family:'Bricolage Grotesque', sans-serif; }
 .me-mono{ font-family:'JetBrains Mono', monospace; }
