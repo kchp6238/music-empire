@@ -23,6 +23,11 @@ def create_draft(payload: SongDraftCreate, db: Session = Depends(get_db), charac
     return songs_service.create_draft(db, character, payload.model_dump())
 
 
+@router.get("", response_model=list[SongOut])
+def list_my_songs(db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    return songs_service.list_released(db, character)
+
+
 @router.get("/{song_id}", response_model=SongOut)
 def get_draft(song_id: str, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
     return songs_service.get_owned_draft(db, song_id, character)

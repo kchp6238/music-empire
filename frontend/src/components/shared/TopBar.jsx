@@ -1,6 +1,7 @@
-import { Disc3 } from 'lucide-react';
+import { Disc3, LogOut } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { won } from '../../lib/utils';
+import { useAuthStore } from '../../state/useAuthStore';
 
 const TABS = [
   { path: '/studio', label: '스튜디오' },
@@ -11,6 +12,7 @@ const TABS = [
 export function TopBar({ character }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const logout = useAuthStore((s) => s.logout);
   if (!character) return null;
   return (
     <div className="me-topbar">
@@ -47,6 +49,9 @@ export function TopBar({ character }) {
           <div style={{ fontSize: 10, color: '#8B8496' }}>발매곡</div>
           <div style={{ fontSize: 14, color: '#EDE9F0' }}>{character.songs.length}</div>
         </div>
+        <button className="me-btn-ghost" style={{ padding: '6px 10px' }} onClick={() => { logout(); navigate('/'); }} title="로그아웃">
+          <LogOut size={14} />
+        </button>
       </div>
     </div>
   );

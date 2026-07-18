@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layers, FileText } from 'lucide-react';
 import { TopBar } from '../shared/TopBar';
@@ -28,6 +29,8 @@ export function BeatmakerScreen() {
   const removeFromArrangement = useGameStore((s) => s.removeFromArrangement);
   const moveArrangement = useGameStore((s) => s.moveArrangement);
   const handleRelease = useGameStore((s) => s.handleRelease);
+  const [releasing, setReleasing] = useState(false);
+  const [releaseError, setReleaseError] = useState('');
 
   if (!character) return null;
 
@@ -36,10 +39,18 @@ export function BeatmakerScreen() {
   const patternInfo = analyzeCombinedPattern(combinedDraft);
   const canRelease = draft.title.trim() && draft.genres.length > 0 && draft.moods.length > 0 && draft.arrangement.length > 0 && patternInfo.totalActive >= 6;
 
-  function onRelease() {
-    if (!canRelease) return;
-    handleRelease();
-    navigate('/results');
+  async function onRelease() {
+    if (!canRelease || releasing) return;
+    setReleasing(true);
+    setReleaseError('');
+    try {
+      await handleRelease();
+      navigate('/results');
+    } catch (e) {
+      setReleaseError(e.message || '발매에 실패했습니다');
+    } finally {
+      setReleasing(false);
+    }
   }
 
   const sectionStep = playingId === 'section-preview' ? currentStep : -1;
@@ -135,12 +146,15 @@ export function BeatmakerScreen() {
         <Mixer />
 
         <div className="me-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ fontSize: 11, color: canRelease ? '#4FD1C5' : '#C4576B' }}>
-            {draft.arrangement.length === 0 ? '곡 구조에 섹션을 최소 1개 이상 추가하세요' :
+          <div style={{ fontSize: 11, color: releaseError ? '#C4576B' : canRelease ? '#4FD1C5' : '#C4576B' }}>
+            {releaseError ? releaseError :
+              draft.arrangement.length === 0 ? '곡 구조에 섹션을 최소 1개 이상 추가하세요' :
               patternInfo.totalActive < 6 ? `최소 6칸 이상 입력해야 발매할 수 있어요 (현재 ${patternInfo.totalActive}개)` :
               `${patternInfo.totalActive}개 스텝 · ${draft.arrangement.length}개 섹션 구성 완료`}
           </div>
-          <button className="me-btn-primary" onClick={onRelease} disabled={!canRelease}>곡 발매하기</button>
+          <button className="me-btn-primary" onClick={onRelease} disabled={!canRelease || releasing}>
+            {releasing ? '발매 중...' : '곡 발매하기'}
+          </button>
         </div>
       </div>
     </div>

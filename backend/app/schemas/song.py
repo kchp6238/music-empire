@@ -69,9 +69,19 @@ class SongReactionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ReleaseBreakdown(BaseModel):
+    reach_ratio: float
+    completion_rate: float
+    repeat_play_rate: float
+    save_rate: float
+    share_rate: float
+    fan_affinity_match: float
+
+
 class ReleaseResult(BaseModel):
     song: SongOut
     reactions: list[SongReactionOut]
+    breakdown: ReleaseBreakdown
     character_fame: float
     character_money: float
     character_fans_count: int

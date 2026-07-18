@@ -8,6 +8,8 @@ class FeedSongItem(BaseModel):
     tier: str | None
     overall_score: float | None
     source: str  # "user" | "npc"
+    bpm: int
+    pattern: dict  # combined (flattened) pattern, ready for the audio engine
 
 
 class ChartEntry(BaseModel):
@@ -17,6 +19,8 @@ class ChartEntry(BaseModel):
     tier: str | None
     overall_score: float | None
     source: str
+    bpm: int
+    pattern: dict
 
 
 class FollowCreate(BaseModel):

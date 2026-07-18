@@ -4,14 +4,22 @@ from app.models.character import Character
 from app.models.song import Song
 from app.models.npc import NpcArtist, NpcSong
 from app.models.community import Follow
+from app.services.patterns import build_combined_pattern
 
 
 def get_feed(db: Session) -> list[dict]:
     items = []
     for song, character in db.query(Song, Character).join(Character, Song.character_id == Character.id).filter(Song.released_at.isnot(None)).all():
-        items.append({"id": song.id, "title": song.title, "artist_name": character.artist_name, "tier": song.tier, "overall_score": song.overall_score, "source": "user"})
+        items.append({
+            "id": song.id, "title": song.title, "artist_name": character.artist_name, "tier": song.tier,
+            "overall_score": song.overall_score, "source": "user", "bpm": song.bpm,
+            "pattern": build_combined_pattern(song.pattern, song.structure),
+        })
     for npc_song, artist in db.query(NpcSong, NpcArtist).join(NpcArtist, NpcSong.npc_artist_id == NpcArtist.id).all():
-        items.append({"id": npc_song.id, "title": npc_song.title, "artist_name": artist.name, "tier": npc_song.tier, "overall_score": float(npc_song.score), "source": "npc"})
+        items.append({
+            "id": npc_song.id, "title": npc_song.title, "artist_name": artist.name, "tier": npc_song.tier,
+            "overall_score": float(npc_song.score), "source": "npc", "bpm": npc_song.bpm, "pattern": npc_song.pattern,
+        })
     return items
 
 

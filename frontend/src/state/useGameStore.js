@@ -1,9 +1,40 @@
 import { create } from 'zustand';
-import { clamp } from '../lib/utils';
-import { SECTION_TYPES, DEFAULT_MIXER, FAN_PERSONAS, makeRandomBackground } from '../lib/gameData/constants';
+import { SECTION_TYPES, DEFAULT_MIXER, FAN_PERSONAS } from '../lib/gameData/constants';
 import { emptySections, emptySection, basicPatternForLength, buildCombinedPattern } from '../lib/patterns';
-import { computeRelease } from '../lib/scoring/computeRelease';
 import * as engine from '../lib/audio/engine';
+import * as charactersApi from '../lib/api/characters';
+import * as songsApi from '../lib/api/songs';
+
+const FAN_PERSONAS_BY_ID = Object.fromEntries(FAN_PERSONAS.map((p) => [p.id, p]));
+
+function mapCharacter(apiChar) {
+  return {
+    id: apiChar.id,
+    artistName: apiChar.artist_name,
+    backgroundId: apiChar.background_id,
+    backgroundName: apiChar.background_name,
+    stats: apiChar.stats,
+    talent: apiChar.talent,
+    fame: apiChar.fame,
+    money: apiChar.money,
+    fansCount: apiChar.fans_count,
+    songs: [],
+  };
+}
+
+// apiSong.pattern is per-section (keyed by section name) plus a separate
+// structure(arrangement) array — the audio engine only plays a single
+// flattened pattern, so combine them the same way the beatmaker preview does.
+function mapSong(apiSong) {
+  return {
+    id: apiSong.id,
+    title: apiSong.title,
+    tier: apiSong.tier,
+    score: Math.round(apiSong.overall_score),
+    bpm: apiSong.bpm,
+    pattern: buildCombinedPattern(apiSong.pattern, apiSong.structure),
+  };
+}
 
 const initialDraft = () => ({
   title: '', genres: [], moods: [], bpm: 100, chordPresetId: 'p1', productionMode: 'beginner', vocalSource: 'self',
@@ -13,6 +44,7 @@ const initialDraft = () => ({
 export const useGameStore = create((set, get) => ({
   artistNameInput: '',
   character: null,
+  characterLoaded: false,
   draft: initialDraft(),
   mixer: DEFAULT_MIXER,
   fx: { reverbWet: 20, delayWet: 15 },
@@ -25,19 +57,33 @@ export const useGameStore = create((set, get) => ({
 
   setArtistNameInput: (v) => set({ artistNameInput: v }),
 
-  confirmBackground: (bg) => {
-    const resolved = bg.id === 'random' ? makeRandomBackground() : bg;
-    set({
-      character: {
-        artistName: get().artistNameInput.trim() || '무명',
-        backgroundId: resolved.id, backgroundName: resolved.name,
-        stats: { ...resolved.stats }, talent: { ...resolved.talent },
-        fame: resolved.fame, money: resolved.money,
-        fansCount: Math.round(resolved.fame * 8 + 30),
-        songs: [], personaLoyalty: Object.fromEntries(FAN_PERSONAS.map((p) => [p.id, 0])),
-      },
-    });
+  // The server resolves backgrounds (including "random"'s jitter) itself —
+  // see backend/app/services/characters_service.py — so the client only
+  // sends the artist name and chosen background id.
+  confirmBackground: async (bg) => {
+    const artistName = get().artistNameInput.trim() || '무명';
+    const apiChar = await charactersApi.createCharacter(artistName, bg.id);
+    set({ character: mapCharacter(apiChar) });
   },
+
+  // Called once on app load to restore the session's character (and
+  // released songs) after a refresh — see docs/mvp-plan.md DoD #1.
+  loadCharacter: async () => {
+    try {
+      const apiChar = await charactersApi.getMyCharacter();
+      const character = mapCharacter(apiChar);
+      try {
+        const songs = await songsApi.listMySongs();
+        character.songs = songs.map(mapSong);
+      } catch {
+        // no songs yet, or listing failed — character itself still loaded
+      }
+      set({ character, characterLoaded: true });
+    } catch {
+      set({ character: null, characterLoaded: true });
+    }
+  },
+  resetCharacterLoaded: () => set({ character: null, characterLoaded: false }),
 
   setDraftField: (field, value) => set((s) => ({ draft: { ...s.draft, [field]: value } })),
 
@@ -134,25 +180,70 @@ export const useGameStore = create((set, get) => ({
     set({ isPlaying: false, currentStep: -1, playingId: null });
   },
 
-  handleRelease: () => {
+  // Server-authoritative: the draft is saved and re-scored by
+  // backend/app/services/scoring.py — see docs/server-architecture.md §3.
+  // Nothing computed client-side (computeRelease.js) is trusted or sent.
+  handleRelease: async () => {
     const s = get();
     if (s.isPlaying) get().stop();
-    const combined = buildCombinedPattern(s.draft.sections, s.draft.arrangement);
-    const result = computeRelease(s.character, s.draft, combined);
-    const songId = Date.now();
-    const songRecord = { id: songId, title: s.draft.title, tier: result.tier, score: Math.round(result.overallScore), pattern: combined, bpm: s.draft.bpm };
-    set({
-      character: {
-        ...s.character,
-        fame: clamp(s.character.fame + result.fameDelta, 0, 100),
-        money: Math.max(0, s.character.money + result.moneyDelta),
-        fansCount: Math.max(0, s.character.fansCount + result.fansDelta),
-        songs: [...s.character.songs, songRecord],
-        personaLoyalty: result.newLoyalty,
-      },
-      lastResult: { ...result, songTitle: s.draft.title, songId, pattern: combined, bpm: s.draft.bpm },
+
+    const lyrics = Object.fromEntries(Object.keys(s.draft.sections).map((k) => [k, s.draft.sections[k].lyrics]));
+    const draftRow = await songsApi.createDraft({
+      title: s.draft.title,
+      bpm: s.draft.bpm,
+      genre_tags: s.draft.genres,
+      mood_tags: s.draft.moods,
+      chord_preset_id: s.draft.chordPresetId,
+      production_mode: s.draft.productionMode,
+      vocal_source: s.draft.vocalSource,
+      structure: s.draft.arrangement,
+      pattern: s.draft.sections,
+      lyrics,
     });
-    return result;
+    const result = await songsApi.releaseSong(draftRow.id);
+    const song = result.song;
+    const combined = buildCombinedPattern(song.pattern, song.structure);
+
+    const lastResult = {
+      attributes: { craft: song.craft, originality: song.originality, accessibility: song.accessibility, experimental: song.experimental },
+      breakdown: {
+        reachRatio: result.breakdown.reach_ratio,
+        completionRate: result.breakdown.completion_rate,
+        repeatPlayRate: result.breakdown.repeat_play_rate,
+        saveRate: result.breakdown.save_rate,
+        shareRate: result.breakdown.share_rate,
+        fanAffinityMatch: result.breakdown.fan_affinity_match,
+      },
+      overallScore: song.overall_score,
+      tier: song.tier,
+      geniusEvent: song.genius_event,
+      sleeperHit: song.sleeper_hit,
+      fansDelta: song.fans_delta,
+      moneyDelta: song.money_delta,
+      fameDelta: song.fame_delta,
+      personaResults: result.reactions.map((r) => ({
+        persona: FAN_PERSONAS_BY_ID[r.persona_id] || { id: r.persona_id, name: `#${r.persona_id}`, color: '#8B8496' },
+        affinity: r.affinity,
+        reached: r.reached,
+        reactionScore: r.reaction_score,
+      })),
+      songTitle: song.title,
+      songId: song.id,
+      pattern: combined,
+      bpm: song.bpm,
+    };
+
+    set((state) => ({
+      character: {
+        ...state.character,
+        fame: result.character_fame,
+        money: result.character_money,
+        fansCount: result.character_fans_count,
+        songs: [...state.character.songs, mapSong(song)],
+      },
+      lastResult,
+    }));
+    return lastResult;
   },
 
   nextSong: () => set({ draft: initialDraft() }),

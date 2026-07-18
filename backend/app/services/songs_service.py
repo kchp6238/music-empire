@@ -10,6 +10,15 @@ from app.services.patterns import build_combined_pattern
 from app.services import scoring
 
 
+def list_released(db: Session, character: Character) -> list[Song]:
+    return (
+        db.query(Song)
+        .filter(Song.character_id == character.id, Song.released_at.isnot(None))
+        .order_by(Song.released_at.desc())
+        .all()
+    )
+
+
 def get_owned_draft(db: Session, song_id: str, character: Character) -> Song:
     song = db.get(Song, song_id)
     if song is None or song.character_id != character.id:
@@ -105,6 +114,7 @@ def release_song(db: Session, song: Song, character: Character) -> dict:
     return {
         "song": song,
         "reactions": db.query(SongReaction).filter(SongReaction.song_id == song.id).all(),
+        "breakdown": result["breakdown"],
         "character_fame": float(character.fame),
         "character_money": float(character.money),
         "character_fans_count": character.fans_count,
