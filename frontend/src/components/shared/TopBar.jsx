@@ -52,7 +52,7 @@ export function TopBar({ character }) {
           <div style={{ fontSize: 10, color: '#8B8496' }}>발매곡</div>
           <div style={{ fontSize: 14, color: '#EDE9F0' }}>{character.songs.length}</div>
         </div>
-        <button className="me-btn-ghost" style={{ padding: '6px 10px' }} onClick={() => { logout(); navigate('/'); }} title="로그아웃">
+        <button className="me-btn-ghost" style={{ padding: '6px 10px' }} onClick={() => { logout(); navigate('/'); }} title="로그아웃" aria-label="로그아웃">
           <LogOut size={14} />
         </button>
       </div>

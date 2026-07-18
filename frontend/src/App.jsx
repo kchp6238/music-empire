@@ -10,6 +10,7 @@ import { ResultsScreen } from './components/results/ResultsScreen';
 import { CollabScreen } from './components/collab/CollabScreen';
 import { CompanyScreen } from './components/company/CompanyScreen';
 import { OnlineScreen } from './components/online/OnlineScreen';
+import { PageTransition } from './components/ui/PageTransition';
 import { useGameStore } from './state/useGameStore';
 import { useAuthStore } from './state/useAuthStore';
 import { disposeEngine } from './lib/audio/engine';
@@ -24,6 +25,12 @@ function RequireCharacter({ children }) {
   return children;
 }
 
+function RequireAuth({ children }) {
+  const token = useAuthStore((s) => s.token);
+  if (!token) return <Navigate to="/" replace />;
+  return children;
+}
+
 function RootRoute() {
   const token = useAuthStore((s) => s.token);
   const character = useGameStore((s) => s.character);
@@ -33,6 +40,30 @@ function RootRoute() {
   if (!characterLoaded) return null;
   if (character) return <Navigate to="/studio" replace />;
   return <IntroScreen />;
+}
+
+// Mount-only fade/slide transition per route (see components/ui/PageTransition.jsx).
+// Deliberately NOT using AnimatePresence+keyed<Routes> for an exit animation —
+// that combination unmounts the old route synchronously on navigate() (React
+// Router swaps the match immediately) while AnimatePresence waits for an exit
+// animation that never gets to run, which left the SPA showing stale content
+// after client-side navigation (confirmed via the in-app browser: URL changes,
+// DOM doesn't). A plain per-route mount animation has no such coordination
+// problem and still delivers real transition polish.
+function AnimatedRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<PageTransition><RootRoute /></PageTransition>} />
+      <Route path="/create" element={<PageTransition><RequireAuth><CharacterCreation /></RequireAuth></PageTransition>} />
+      <Route path="/studio" element={<PageTransition><RequireCharacter><StudioScreen /></RequireCharacter></PageTransition>} />
+      <Route path="/beatmaker" element={<PageTransition><RequireCharacter><BeatmakerScreen /></RequireCharacter></PageTransition>} />
+      <Route path="/community" element={<PageTransition><RequireCharacter><CommunityScreen /></RequireCharacter></PageTransition>} />
+      <Route path="/collab" element={<PageTransition><RequireCharacter><CollabScreen /></RequireCharacter></PageTransition>} />
+      <Route path="/company" element={<PageTransition><RequireCharacter><CompanyScreen /></RequireCharacter></PageTransition>} />
+      <Route path="/online" element={<PageTransition><RequireCharacter><OnlineScreen /></RequireCharacter></PageTransition>} />
+      <Route path="/results" element={<PageTransition><RequireCharacter><ResultsScreen /></RequireCharacter></PageTransition>} />
+    </Routes>
+  );
 }
 
 function App() {
@@ -50,17 +81,7 @@ function App() {
   return (
     <div className="me-root">
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<RootRoute />} />
-          <Route path="/create" element={token ? <CharacterCreation /> : <Navigate to="/" replace />} />
-          <Route path="/studio" element={<RequireCharacter><StudioScreen /></RequireCharacter>} />
-          <Route path="/beatmaker" element={<RequireCharacter><BeatmakerScreen /></RequireCharacter>} />
-          <Route path="/community" element={<RequireCharacter><CommunityScreen /></RequireCharacter>} />
-          <Route path="/collab" element={<RequireCharacter><CollabScreen /></RequireCharacter>} />
-          <Route path="/company" element={<RequireCharacter><CompanyScreen /></RequireCharacter>} />
-          <Route path="/online" element={<RequireCharacter><OnlineScreen /></RequireCharacter>} />
-          <Route path="/results" element={<RequireCharacter><ResultsScreen /></RequireCharacter>} />
-        </Routes>
+        <AnimatedRoutes />
       </BrowserRouter>
     </div>
   );

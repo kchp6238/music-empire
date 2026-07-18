@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { SECTION_TYPES, DEFAULT_MIXER, FAN_PERSONAS } from '../lib/gameData/constants';
 import { emptySections, emptySection, basicPatternForLength, buildCombinedPattern } from '../lib/patterns';
 import * as engine from '../lib/audio/engine';
+import { playStepTick, playSuccessChime } from '../lib/audio/uiSounds';
 import * as charactersApi from '../lib/api/characters';
 import * as songsApi from '../lib/api/songs';
 import * as communityApi from '../lib/api/community';
@@ -122,19 +123,25 @@ export const useGameStore = create((set, get) => ({
 
   setEditingSection: (key) => set((s) => ({ draft: { ...s.draft, editingSection: key } })),
 
-  toggleDrumStep: (instKey, idx) => set((s) => {
-    const sec = s.draft.sections[s.draft.editingSection];
-    const arr = [...sec.drums[instKey]];
-    arr[idx] = !arr[idx];
-    return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, drums: { ...sec.drums, [instKey]: arr } } } } };
-  }),
+  toggleDrumStep: (instKey, idx) => {
+    playStepTick();
+    set((s) => {
+      const sec = s.draft.sections[s.draft.editingSection];
+      const arr = [...sec.drums[instKey]];
+      arr[idx] = !arr[idx];
+      return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, drums: { ...sec.drums, [instKey]: arr } } } } };
+    });
+  },
 
-  setNoteStep: (track, idx, pitch) => set((s) => {
-    const sec = s.draft.sections[s.draft.editingSection];
-    const arr = [...sec[track]];
-    arr[idx] = arr[idx] === pitch ? null : pitch;
-    return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [track]: arr } } } };
-  }),
+  setNoteStep: (track, idx, pitch) => {
+    playStepTick();
+    set((s) => {
+      const sec = s.draft.sections[s.draft.editingSection];
+      const arr = [...sec[track]];
+      arr[idx] = arr[idx] === pitch ? null : pitch;
+      return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [track]: arr } } } };
+    });
+  },
 
   setLyrics: (text) => set((s) => ({
     draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...s.draft.sections[s.draft.editingSection], lyrics: text } } },
@@ -306,6 +313,7 @@ export const useGameStore = create((set, get) => ({
       lastResult,
       persistedDraftId: null,
     }));
+    playSuccessChime();
     return lastResult;
   },
 

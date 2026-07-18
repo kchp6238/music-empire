@@ -122,9 +122,9 @@ export function StudioScreen() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 200, overflowY: 'auto' }} className="me-scroll">
                 {character.songs.slice().reverse().map((s) => (
                   <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
-                    <span className="me-btn-ghost" style={{ padding: '2px 8px', fontSize: 11, borderRadius: 6 }} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id)}>
+                    <button className="me-btn-ghost" style={{ padding: '2px 8px', fontSize: 11, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id)}>
                       {(isPlaying && playingId === s.id) ? '■' : '▶'}
-                    </span>
+                    </button>
                     <span style={{ color: '#EDE9F0', flex: 1, margin: '0 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</span>
                     <span className="me-mono" style={{ color: TIER_COLOR[s.tier] }}>{s.tier} · {s.score}</span>
                   </div>

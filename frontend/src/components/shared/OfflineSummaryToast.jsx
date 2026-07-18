@@ -16,7 +16,7 @@ export function OfflineSummaryToast() {
         </b>
         , 스트리밍 수익 <b className="me-mono" style={{ color: '#4FD1C5' }}>+{won(summary.streaming_income)}</b>
       </span>
-      <button className="me-btn-ghost" style={{ padding: '4px 8px', marginLeft: 'auto' }} onClick={dismiss}><X size={13} /></button>
+      <button className="me-btn-ghost" style={{ padding: '4px 8px', marginLeft: 'auto' }} onClick={dismiss} aria-label="닫기"><X size={13} /></button>
     </div>
   );
 }

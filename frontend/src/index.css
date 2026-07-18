@@ -1,9 +1,40 @@
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&family=Gaegu:wght@400;700&display=swap');
 @import 'tailwindcss';
 
+/* Design tokens — formalizes the palette that used to live only as scattered
+   hex literals in inline styles. New components should be built against
+   these (bg-panel, text-accent, etc.), not raw hex. See docs/frontend-architecture.md. */
+@theme {
+  --color-bg: #12101A;
+  --color-panel: #1C1926;
+  --color-panel-2: #0E0C14;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.2);
+  --color-accent: #E8A33D;
+  --color-accent2: #4FD1C5;
+  --color-pink: #E893A6;
+  --color-purple: #8B7FD1;
+  --color-purple2: #B794F4;
+  --color-green: #5FBF8F;
+  --color-yellow: #E8C34D;
+  --color-danger: #C4576B;
+  --color-text: #EDE9F0;
+  --color-muted: #8B8496;
+  --color-faint: #6B6577;
+
+  --font-display: 'Bricolage Grotesque', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Inter', sans-serif;
+  --font-hand: 'Gaegu', sans-serif;
+}
+
 * { box-sizing: border-box; }
 body { margin: 0; }
 #root { min-height: 100svh; }
+
+/* focus-visible ring, applied globally so every real <button>/<input> gets
+   consistent keyboard-focus feedback without repeating it per component */
+:focus-visible { outline: 2px solid var(--color-accent2); outline-offset: 2px; border-radius: 4px; }
 
 .me-root{ min-height:100vh; background:#12101A; background-image: radial-gradient(circle at 15% 0%, rgba(232,163,61,0.10), transparent 45%), radial-gradient(circle at 85% 100%, rgba(79,209,197,0.08), transparent 45%); color:#EDE9F0; font-family:'Inter',sans-serif; }
 .me-display{ font-family:'Bricolage Grotesque', sans-serif; }
