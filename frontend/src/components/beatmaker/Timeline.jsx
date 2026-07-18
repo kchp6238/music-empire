@@ -73,7 +73,13 @@ export function Timeline() {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
       setResizing((r) => {
-        if (r && r.previewLength !== r.startLength) setSectionLengthFor(r.key, r.previewLength);
+        // queueMicrotask: this commit runs inside a native (non-React) window
+        // mouseup listener; calling the store setter synchronously here can
+        // race React's synthetic handling of that same event on other
+        // components (Zustand-subscribed Timeline re-rendering while this
+        // one is still mid-render) — see useGameStore.js's play() for the
+        // same fix applied to the first hit of this class of warning.
+        if (r && r.previewLength !== r.startLength) queueMicrotask(() => setSectionLengthFor(r.key, r.previewLength));
         return null;
       });
     }

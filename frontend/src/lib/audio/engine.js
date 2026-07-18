@@ -70,23 +70,55 @@ export function stopPattern() {
   Tone.Transport.cancel();
 }
 
+// Collapses consecutive equal-pitch steps into runs, keyed by their start
+// index — one held note (length = run length) instead of retriggering every
+// step. This is what makes a "painted" multi-step note in the piano roll
+// actually sound sustained instead of machine-gunned.
+function computeRuns(arr) {
+  const byStart = {};
+  let i = 0;
+  while (i < arr.length) {
+    if (!arr[i]) { i++; continue; }
+    const pitch = arr[i];
+    let j = i + 1;
+    while (j < arr.length && arr[j] === pitch) j++;
+    byStart[i] = { length: j - i, pitch };
+    i = j;
+  }
+  return byStart;
+}
+
 export async function playPattern(pattern, bpm, mixer, fx, onStep) {
   await Tone.start();
   stopPattern();
   const s = getSynths(mixer, fx);
   Tone.Transport.bpm.value = bpm;
   const totalSteps = pattern.bass.length;
+  const stepSeconds = Tone.Time('16n').toSeconds();
+  const bassRuns = computeRuns(pattern.bass);
+  const pianoRuns = computeRuns(pattern.piano);
+  const guitarRuns = computeRuns(pattern.guitar);
+  const humanize = Boolean(fx.humanize);
+
+  const jTime = (time) => humanize ? time + (Math.random() - 0.5) * 0.012 : time;
+  const jVel = (v) => humanize ? Math.max(0.05, Math.min(1, v * (1 + (Math.random() - 0.5) * 0.25))) : v;
+  const velAt = (velArr, idx) => jVel((velArr?.[idx] ?? 100) / 127);
+
   const seq = new Tone.Sequence((time, idx) => {
     DRUM_INSTRUMENTS.forEach((di) => {
       if (pattern.drums[di.key][idx]) {
-        if (di.key === 'kick') s.kick.triggerAttackRelease('C1', '8n', time);
-        else if (di.key === 'tom') s.tom.triggerAttackRelease('G1', '8n', time);
-        else s[di.key].triggerAttackRelease('8n', time);
+        const t = jTime(time);
+        if (di.key === 'kick') s.kick.triggerAttackRelease('C1', '8n', t);
+        else if (di.key === 'tom') s.tom.triggerAttackRelease('G1', '8n', t);
+        else s[di.key].triggerAttackRelease('8n', t);
       }
     });
-    if (pattern.bass[idx]) s.bass.triggerAttackRelease(pattern.bass[idx], '8n', time);
-    if (pattern.piano[idx]) s.piano.triggerAttackRelease(pattern.piano[idx], '8n', time);
-    if (pattern.guitar[idx]) s.guitar.triggerAttackRelease(pattern.guitar[idx], '8n', time);
+    const bassRun = bassRuns[idx];
+    if (bassRun) s.bass.triggerAttackRelease(bassRun.pitch, stepSeconds * bassRun.length, jTime(time), velAt(pattern.bassVelocity, idx));
+    const pianoRun = pianoRuns[idx];
+    if (pianoRun) s.piano.triggerAttackRelease(pianoRun.pitch, stepSeconds * pianoRun.length, jTime(time), velAt(pattern.pianoVelocity, idx));
+    const guitarRun = guitarRuns[idx];
+    if (guitarRun) s.guitar.triggerAttackRelease(guitarRun.pitch, stepSeconds * guitarRun.length, jTime(time), velAt(pattern.guitarVelocity, idx));
     Tone.Draw.schedule(() => onStep(idx), time);
   }, Array.from({ length: totalSteps }, (_, i) => i), '16n');
   seq.start(0);

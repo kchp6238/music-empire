@@ -1,5 +1,6 @@
-import { Sliders } from 'lucide-react';
+import { Sliders, Waves } from 'lucide-react';
 import { MixerRow } from '../shared/MixerRow';
+import { Pill } from '../ui/Pill';
 import { MIXER_TRACKS } from '../../lib/gameData/constants';
 import { useGameStore } from '../../state/useGameStore';
 
@@ -34,6 +35,14 @@ export function Mixer() {
           <div style={{ fontSize: 11, color: '#8B8496', marginBottom: 6 }}>딜레이 <span className="me-mono">{fx.delayWet}%</span></div>
           <input type="range" className="me-slider" min={0} max={100} value={fx.delayWet} onChange={(e) => setFx('delayWet', Number(e.target.value))} />
         </div>
+      </div>
+      <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '16px 0' }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Waves size={14} style={{ color: '#8B7FD1' }} />
+        <div style={{ fontSize: 11, color: '#8B8496' }}>휴머나이즈 — 재생 시 타이밍/벨로시티에 미세한 흔들림을 더해요 (데이터는 바뀌지 않음)</div>
+        <Pill size="sm" active={fx.humanize} onClick={() => setFx('humanize', !fx.humanize)} className="ml-auto">
+          {fx.humanize ? '켜짐' : '꺼짐'}
+        </Pill>
       </div>
     </div>
   );

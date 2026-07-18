@@ -1,4 +1,28 @@
-export function PianoRoll({ label, pitches, steps, onSetNote, currentStep, color }) {
+import { useState } from 'react';
+
+// Click a cell to toggle a single-step note (unchanged). Mousedown + drag
+// across cells in the SAME row paints one sustained note spanning the
+// dragged steps — engine.js merges same-pitch runs into one triggered note
+// with duration = run length, instead of retriggering every step.
+export function PianoRoll({ label, pitches, steps, onSetNote, onPaintRange, currentStep, color }) {
+  const [drag, setDrag] = useState(null); // { pitch, start, end }
+
+  function startPaint(pitch, col) {
+    setDrag({ pitch, start: col, end: col });
+    function onUp() {
+      window.removeEventListener('mouseup', onUp);
+      setDrag((d) => {
+        if (!d) return null;
+        // queueMicrotask: commit runs inside a native mouseup listener — see
+        // Timeline.jsx's onResizeStart for why this avoids a React warning.
+        if (d.start === d.end) queueMicrotask(() => onSetNote(d.start, d.pitch));
+        else queueMicrotask(() => onPaintRange(d.start, d.end, d.pitch));
+        return null;
+      });
+    }
+    window.addEventListener('mouseup', onUp);
+  }
+
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 16 }}>
       <div style={{ width: 84, fontSize: 11, color: '#8B8496', flexShrink: 0, paddingTop: 2 }}>{label}</div>
@@ -13,11 +37,13 @@ export function PianoRoll({ label, pitches, steps, onSetNote, currentStep, color
             {pitches.map((p, rowIdx) => (
               <div key={p} style={{ display: 'flex' }}>
                 {steps.map((val, colIdx) => {
-                  const active = val === p;
+                  const painting = drag && drag.pitch === p && colIdx >= Math.min(drag.start, drag.end) && colIdx <= Math.max(drag.start, drag.end);
+                  const active = val === p || painting;
                   return (
                     <div
                       key={colIdx}
-                      onClick={() => onSetNote(colIdx, p)}
+                      onMouseDown={(e) => { e.preventDefault(); startPaint(p, colIdx); }}
+                      onMouseEnter={() => { if (drag && drag.pitch === p) setDrag((d) => ({ ...d, end: colIdx })); }}
                       style={{
                         width: 22, height: 18, cursor: 'pointer', boxSizing: 'border-box',
                         background: active ? color : (rowIdx % 12 === 11 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.025)'),

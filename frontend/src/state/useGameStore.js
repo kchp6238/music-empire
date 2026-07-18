@@ -51,7 +51,7 @@ export const useGameStore = create((set, get) => ({
   characterLoaded: false,
   draft: initialDraft(),
   mixer: DEFAULT_MIXER,
-  fx: { reverbWet: 20, delayWet: 15 },
+  fx: { reverbWet: 20, delayWet: 15, humanize: false },
   lastResult: null,
   isPlaying: false,
   currentStep: -1,
@@ -133,15 +133,44 @@ export const useGameStore = create((set, get) => ({
     });
   },
 
+  // Single-cell click: toggle. Used by PianoRoll/PianoKeyRoll's plain click
+  // (no drag) — see paintNoteRange for the multi-step drag gesture.
   setNoteStep: (track, idx, pitch) => {
     playStepTick();
     set((s) => {
       const sec = s.draft.sections[s.draft.editingSection];
       const arr = [...sec[track]];
-      arr[idx] = arr[idx] === pitch ? null : pitch;
-      return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [track]: arr } } } };
+      const velArr = [...sec[`${track}Velocity`]];
+      const turningOn = arr[idx] !== pitch;
+      arr[idx] = turningOn ? pitch : null;
+      if (turningOn) velArr[idx] = 100;
+      return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [track]: arr, [`${track}Velocity`]: velArr } } } };
     });
   },
+
+  // Drag-paint gesture (PianoRoll.jsx/PianoKeyRoll.jsx): force-sets a
+  // contiguous run of steps to one pitch, representing a single held note
+  // spanning multiple steps (engine.js merges these into one sustained
+  // trigger on playback instead of retriggering every step).
+  paintNoteRange: (track, fromIdx, toIdx, pitch) => {
+    playStepTick();
+    set((s) => {
+      const sec = s.draft.sections[s.draft.editingSection];
+      const arr = [...sec[track]];
+      const velArr = [...sec[`${track}Velocity`]];
+      const lo = Math.min(fromIdx, toIdx);
+      const hi = Math.max(fromIdx, toIdx);
+      for (let i = lo; i <= hi; i++) { arr[i] = pitch; velArr[i] = 100; }
+      return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [track]: arr, [`${track}Velocity`]: velArr } } } };
+    });
+  },
+
+  setVelocity: (track, idx, velocity) => set((s) => {
+    const sec = s.draft.sections[s.draft.editingSection];
+    const velArr = [...sec[`${track}Velocity`]];
+    velArr[idx] = Math.round(Math.max(1, Math.min(127, velocity)));
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [`${track}Velocity`]: velArr } } } };
+  }),
 
   setLyrics: (text) => set((s) => ({
     draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...s.draft.sections[s.draft.editingSection], lyrics: text } } },
@@ -155,7 +184,15 @@ export const useGameStore = create((set, get) => ({
     return {
       draft: {
         ...s.draft,
-        sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, length, drums: newDrums, bass: resize(sec.bass, null), piano: resize(sec.piano, null), guitar: resize(sec.guitar, null) } },
+        sections: {
+          ...s.draft.sections,
+          [s.draft.editingSection]: {
+            ...sec, length, drums: newDrums,
+            bass: resize(sec.bass, null), bassVelocity: resize(sec.bassVelocity, 100),
+            piano: resize(sec.piano, null), pianoVelocity: resize(sec.pianoVelocity, 100),
+            guitar: resize(sec.guitar, null), guitarVelocity: resize(sec.guitarVelocity, 100),
+          },
+        },
       },
     };
   }),
@@ -201,7 +238,15 @@ export const useGameStore = create((set, get) => ({
     return {
       draft: {
         ...s.draft,
-        sections: { ...s.draft.sections, [sectionKey]: { ...sec, length, drums: newDrums, bass: resize(sec.bass, null), piano: resize(sec.piano, null), guitar: resize(sec.guitar, null) } },
+        sections: {
+          ...s.draft.sections,
+          [sectionKey]: {
+            ...sec, length, drums: newDrums,
+            bass: resize(sec.bass, null), bassVelocity: resize(sec.bassVelocity, 100),
+            piano: resize(sec.piano, null), pianoVelocity: resize(sec.pianoVelocity, 100),
+            guitar: resize(sec.guitar, null), guitarVelocity: resize(sec.guitarVelocity, 100),
+          },
+        },
       },
     };
   }),

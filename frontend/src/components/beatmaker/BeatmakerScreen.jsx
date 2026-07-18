@@ -24,6 +24,8 @@ export function BeatmakerScreen() {
   const setSectionLength = useGameStore((s) => s.setSectionLength);
   const toggleDrumStep = useGameStore((s) => s.toggleDrumStep);
   const setNoteStep = useGameStore((s) => s.setNoteStep);
+  const paintNoteRange = useGameStore((s) => s.paintNoteRange);
+  const setVelocity = useGameStore((s) => s.setVelocity);
   const setLyrics = useGameStore((s) => s.setLyrics);
   const loadBasicPattern = useGameStore((s) => s.loadBasicPattern);
   const clearSection = useGameStore((s) => s.clearSection);
@@ -54,6 +56,11 @@ export function BeatmakerScreen() {
 
   const sectionStep = playingId === 'section-preview' ? currentStep : -1;
 
+  function onAdjustVelocity(track, idx, delta) {
+    const current = editingSec[`${track}Velocity`]?.[idx] ?? 100;
+    setVelocity(track, idx, current + delta);
+  }
+
   return (
     <div>
       <TopBar character={character} />
@@ -80,13 +87,13 @@ export function BeatmakerScreen() {
             <div style={{ minWidth: 520 }}>
               <DrumGrid section={editingSec} onToggle={toggleDrumStep} currentStep={sectionStep} />
               <div style={{ height: 8 }} />
-              <BassGuitarPanel section={editingSec} onSetNote={setNoteStep} currentStep={sectionStep} />
+              <BassGuitarPanel section={editingSec} onSetNote={setNoteStep} onPaintRange={paintNoteRange} onSetVelocity={setVelocity} currentStep={sectionStep} />
             </div>
           </div>
 
           <div className="me-scroll" style={{ overflowX: 'auto', marginTop: 16 }}>
             <div style={{ minWidth: 520 }}>
-              <PianoPanel section={editingSec} onSetNote={setNoteStep} currentStep={sectionStep} />
+              <PianoPanel section={editingSec} onSetNote={setNoteStep} onPaintRange={paintNoteRange} onAdjustVelocity={onAdjustVelocity} currentStep={sectionStep} />
             </div>
           </div>
 
