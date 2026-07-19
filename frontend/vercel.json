@@ -2,7 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "//": "SPA fallback: /studio, /recording etc. are client-side routes with no file on disk, so a hard refresh or shared link would 404 without this.",
       "source": "/((?!assets/|icons/|favicon|manifest|sw\\.js|workbox-|registerSW).*)",
       "destination": "/index.html"
     }
