@@ -131,7 +131,7 @@ def compute_release(character, song_input: dict, combined_pattern: dict, fan_per
 
     fans_delta = js_round((overall_score - 45) * 1.4 + reached_count * 0.8)
     money_delta = js_round(
-        overall_score * 45 + float(character.fame) * 8 - (280 if vocal_source == "npc" else 0) - (140 if is_expert else 0)
+        overall_score * 45000 + float(character.fame) * 8000 - (280000 if vocal_source == "npc" else 0) - (140000 if is_expert else 0)
     )
     fame_delta = js_round((overall_score - 50) * 0.35)
 

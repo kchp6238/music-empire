@@ -115,3 +115,59 @@ def list_for_song(db: Session, song_id: str) -> list[dict]:
          "contribution_pct": float(c.contribution_pct), "is_owner": c.is_owner}
         for c, ch in rows
     ]
+
+
+def list_mine(db: Session, character: Character) -> list[dict]:
+    """Every song this character is a confirmed collaborator on (as owner or
+    invited artist) — the "공동 작업" list an invitee lands on after accepting,
+    since a solo song never gets a SongCollaborator row in the first place."""
+    my_rows = (
+        db.query(SongCollaborator, Song)
+        .join(Song, SongCollaborator.song_id == Song.id)
+        .filter(SongCollaborator.character_id == character.id)
+        .all()
+    )
+    if not my_rows:
+        return []
+
+    song_ids = [song.id for _, song in my_rows]
+    all_rows = (
+        db.query(SongCollaborator, Character)
+        .join(Character, SongCollaborator.character_id == Character.id)
+        .filter(SongCollaborator.song_id.in_(song_ids))
+        .all()
+    )
+    by_song: dict[str, list[dict]] = {}
+    for c, ch in all_rows:
+        by_song.setdefault(c.song_id, []).append({
+            "character_id": c.character_id, "artist_name": ch.artist_name, "role": c.role,
+            "contribution_pct": float(c.contribution_pct), "is_owner": c.is_owner,
+        })
+
+    return [
+        {
+            "song_id": song.id, "title": song.title, "is_owner": my_row.is_owner,
+            "my_role": my_row.role, "my_contribution_pct": float(my_row.contribution_pct),
+            "released": song.released_at is not None, "tier": song.tier,
+            "overall_score": float(song.overall_score) if song.overall_score is not None else None,
+            "collaborators": by_song.get(song.id, []),
+        }
+        for my_row, song in my_rows
+    ]
+
+
+def get_song_for_collaborator(db: Session, character: Character, song_id: str) -> Song:
+    """A collaborator (owner or invited) can view the shared song even though
+    only the owner can edit or release it — this is the "come see the song"
+    step that was previously entirely missing after accepting an invite."""
+    is_collaborator = (
+        db.query(SongCollaborator)
+        .filter(SongCollaborator.song_id == song_id, SongCollaborator.character_id == character.id)
+        .first()
+    )
+    if is_collaborator is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
+    song = db.get(Song, song_id)
+    if song is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
+    return song

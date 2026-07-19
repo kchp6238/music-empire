@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.character import Character
 from app.routers.songs import get_current_character
+from app.schemas.song import SongOut
 from app.services import collab_service
 
 router = APIRouter(prefix="/collab", tags=["collab"])
@@ -40,3 +41,13 @@ def respond(invite_id: str, payload: InviteRespond, db: Session = Depends(get_db
 @router.get("/songs/{song_id}/collaborators")
 def collaborators(song_id: str, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
     return collab_service.list_for_song(db, song_id)
+
+
+@router.get("/mine")
+def mine(db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    return collab_service.list_mine(db, character)
+
+
+@router.get("/songs/{song_id}", response_model=SongOut)
+def song_detail(song_id: str, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    return collab_service.get_song_for_collaborator(db, character, song_id)

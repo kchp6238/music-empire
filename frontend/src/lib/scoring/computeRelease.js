@@ -98,7 +98,7 @@ export function computeRelease(character, draft, combined, trendMultiplier = 1.0
 
   const fansDelta = Math.round((overallScore - 45) * 1.4 + reachedCount * 0.8);
   const moneyDelta = Math.round(
-    overallScore * 45 + character.fame * 8 - (draft.vocalSource === 'npc' ? 280 : 0) - (isExpert ? 140 : 0)
+    overallScore * 45000 + character.fame * 8000 - (draft.vocalSource === 'npc' ? 280000 : 0) - (isExpert ? 140000 : 0)
   );
   const fameDelta = Math.round((overallScore - 50) * 0.35);
 

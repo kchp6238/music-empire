@@ -11,9 +11,9 @@ from app.models.character import Character
 from app.models.company import Company, Trainee, Group
 from app.services import time_service
 
-FOUND_COST = 5000
-RECRUIT_COST = 800
-TRAIN_COST = 300
+FOUND_COST = 5000000
+RECRUIT_COST = 800000
+TRAIN_COST = 300000
 DEBUT_MIN_STAGE = 3
 MAX_CURRICULUM_STAGE = 5
 

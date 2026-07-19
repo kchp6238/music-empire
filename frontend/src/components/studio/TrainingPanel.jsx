@@ -3,12 +3,13 @@ import { Dumbbell, Bed } from 'lucide-react';
 import { Panel } from '../ui/Panel';
 import { Button } from '../ui/Button';
 import { useGameStore } from '../../state/useGameStore';
+import { won } from '../../lib/utils';
 
 const STAT_LABELS = {
   composing: '작곡', lyrics: '작사', arrangement: '편곡', vocal: '보컬',
   production: '프로듀싱', mixing: '믹싱', business: '비즈니스', marketing: '마케팅',
 };
-const TRAIN_COST = 200;
+const TRAIN_COST = 200000;
 const CEILING = 95;
 
 export function TrainingPanel() {
@@ -33,7 +34,7 @@ export function TrainingPanel() {
         <Dumbbell size={15} className="text-accent2" /> 훈련
       </div>
       <div className="text-[11px] text-muted mb-3">
-        한 번에 3일이 지나고 {TRAIN_COST}원이 듭니다. 능력치가 높을수록 오르는 폭이 줄어듭니다.
+        한 번에 3일이 지나고 {won(TRAIN_COST)}이 듭니다. 능력치가 높을수록 오르는 폭이 줄어듭니다.
       </div>
       {error && <div className="text-danger text-xs mb-2">{error}</div>}
 

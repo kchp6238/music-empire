@@ -19,6 +19,9 @@ from app.services.js_math import js_round
 WEEKLY_FAME_DECAY = 0.4
 # Older releases keep earning, but less each week.
 CATALOGUE_DECAY_PER_WEEK = 0.97
+# Base weekly royalty per released song, before age decay. This is the game's
+# only passive income source — no songs released means no passive income.
+CATALOGUE_INCOME_PER_SONG_WEEK = 20000
 
 # Age curve. Physical/performance stats peak early and decline; judgement-type
 # stats keep improving. Applied once per season so it's gradual.
@@ -34,12 +37,13 @@ MATURING_SOFT_CAP = 70
 DECLINE_FLOOR = 30
 
 
-def settle_weeks(db: Session, character: Character) -> int:
+def settle_weeks(db: Session, character: Character) -> dict:
     """Settle every whole game-week crossed since the last settlement."""
     from app.services.time_service import week_index
 
     current = week_index(character)
     settled = 0
+    income = 0.0
     while character.last_settled_week < current:
         character.last_settled_week += 1
         settled += 1
@@ -47,10 +51,32 @@ def settle_weeks(db: Session, character: Character) -> int:
         # fame decays a little each week without a release
         character.fame = max(0.0, float(character.fame) - WEEKLY_FAME_DECAY)
 
+        week_income = _catalogue_income_for_week(db, character)
+        income += week_income
+        character.money = float(character.money) + week_income
+
         # trainees keep improving on their own while time passes
         _grow_trainees(db, character)
 
-    return settled
+    return {"weeks_settled": settled, "catalogue_income": js_round(income)}
+
+
+def _catalogue_income_for_week(db: Session, character: Character) -> float:
+    """This week's back-catalogue royalties: each released song pays a little,
+    decaying the longer it's been out — so a career needs fresh hits, not just
+    an ever-growing back catalogue, to keep income up."""
+    from app.services.time_service import DAYS_PER_WEEK
+
+    songs = db.query(Song).filter(
+        Song.character_id == character.id, Song.released_on.isnot(None)
+    ).all()
+    if not songs:
+        return 0.0
+    total = 0.0
+    for song in songs:
+        weeks_old = max(0, (character.game_date - song.released_on).days // DAYS_PER_WEEK)
+        total += CATALOGUE_INCOME_PER_SONG_WEEK * (CATALOGUE_DECAY_PER_WEEK ** weeks_old)
+    return js_round(total)
 
 
 def _grow_trainees(db: Session, character: Character) -> None:
@@ -131,18 +157,3 @@ def _apply_age_effects(character: Character) -> None:
             stats[k] = min(MATURING_SOFT_CAP, stats[k] + 1)
 
     character.stats = stats
-
-
-def catalogue_income(db: Session, character: Character, weeks: int) -> float:
-    """Back-catalogue streaming, decaying with each week that passes."""
-    if weeks <= 0:
-        return 0.0
-    songs = db.query(Song).filter(
-        Song.character_id == character.id, Song.released_at.isnot(None)
-    ).count()
-    if songs == 0:
-        return 0.0
-    total = 0.0
-    for w in range(weeks):
-        total += songs * 20 * (CATALOGUE_DECAY_PER_WEEK ** w)
-    return js_round(total)

@@ -35,7 +35,7 @@ export function CollabInvitePanel() {
     setBusy(true); setMsg('');
     try {
       await inviteCollaborator(artistId, role, pct);
-      setMsg(`초대를 보냈습니다 (${role} · ${pct}%). 상대가 수락하면 발매 수익이 분배됩니다.`);
+      setMsg(`초대를 보냈습니다 (${role} · ${pct}%). 상대가 수락하면 "협업" 탭의 "내 공동 작업"에 이 곡이 뜨고, 발매 수익도 지분대로 분배됩니다.`);
     } catch (e) {
       setMsg(e.message || '초대에 실패했습니다');
     } finally {

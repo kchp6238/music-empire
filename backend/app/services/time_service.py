@@ -80,6 +80,8 @@ def advance_days(db: Session, character: Character, days: int, reason: str = "")
     drift = fan_simulation.settle_days(db, character, days)
 
     # Weekly/season boundaries crossed by this jump, each settled once.
+    # Passive money (catalogue royalties) is granted here, not per-day, so
+    # actions with no release catalogue behind them earn nothing.
     weekly = settlement.settle_weeks(db, character)
     seasonal = settlement.settle_seasons(db, character)
 
@@ -93,8 +95,8 @@ def advance_days(db: Session, character: Character, days: int, reason: str = "")
         "age": character.age,
         "season": season_label(character),
         "fans_delta": drift["fans_delta"],
-        "streaming_income": drift["streaming_income"],
+        "streaming_income": weekly["catalogue_income"],
         "new_streams": drift["new_streams"],
-        "weeks_settled": weekly,
+        "weeks_settled": weekly["weeks_settled"],
         "seasons_settled": seasonal,
     }

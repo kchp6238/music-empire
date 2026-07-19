@@ -3,8 +3,12 @@ import { Building2, Users, Sparkles } from 'lucide-react';
 import { TopBar } from '../shared/TopBar';
 import * as companyApi from '../../lib/api/company';
 import { useGameStore } from '../../state/useGameStore';
+import { won } from '../../lib/utils';
 
 const DEBUT_MIN_STAGE = 3;
+const FOUND_COST = 5000000;
+const RECRUIT_COST = 800000;
+const TRAINEE_TRAIN_COST = 300000;
 
 export function CompanyScreen() {
   const character = useGameStore((s) => s.character);
@@ -56,7 +60,7 @@ export function CompanyScreen() {
         {company === null && (
           <div className="me-panel">
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>회사 설립</div>
-            <div style={{ fontSize: 12, color: '#8B8496', marginBottom: 12 }}>설립 자본 5,000원이 필요합니다.</div>
+            <div style={{ fontSize: 12, color: '#8B8496', marginBottom: 12 }}>설립 자본 {won(FOUND_COST)}이 필요합니다.</div>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="회사명"
@@ -71,7 +75,7 @@ export function CompanyScreen() {
           <>
             <div className="me-panel" style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div className="me-display" style={{ fontSize: 18, fontWeight: 700 }}>{company.name}</div>
-              <button className="me-btn-ghost" disabled={busy} onClick={() => run(() => companyApi.recruitTrainee())}>+ 연습생 모집 (800원)</button>
+              <button className="me-btn-ghost" disabled={busy} onClick={() => run(() => companyApi.recruitTrainee())}>+ 연습생 모집 ({won(RECRUIT_COST)})</button>
             </div>
 
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6, color: '#8B8496' }}><Users size={14} /> 연습생</div>
@@ -92,7 +96,7 @@ export function CompanyScreen() {
                       <div style={{ fontSize: 11, color: '#5FBF8F' }}>데뷔 완료</div>
                     ) : (
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }} disabled={busy || t.curriculum_stage >= 5} onClick={() => run(() => companyApi.trainTrainee(t.id))}>트레이닝 (300원)</button>
+                        <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }} disabled={busy || t.curriculum_stage >= 5} onClick={() => run(() => companyApi.trainTrainee(t.id))}>트레이닝 ({won(TRAINEE_TRAIN_COST)})</button>
                         {canSelect && (
                           <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 11, borderColor: isSelected ? '#4FD1C5' : undefined, color: isSelected ? '#4FD1C5' : undefined }}
                             onClick={() => setSelected((sel) => isSelected ? sel.filter((x) => x !== t.id) : [...sel, t.id])}>

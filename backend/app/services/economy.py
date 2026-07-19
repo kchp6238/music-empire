@@ -22,8 +22,8 @@ BASE_WEIGHTS = {
 
 def compute_revenue_breakdown(overall_score, fame, fans_count, vocal_source, is_expert, money_delta):
     fame = float(fame)
-    gross = overall_score * 45 + fame * 8
-    expenses = (280 if vocal_source == "npc" else 0) + (140 if is_expert else 0)
+    gross = overall_score * 45000 + fame * 8000
+    expenses = (280000 if vocal_source == "npc" else 0) + (140000 if is_expert else 0)
 
     weights = dict(BASE_WEIGHTS)
     # more famous artists earn relatively more from live performance,

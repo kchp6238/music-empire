@@ -14,3 +14,11 @@ export function getIncomingInvites() {
 export function respondInvite(inviteId, accept) {
   return apiFetch(`/collab/invites/${inviteId}/respond`, { method: 'POST', body: { accept } });
 }
+
+export function getMyCollabs() {
+  return apiFetch('/collab/mine');
+}
+
+export function getCollabSong(songId) {
+  return apiFetch(`/collab/songs/${songId}`);
+}

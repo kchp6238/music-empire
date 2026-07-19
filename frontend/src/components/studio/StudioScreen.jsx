@@ -95,8 +95,8 @@ export function StudioScreen() {
                 <div className={`me-pill small ${draft.vocalSource === 'ai' ? 'active' : ''}`} onClick={() => setDraftField('vocalSource', 'ai')}>AI</div>
                 <div
                   className={`me-pill small ${draft.vocalSource === 'npc' ? 'active' : ''}`}
-                  style={character.money < 300 ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
-                  onClick={() => character.money >= 300 && setDraftField('vocalSource', 'npc')}
+                  style={character.money < 300000 ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                  onClick={() => character.money >= 300000 && setDraftField('vocalSource', 'npc')}
                 >NPC 고용</div>
               </div>
             </div>

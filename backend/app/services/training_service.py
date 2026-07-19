@@ -20,7 +20,7 @@ STAT_LABELS = {
     "composing": "작곡", "lyrics": "작사", "arrangement": "편곡", "vocal": "보컬",
     "production": "프로듀싱", "mixing": "믹싱", "business": "비즈니스", "marketing": "마케팅",
 }
-TRAIN_COST = 200
+TRAIN_COST = 200000
 STAT_CEILING = 95
 
 # Past this age, training the physical/performance stats stops paying off as
