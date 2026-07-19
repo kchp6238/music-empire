@@ -6,6 +6,7 @@ from pydantic import BaseModel, EmailStr
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+    invite_code: str | None = None
 
 
 class UserOut(BaseModel):

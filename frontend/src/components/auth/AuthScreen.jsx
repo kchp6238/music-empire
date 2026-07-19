@@ -1,22 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Disc3, ChevronRight } from 'lucide-react';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { getAuthConfig } from '../../lib/api/auth';
 import { useAuthStore } from '../../state/useAuthStore';
 
 export function AuthScreen() {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [inviteRequired, setInviteRequired] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const login = useAuthStore((s) => s.login);
   const register = useAuthStore((s) => s.register);
+
+  // The deployed instance is invite-gated; local dev usually isn't. Ask the
+  // server rather than hardcoding, so the same build works in both.
+  useEffect(() => {
+    getAuthConfig().then((c) => setInviteRequired(!!c.invite_required)).catch(() => {});
+  }, []);
 
   async function submit() {
     setError('');
     setBusy(true);
     try {
       if (mode === 'register') {
-        await register(email, password);
+        await register(email, password, inviteCode);
       }
       await login(email, password);
     } catch (e) {
@@ -26,35 +37,45 @@ export function AuthScreen() {
     }
   }
 
+  const canSubmit = email.trim() && password.trim()
+    && (mode === 'login' || !inviteRequired || inviteCode.trim());
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 24 }}>
-      <Disc3 size={44} style={{ color: '#E8A33D', marginBottom: 14 }} />
-      <div className="me-display" style={{ fontSize: 30, fontWeight: 800 }}>Music Empire</div>
-      <div style={{ color: '#8B8496', marginTop: 6, fontSize: 13 }}>{mode === 'login' ? '로그인' : '회원가입'}</div>
+    <div className="min-h-screen flex flex-col items-center justify-center text-center p-6">
+      <Disc3 size={44} className="text-accent mb-3.5" />
+      <div className="font-display text-3xl font-extrabold">Music Empire</div>
+      <div className="text-muted mt-1.5 text-sm">{mode === 'login' ? '로그인' : '회원가입'}</div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 24, width: 280 }}>
-        <input
-          type="email" placeholder="이메일" value={email} onChange={(e) => setEmail(e.target.value)}
-          className="me-mono" style={{ padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', background: '#1C1926', color: '#EDE9F0', outline: 'none' }}
-        />
-        <input
-          type="password" placeholder="비밀번호" value={password} onChange={(e) => setPassword(e.target.value)}
-          className="me-mono" style={{ padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', background: '#1C1926', color: '#EDE9F0', outline: 'none' }}
-        />
-      </div>
-
-      {error && <div style={{ color: '#C4576B', fontSize: 12, marginTop: 12 }}>{error}</div>}
-
-      <button className="me-btn-primary" style={{ marginTop: 20, display: 'inline-flex', alignItems: 'center', gap: 8 }} onClick={submit} disabled={busy || !email.trim() || !password.trim()}>
-        {mode === 'login' ? '로그인' : '회원가입 후 시작'} <ChevronRight size={17} />
-      </button>
-
-      <button
-        className="me-btn-ghost" style={{ marginTop: 14 }}
-        onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
+      <form
+        className="flex flex-col gap-2.5 mt-6 w-70"
+        onSubmit={(e) => { e.preventDefault(); if (canSubmit && !busy) submit(); }}
       >
+        <Input type="email" placeholder="이메일" autoComplete="email" className="font-mono"
+          value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Input type="password" placeholder="비밀번호 (8자 이상)" className="font-mono"
+          autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+          value={password} onChange={(e) => setPassword(e.target.value)} />
+        {mode === 'register' && inviteRequired && (
+          <Input placeholder="초대 코드" className="font-mono"
+            value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
+        )}
+
+        {error && <div className="text-danger text-xs mt-1">{error}</div>}
+
+        <Button type="submit" variant="primary" size="lg" className="mt-2 justify-center" disabled={busy || !canSubmit}>
+          {mode === 'login' ? '로그인' : '회원가입 후 시작'} <ChevronRight size={17} />
+        </Button>
+      </form>
+
+      <Button className="mt-3.5" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}>
         {mode === 'login' ? '계정이 없으신가요? 회원가입' : '이미 계정이 있으신가요? 로그인'}
-      </button>
+      </Button>
+
+      {mode === 'register' && inviteRequired && (
+        <div className="text-faint text-[11px] mt-3 max-w-xs">
+          이 서버는 초대 코드가 있어야 가입할 수 있습니다.
+        </div>
+      )}
     </div>
   );
 }

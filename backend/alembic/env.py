@@ -9,14 +9,15 @@ from alembic import context
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.config import settings
 from app.db.base import Base
+from app.db.session import DATABASE_URL  # already normalized for psycopg
 from app.models import *  # noqa: F401,F403 — registers all models on Base.metadata
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# escape % so ConfigParser doesn't treat URL-encoded passwords as interpolation
+config.set_main_option("sqlalchemy.url", DATABASE_URL.replace("%", "%%"))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

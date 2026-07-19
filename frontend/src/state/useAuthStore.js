@@ -4,8 +4,8 @@ import * as authApi from '../lib/api/auth';
 export const useAuthStore = create((set) => ({
   token: localStorage.getItem('me_token'),
 
-  async register(email, password) {
-    await authApi.register(email, password);
+  async register(email, password, inviteCode) {
+    await authApi.register(email, password, inviteCode);
   },
 
   async login(email, password) {

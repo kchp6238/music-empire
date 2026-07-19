@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -47,7 +47,7 @@ async def upload_recording(
 @router.get("/{recording_id}/audio")
 def get_audio(recording_id: str, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
     rec = recordings_service.get_owned(db, recording_id, character)
-    return FileResponse(recordings_service.file_path(rec), media_type=rec.mime_type)
+    return Response(content=rec.audio_data, media_type=rec.mime_type)
 
 
 @router.patch("/{recording_id}")

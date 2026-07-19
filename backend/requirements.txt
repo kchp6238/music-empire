@@ -11,6 +11,6 @@ bcrypt==4.0.1
 python-multipart==0.0.12
 python-dotenv==1.0.1
 
-# Postgres driver — not needed for local SQLite dev (default DATABASE_URL).
-# Install separately when pointing DATABASE_URL at Postgres:
-#   pip install "psycopg[binary]"
+# Postgres driver. Unused for local SQLite dev, but required on the deployed
+# instance — Railway sets DATABASE_URL to a postgresql:// URL.
+psycopg[binary]==3.2.3
