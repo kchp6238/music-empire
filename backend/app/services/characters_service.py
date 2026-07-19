@@ -2,7 +2,7 @@ import random
 
 from sqlalchemy.orm import Session
 
-from app.models.character import Character
+from app.models.character import Character, GAME_EPOCH
 from app.models.fan import FanPersona, CharacterFanLoyalty
 from app.services.game_data import BACKGROUNDS, BACKGROUNDS_BY_ID
 from app.services.js_math import js_round
@@ -23,11 +23,13 @@ def resolve_background(background_id: str) -> dict:
         "talent": _jitter(base["talent"], -15, 15, 5, 95),
         "fame": js_round(max(0, min(100, base["fame"] + random.uniform(-10, 10)))),
         "money": js_round(max(100, min(50000, base["money"] + random.uniform(-300, 300)))),
+        "start_age": max(16, base.get("start_age", 22) + random.randint(-3, 3)),
     }
 
 
 def create_character(db: Session, user_id: str, artist_name: str, background_id: str) -> Character:
     resolved = resolve_background(background_id)
+    start_age = resolved.get("start_age", 22)
     character = Character(
         user_id=user_id,
         artist_name=artist_name.strip() or "무명",
@@ -38,6 +40,12 @@ def create_character(db: Session, user_id: str, artist_name: str, background_id:
         fame=resolved["fame"],
         money=resolved["money"],
         fans_count=js_round(resolved["fame"] * 8 + 30),
+        # Everyone starts on the shared epoch; backdating the birthday is what
+        # gives each background its starting age. Subtracting years directly
+        # rather than start_age*365 — leap days otherwise push the birthday
+        # past the epoch and the character starts a year younger than intended.
+        game_date=GAME_EPOCH,
+        birth_date=GAME_EPOCH.replace(year=GAME_EPOCH.year - start_age),
     )
     db.add(character)
     db.flush()

@@ -10,6 +10,7 @@ from app.models.collab import CollabInvite, SongCollaborator
 from app.models.company import Company, Trainee, Group
 from app.models.online import Concert, ConcertTicket, MarketplaceListing
 from app.models.recording import VocalRecording
+from app.models.season import SeasonRecord
 
 __all__ = [
     "Base",
@@ -34,4 +35,5 @@ __all__ = [
     "ConcertTicket",
     "MarketplaceListing",
     "VocalRecording",
+    "SeasonRecord",
 ]

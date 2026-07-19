@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 
 from pydantic import BaseModel
 
@@ -55,6 +55,7 @@ class SongOut(BaseModel):
     fame_delta: float | None
     revenue_breakdown: dict | None = None
     released_at: datetime | None
+    released_on: date | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -91,6 +92,10 @@ class ReleaseResult(BaseModel):
     breakdown: ReleaseBreakdown
     revenue_breakdown: dict
     newly_unlocked: list[UnlockedAchievement] = []
+    # A release consumes a week of game time; this is what happened during it.
+    time: dict
     character_fame: float
     character_money: float
     character_fans_count: int
+    character_age: int
+    character_game_date: date

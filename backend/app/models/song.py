@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 
-from sqlalchemy import String, DateTime, Numeric, Integer, Boolean, ForeignKey, JSON
+from sqlalchemy import String, DateTime, Date, Numeric, Integer, Boolean, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -41,6 +41,9 @@ class Song(Base):
     revenue_breakdown: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     released_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # In-game release date — what weekly charts and season records key off.
+    # released_at stays as the real-world audit timestamp.
+    released_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)

@@ -1,10 +1,14 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 
-from sqlalchemy import String, DateTime, Numeric, Integer, ForeignKey, JSON
+from sqlalchemy import String, DateTime, Date, Numeric, Integer, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+# Every career starts here, so seasons/weeks line up across players regardless
+# of when they actually signed up.
+GAME_EPOCH = date(2026, 1, 1)
 
 
 class Character(Base):
@@ -21,9 +25,19 @@ class Character(Base):
     money: Mapped[float] = mapped_column(Numeric, nullable=False)
     fans_count: Mapped[int] = mapped_column(Integer, nullable=False)
     total_streams: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    # Last time the offline fan-drift / passive-income batch ran for this
-    # character — see docs/core-loop.md §3/§5 and services/fan_simulation.py.
-    last_simulated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # In-game calendar. Time advances only when the player *does* something
+    # (release, train, tour) — never in real time — so a career can be played
+    # out in one sitting and idling is never a strategy (GDD anti-pattern:
+    # 방치형 루프). services/time_service.py is the only thing that moves this.
+    game_date: Mapped[date] = mapped_column(Date, nullable=False, default=GAME_EPOCH)
+    birth_date: Mapped[date] = mapped_column(Date, nullable=False, default=GAME_EPOCH)
+    # Marks the last game-week/season already settled, so weekly chart and
+    # season payouts fire exactly once per period no matter how far a single
+    # action jumps the calendar.
+    last_settled_week: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_settled_season: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
@@ -32,3 +46,14 @@ class Character(Base):
     user: Mapped["User"] = relationship(back_populates="character")
     songs: Mapped[list["Song"]] = relationship(back_populates="character", cascade="all, delete-orphan")
     loyalty: Mapped[list["CharacterFanLoyalty"]] = relationship(back_populates="character", cascade="all, delete-orphan")
+
+    @property
+    def age(self) -> int:
+        """Whole years between birth_date and the current in-game date."""
+        d, b = self.game_date, self.birth_date
+        return d.year - b.year - ((d.month, d.day) < (b.month, b.day))
+
+    @property
+    def game_day_index(self) -> int:
+        """Days since the shared epoch — the basis for week/season numbering."""
+        return (self.game_date - GAME_EPOCH).days

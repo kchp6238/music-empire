@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models.character import Character
 from app.models.company import Company, Trainee, Group
+from app.services import time_service
 
 FOUND_COST = 5000
 RECRUIT_COST = 800
@@ -62,6 +63,7 @@ def recruit_trainee(db: Session, character: Character, name: str | None) -> Trai
     )
     db.add(trainee)
     db.commit()
+    time_service.advance_days(db, character, time_service.ACTION_DAYS["recruit"], reason="recruit")
     db.refresh(trainee)
     return trainee
 
@@ -84,6 +86,7 @@ def train_trainee(db: Session, character: Character, trainee_id: str) -> Trainee
     trainee.stats = new_stats
     trainee.curriculum_stage += 1
     db.commit()
+    time_service.advance_days(db, character, time_service.ACTION_DAYS["trainee_train"], reason="trainee_train")
     db.refresh(trainee)
     return trainee
 

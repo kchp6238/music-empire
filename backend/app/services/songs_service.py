@@ -8,7 +8,7 @@ from app.models.song import Song
 from app.models.fan import FanPersona, CharacterFanLoyalty, SongReaction
 from app.models.collab import SongCollaborator
 from app.services.patterns import build_combined_pattern
-from app.services import scoring, economy, achievements
+from app.services import scoring, economy, achievements, time_service
 from app.services.trends import trend_multiplier
 
 
@@ -65,24 +65,16 @@ def update_draft(db: Session, song: Song, data: dict) -> Song:
     return song
 
 
-def _released_today(db: Session, character: Character) -> bool:
-    today = date.today()
-    return (
-        db.query(Song)
-        .filter(Song.character_id == character.id, Song.released_at.isnot(None))
-        .filter(Song.released_at >= datetime(today.year, today.month, today.day, tzinfo=timezone.utc))
-        .first()
-        is not None
-    )
-
-
 def release_song(db: Session, song: Song, character: Character) -> dict:
     """Server-side authoritative scoring — see docs/server-architecture.md §3.
-    The client's own computeRelease() result is never trusted or accepted here."""
+    The client's own computeRelease() result is never trusted or accepted here.
+
+    Releasing costs a week of game time (time_service.ACTION_DAYS), which
+    replaces the old one-release-per-real-day throttle: spacing between
+    releases is now a property of the in-game calendar rather than a rule.
+    """
     if song.released_at is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Song already released")
-    if _released_today(db, character):
-        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="One release per day per character")
 
     combined = build_combined_pattern(song.pattern, song.structure)
     fan_personas = [
@@ -97,7 +89,8 @@ def release_song(db: Session, song: Song, character: Character) -> dict:
         "chord_preset_id": song.chord_preset_id, "production_mode": song.production_mode,
         "vocal_source": song.vocal_source, "structure": song.structure, "lyrics": song.lyrics,
     }
-    tmult = trend_multiplier(song.genre_tags, song.mood_tags)
+    # Scored against the trend on the release date, before the calendar moves.
+    tmult = trend_multiplier(song.genre_tags, song.mood_tags, character.game_date)
     result = scoring.compute_release(character, song_input, combined, fan_personas, persona_loyalty, trend_multiplier=tmult)
 
     breakdown_money = economy.compute_revenue_breakdown(
@@ -118,6 +111,7 @@ def release_song(db: Session, song: Song, character: Character) -> dict:
     song.fame_delta = result["fame_delta"]
     song.revenue_breakdown = breakdown_money
     song.released_at = datetime.now(timezone.utc)
+    song.released_on = character.game_date
 
     for r in result["persona_results"]:
         db.add(SongReaction(
@@ -147,6 +141,11 @@ def release_song(db: Session, song: Song, character: Character) -> dict:
     db.commit()
     db.refresh(song)
 
+    # A release eats a week of calendar: fans drift, the trend may rotate, and
+    # any week/season boundary crossed gets settled. Runs after the release is
+    # committed so the new song counts toward the period it was released in.
+    time_summary = time_service.advance_days(db, character, time_service.ACTION_DAYS["release"], reason="release")
+
     newly_unlocked = achievements.check_and_unlock(db, character)
 
     return {
@@ -155,7 +154,10 @@ def release_song(db: Session, song: Song, character: Character) -> dict:
         "breakdown": result["breakdown"],
         "revenue_breakdown": breakdown_money,
         "newly_unlocked": newly_unlocked,
+        "time": time_summary,
         "character_fame": float(character.fame),
         "character_money": float(character.money),
         "character_fans_count": character.fans_count,
+        "character_age": character.age,
+        "character_game_date": character.game_date,
     }
