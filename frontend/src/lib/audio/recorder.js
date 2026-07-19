@@ -27,10 +27,15 @@ function pickMimeType() {
 }
 
 /**
- * Starts recording. Returns a handle with stop() -> {blob, mimeType, durationSec}.
+ * Starts recording. Returns a handle with stop() -> {blob, mimeType, durationSec, peak}.
  * onLevel (0..1) fires ~20x/sec so the UI can draw an input meter.
+ * `peak` is the loudest input seen across the whole take — the studio uses it
+ * to tell "mic captured nothing" apart from "playback problem", which is
+ * otherwise indistinguishable from a silent result.
+ * monitor: route the mic to the speakers so the singer hears themselves
+ * (needs headphones — on speakers it will feed back).
  */
-export async function startRecording({ onLevel } = {}) {
+export async function startRecording({ onLevel, monitor = false } = {}) {
   if (!isRecordingSupported()) {
     throw new Error('이 브라우저는 녹음을 지원하지 않습니다');
   }
@@ -60,24 +65,27 @@ export async function startRecording({ onLevel } = {}) {
   // context so monitoring can't be disturbed by transport start/stop.
   let audioCtx = null;
   let rafId = null;
-  if (onLevel) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const source = audioCtx.createMediaStreamSource(stream);
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 512;
-    source.connect(analyser);
-    const buf = new Uint8Array(analyser.frequencyBinCount);
-    let last = 0;
-    const tick = () => {
-      analyser.getByteTimeDomainData(buf);
-      let peak = 0;
-      for (let i = 0; i < buf.length; i++) peak = Math.max(peak, Math.abs(buf[i] - 128) / 128);
-      const now = performance.now();
-      if (now - last > 50) { last = now; onLevel(peak); }
-      rafId = requestAnimationFrame(tick);
-    };
+  let takePeak = 0; // loudest sample seen for the whole take
+
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const source = audioCtx.createMediaStreamSource(stream);
+  const analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 512;
+  source.connect(analyser);
+  if (monitor) source.connect(audioCtx.destination);
+
+  const buf = new Uint8Array(analyser.frequencyBinCount);
+  let last = 0;
+  const tick = () => {
+    analyser.getByteTimeDomainData(buf);
+    let peak = 0;
+    for (let i = 0; i < buf.length; i++) peak = Math.max(peak, Math.abs(buf[i] - 128) / 128);
+    if (peak > takePeak) takePeak = peak;
+    const now = performance.now();
+    if (onLevel && now - last > 50) { last = now; onLevel(peak); }
     rafId = requestAnimationFrame(tick);
-  }
+  };
+  rafId = requestAnimationFrame(tick);
 
   const startedAt = performance.now();
   recorder.start();
@@ -96,6 +104,7 @@ export async function startRecording({ onLevel } = {}) {
       return {
         blob: new Blob(chunks, { type }),
         mimeType: type,
+        peak: takePeak,
         durationSec: (performance.now() - startedAt) / 1000,
       };
     },

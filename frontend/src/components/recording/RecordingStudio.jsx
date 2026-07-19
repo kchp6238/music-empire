@@ -34,11 +34,16 @@ export function RecordingStudio() {
   const [title, setTitle] = useState('');
   const [playingId, setPlayingId] = useState(null);
   const [withBeat, setWithBeat] = useState(true);
+  const [monitor, setMonitor] = useState(false);
+  // Diagnostics for the last take: input peak + a local blob URL, so a silent
+  // result can be traced to mic capture vs. server playback.
+  const [lastTake, setLastTake] = useState(null);
 
   const handleRef = useRef(null);
   const timerRef = useRef(null);
   const audioRef = useRef(null);
   const urlCacheRef = useRef({});
+  const lastTakeUrlRef = useRef(null);
 
   async function loadTakes() {
     try { setTakes(await recordingsApi.listRecordings()); } catch (e) { setError(e.message); setTakes([]); }
@@ -48,6 +53,7 @@ export function RecordingStudio() {
   // Revoke object URLs on unmount so blobs aren't leaked between visits
   useEffect(() => () => {
     Object.values(urlCacheRef.current).forEach((u) => URL.revokeObjectURL(u));
+    if (lastTakeUrlRef.current) URL.revokeObjectURL(lastTakeUrlRef.current);
     if (audioRef.current) audioRef.current.pause();
     if (handleRef.current) handleRef.current.cancel();
     if (timerRef.current) clearInterval(timerRef.current);
@@ -60,8 +66,9 @@ export function RecordingStudio() {
       if (withBeat && draft.arrangement.length > 0) {
         await play(buildCombinedPattern(draft.sections, draft.arrangement), draft.bpm, 'recording-backing');
       }
-      handleRef.current = await startRecording({ onLevel: setLevel });
+      handleRef.current = await startRecording({ onLevel: setLevel, monitor });
       setRecording(true);
+      setLastTake(null);
       setElapsed(0);
       timerRef.current = setInterval(() => setElapsed((e) => e + 0.25), 250);
     } catch (e) {
@@ -78,9 +85,14 @@ export function RecordingStudio() {
     stop();
     setBusy(true);
     try {
-      const { blob, mimeType, durationSec } = await handleRef.current.stop();
+      const { blob, mimeType, durationSec, peak } = await handleRef.current.stop();
       handleRef.current = null;
       if (!blob.size) throw new Error('녹음된 오디오가 비어 있습니다');
+      // Keep a local URL so the take can be auditioned without the server —
+      // if this plays but the saved one doesn't, the problem is playback, not capture.
+      if (lastTakeUrlRef.current) URL.revokeObjectURL(lastTakeUrlRef.current);
+      lastTakeUrlRef.current = URL.createObjectURL(blob);
+      setLastTake({ url: lastTakeUrlRef.current, peak, durationSec, bytes: blob.size, mimeType });
       // Attach to the open draft when there is one, so the take belongs to the song.
       let songId = persistedDraftId;
       if (!songId && draft.arrangement.length > 0) {
@@ -201,7 +213,16 @@ export function RecordingStudio() {
                 <input type="checkbox" checked={withBeat} onChange={(e) => setWithBeat(e.target.checked)} disabled={recording} />
                 반주와 함께
               </label>
+              <label className="flex items-center gap-2 text-xs text-muted cursor-pointer select-none" title="녹음 중 내 목소리를 스피커로 들려줍니다. 헤드폰을 껴야 하울링이 생기지 않습니다.">
+                <input type="checkbox" checked={monitor} onChange={(e) => setMonitor(e.target.checked)} disabled={recording} />
+                내 목소리 듣기
+              </label>
             </div>
+            {monitor && !recording && (
+              <div className="text-[11px] text-accent mt-2">
+                ⚠ 반드시 헤드폰을 착용하세요. 스피커로 들으면 소리가 되먹임(하울링)됩니다.
+              </div>
+            )}
             {withBeat && draft.arrangement.length === 0 && (
               <div className="text-[11px] text-faint mt-2">
                 비트메이커에 곡 구조가 없어 반주 없이 녹음됩니다.
@@ -209,6 +230,32 @@ export function RecordingStudio() {
             )}
             {recording && <div className="text-[11px] text-accent2 mt-2">녹음 중… 정지를 누르면 서버에 저장됩니다.</div>}
           </Panel>
+
+          {lastTake && (
+            <Panel className={`mb-6 ${lastTake.peak < 0.02 ? 'border-danger/60' : 'border-accent2/40'}`}>
+              <div className="text-sm font-bold mb-2">방금 녹음한 테이크</div>
+              {lastTake.peak < 0.02 ? (
+                <div className="text-xs text-danger mb-3">
+                  마이크에 소리가 거의 들어오지 않았습니다 (최대 입력 {(lastTake.peak * 100).toFixed(1)}%).
+                  <br />파일은 저장됐지만 사실상 무음입니다. 윈도우 <b>설정 → 시스템 → 소리 → 입력</b>에서
+                  올바른 마이크가 선택되어 있는지, 음소거·입력 볼륨을 확인해 주세요.
+                </div>
+              ) : (
+                <div className="text-xs text-accent2 mb-3">
+                  입력 신호가 정상적으로 감지되었습니다 (최대 입력 {(lastTake.peak * 100).toFixed(0)}%).
+                </div>
+              )}
+              <div className="text-[11px] text-muted mb-2">
+                {fmtDuration(lastTake.durationSec)} · {(lastTake.bytes / 1024).toFixed(0)}KB · {lastTake.mimeType}
+              </div>
+              {/* Plays straight from the local blob — no server involved, so this
+                  isolates capture problems from playback/serving problems. */}
+              <audio controls src={lastTake.url} className="w-full" />
+              <div className="text-[11px] text-faint mt-2">
+                여기서는 들리는데 아래 목록에서 안 들린다면 재생 쪽 문제입니다. 여기서도 안 들리면 마이크 입력 문제입니다.
+              </div>
+            </Panel>
+          )}
 
           <div className="text-sm font-bold text-muted mb-3 flex items-center gap-2">
             <Music2 size={14} /> 저장된 테이크
