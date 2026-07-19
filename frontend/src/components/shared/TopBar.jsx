@@ -6,6 +6,7 @@ import { useAuthStore } from '../../state/useAuthStore';
 const TABS = [
   { path: '/studio', label: '스튜디오' },
   { path: '/beatmaker', label: '비트메이커' },
+  { path: '/recording', label: '녹음실' },
   { path: '/community', label: '커뮤니티' },
   { path: '/collab', label: '협업' },
   { path: '/company', label: '회사' },

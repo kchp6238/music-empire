@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth, characters, songs, community, fans, progress, collab, company, online
+from app.routers import auth, characters, songs, community, fans, progress, collab, company, online, recordings
 
 app = FastAPI(title="Music Empire API")
 
@@ -23,6 +23,7 @@ app.include_router(progress.router)
 app.include_router(collab.router)
 app.include_router(company.router)
 app.include_router(online.router)
+app.include_router(recordings.router)
 
 
 @app.get("/health")

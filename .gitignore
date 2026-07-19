@@ -13,6 +13,9 @@ venv/
 *.egg-info/
 *.db
 
+# Uploaded vocal takes (audio blobs live on disk, metadata in the DB)
+backend/uploads/
+
 # Env
 .env
 .env.*

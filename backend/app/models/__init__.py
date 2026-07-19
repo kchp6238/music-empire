@@ -9,6 +9,7 @@ from app.models.achievement import CharacterAchievement
 from app.models.collab import CollabInvite, SongCollaborator
 from app.models.company import Company, Trainee, Group
 from app.models.online import Concert, ConcertTicket, MarketplaceListing
+from app.models.recording import VocalRecording
 
 __all__ = [
     "Base",
@@ -32,4 +33,5 @@ __all__ = [
     "Concert",
     "ConcertTicket",
     "MarketplaceListing",
+    "VocalRecording",
 ]

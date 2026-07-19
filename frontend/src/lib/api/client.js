@@ -4,7 +4,14 @@ function getToken() {
   return localStorage.getItem('me_token');
 }
 
-export async function apiFetch(path, { method = 'GET', body, form, auth = true } = {}) {
+/**
+ * body      -> JSON request
+ * form      -> URLSearchParams (login)
+ * formData  -> FormData (file upload; Content-Type is intentionally left unset
+ *              so the browser can add the multipart boundary)
+ * asBlob    -> resolve with a Blob instead of JSON (authenticated audio)
+ */
+export async function apiFetch(path, { method = 'GET', body, form, formData, asBlob = false, auth = true } = {}) {
   const headers = {};
   if (body) headers['Content-Type'] = 'application/json';
   if (form) headers['Content-Type'] = 'application/x-www-form-urlencoded';
@@ -16,7 +23,7 @@ export async function apiFetch(path, { method = 'GET', body, form, auth = true }
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
-    body: form ? form : body ? JSON.stringify(body) : undefined,
+    body: formData ? formData : form ? form : body ? JSON.stringify(body) : undefined,
   });
 
   if (!res.ok) {
@@ -31,5 +38,6 @@ export async function apiFetch(path, { method = 'GET', body, form, auth = true }
   }
 
   if (res.status === 204) return null;
+  if (asBlob) return res.blob();
   return res.json();
 }
