@@ -7,6 +7,7 @@ import * as charactersApi from '../lib/api/characters';
 import * as songsApi from '../lib/api/songs';
 import * as communityApi from '../lib/api/community';
 import * as collabApi from '../lib/api/collab';
+import * as timeApi from '../lib/api/time';
 
 const FAN_PERSONAS_BY_ID = Object.fromEntries(FAN_PERSONAS.map((p) => [p.id, p]));
 
@@ -22,6 +23,8 @@ function mapCharacter(apiChar) {
     money: apiChar.money,
     fansCount: apiChar.fans_count,
     totalStreams: apiChar.total_streams ?? 0,
+    gameDate: apiChar.game_date,
+    age: apiChar.age,
     songs: [],
   };
 }
@@ -100,9 +103,9 @@ export const useGameStore = create((set, get) => ({
   playingId: null,
   communityTab: 'feed',
   followedArtists: [],   // list of {followed_type, followed_id}
-  offlineSummary: null,  // offline fan-drift / passive income since last login
   persistedDraftId: null, // server id of the open draft (set on first save/load)
   draftSavedAt: null,     // timestamp of the last successful save, for the UI indicator
+  lastTimeSummary: null,  // what happened during the most recent timed action
 
   setArtistNameInput: (v) => set({ artistNameInput: v }),
 
@@ -117,7 +120,8 @@ export const useGameStore = create((set, get) => ({
 
   // Called once on app load to restore the session's character (and
   // released songs) after a refresh — see docs/mvp-plan.md DoD #1.
-  // GET /characters/me also settles offline fan drift + passive income.
+  // Loading no longer advances anything: the in-game calendar only moves on
+  // player actions (backend services/time_service.py).
   loadCharacter: async () => {
     try {
       const res = await charactersApi.getMyCharacter();
@@ -134,13 +138,35 @@ export const useGameStore = create((set, get) => ({
       } catch {
         // ignore
       }
-      set({ character, characterLoaded: true, offlineSummary: res.offline_summary || null, followedArtists });
+      set({ character, characterLoaded: true, followedArtists });
     } catch {
       set({ character: null, characterLoaded: true });
     }
   },
-  resetCharacterLoaded: () => set({ character: null, characterLoaded: false, offlineSummary: null, followedArtists: [] }),
-  dismissOfflineSummary: () => set({ offlineSummary: null }),
+  resetCharacterLoaded: () => set({ character: null, characterLoaded: false, lastTimeSummary: null, followedArtists: [] }),
+
+  // Timed actions: the server moves the in-game calendar and reports what
+  // happened in the gap (fans, income, weeks/seasons settled). Both refresh
+  // the character from the response rather than re-fetching.
+  trainStat: async (stat) => {
+    const res = await timeApi.train(stat);
+    set((s) => ({
+      character: { ...mapCharacter(res.character), songs: s.character ? s.character.songs : [] },
+      lastTimeSummary: { ...res.time, message: res.message },
+    }));
+    return res;
+  },
+
+  restWeek: async () => {
+    const res = await timeApi.rest();
+    set((s) => ({
+      character: { ...mapCharacter(res.character), songs: s.character ? s.character.songs : [] },
+      lastTimeSummary: { ...res.time, message: res.message },
+    }));
+    return res;
+  },
+
+  dismissTimeSummary: () => set({ lastTimeSummary: null }),
 
   // Re-pull the character (money/fame/fans) after an action that changes it
   // server-side — company/concert/marketplace spending. Preserves loaded songs.
@@ -433,9 +459,13 @@ export const useGameStore = create((set, get) => ({
         fame: result.character_fame,
         money: result.character_money,
         fansCount: result.character_fans_count,
+        // a release consumes a week of game time
+        gameDate: result.character_game_date,
+        age: result.character_age,
         songs: [...state.character.songs, mapSong(song)],
       },
       lastResult,
+      lastTimeSummary: result.time ? { ...result.time, message: '발매 후 한 주가 지났습니다.' } : null,
       // released: the row is no longer a draft, so detach from it
       persistedDraftId: null,
       draftSavedAt: null,

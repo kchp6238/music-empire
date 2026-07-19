@@ -3,8 +3,9 @@ import { ChevronRight, Music2, TrendingUp, Sparkles } from 'lucide-react';
 import { TopBar } from '../shared/TopBar';
 import { MiniBar } from '../shared/MiniBar';
 import { TrendBanner } from '../shared/TrendBanner';
-import { OfflineSummaryToast } from '../shared/OfflineSummaryToast';
+import { TimePassedToast } from '../shared/TimePassedToast';
 import { AchievementsPanel } from '../shared/AchievementsPanel';
+import { TrainingPanel } from './TrainingPanel';
 import { GENRES, MOODS, CHORD_PRESETS, TIER_COLOR } from '../../lib/gameData/constants';
 import { useGameStore } from '../../state/useGameStore';
 
@@ -25,7 +26,7 @@ export function StudioScreen() {
     <div>
       <TopBar character={character} />
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '20px 24px 0' }}>
-        <OfflineSummaryToast />
+        <TimePassedToast />
         <TrendBanner />
       </div>
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '8px 24px 20px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20 }}>
@@ -115,6 +116,7 @@ export function StudioScreen() {
             <span style={{ fontSize: 12, color: '#8B8496' }}>누적 스트리밍</span>
             <span className="me-mono" style={{ fontSize: 14, color: '#4FD1C5' }}>{(character.totalStreams || 0).toLocaleString('ko-KR')}</span>
           </div>
+          <TrainingPanel />
           <div style={{ marginBottom: 16 }}><AchievementsPanel /></div>
           {character.songs.length > 0 && (
             <div className="me-panel">

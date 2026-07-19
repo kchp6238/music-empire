@@ -23,9 +23,18 @@ export function TopBar({ character }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <Disc3 size={20} style={{ color: '#E8A33D' }} />
         <div>
-          <div className="me-display" style={{ fontSize: 15, fontWeight: 700 }}>{character.artistName}</div>
+          <div className="me-display" style={{ fontSize: 15, fontWeight: 700 }}>
+            {character.artistName}
+            {character.age != null && <span style={{ fontSize: 11, color: '#8B8496', fontWeight: 400, marginLeft: 6 }}>{character.age}세</span>}
+          </div>
           <div style={{ fontSize: 11, color: '#8B8496' }}>{character.backgroundName}</div>
         </div>
+        {character.gameDate && (
+          <div className="me-mono" style={{ fontSize: 12, color: '#4FD1C5', border: '1px solid rgba(79,209,197,0.35)', borderRadius: 8, padding: '4px 10px' }}
+            title="게임 내 날짜 — 곡 발매·훈련 같은 행동을 하면 흘러갑니다">
+            {character.gameDate}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 6, marginLeft: 6 }}>
           {TABS.map((tab) => (
             <button
