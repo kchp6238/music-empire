@@ -28,9 +28,22 @@ def list_my_songs(db: Session = Depends(get_db), character: Character = Depends(
     return songs_service.list_released(db, character)
 
 
+# NOTE: must stay above the /{song_id} routes — otherwise FastAPI matches
+# "drafts" as a song_id and this endpoint becomes unreachable.
+@router.get("/drafts", response_model=list[SongOut])
+def list_my_drafts(db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    return songs_service.list_drafts(db, character)
+
+
 @router.get("/{song_id}", response_model=SongOut)
 def get_draft(song_id: str, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
     return songs_service.get_owned_draft(db, song_id, character)
+
+
+@router.delete("/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_draft(song_id: str, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    song = songs_service.get_owned_draft(db, song_id, character)
+    songs_service.delete_draft(db, song)
 
 
 @router.patch("/{song_id}", response_model=SongOut)

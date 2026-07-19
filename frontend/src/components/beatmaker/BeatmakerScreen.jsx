@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 import { TopBar } from '../shared/TopBar';
+import { DraftBar } from './DraftBar';
 import { Timeline } from './Timeline';
 import { DrumGrid } from './DrumGrid';
 import { BassGuitarPanel, PianoPanel } from './PianoRollPanel';
@@ -65,6 +66,7 @@ export function BeatmakerScreen() {
     <div>
       <TopBar character={character} />
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 24px 60px' }}>
+        <DraftBar />
         <Timeline />
 
         <div className="me-panel" style={{ marginBottom: 20 }}>

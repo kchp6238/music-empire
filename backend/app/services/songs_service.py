@@ -21,11 +21,29 @@ def list_released(db: Session, character: Character) -> list[Song]:
     )
 
 
+def list_drafts(db: Session, character: Character) -> list[Song]:
+    """Unreleased works-in-progress, newest first — backs the editor's
+    save/load flow so a song survives leaving the page."""
+    return (
+        db.query(Song)
+        .filter(Song.character_id == character.id, Song.released_at.is_(None))
+        .order_by(Song.updated_at.desc())
+        .all()
+    )
+
+
 def get_owned_draft(db: Session, song_id: str, character: Character) -> Song:
     song = db.get(Song, song_id)
     if song is None or song.character_id != character.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
     return song
+
+
+def delete_draft(db: Session, song: Song) -> None:
+    if song.released_at is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="발매된 곡은 삭제할 수 없습니다")
+    db.delete(song)
+    db.commit()
 
 
 def create_draft(db: Session, character: Character, data: dict) -> Song:

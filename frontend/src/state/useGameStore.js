@@ -45,6 +45,48 @@ const initialDraft = () => ({
   sections: emptySections(), arrangement: [], editingSection: SECTION_TYPES[0],
 });
 
+// Editor draft -> API payload. Single source of truth for the shape, shared by
+// manual save, collab draft-persist, and release.
+function buildDraftPayload(draft) {
+  return {
+    title: draft.title,
+    bpm: draft.bpm,
+    genre_tags: draft.genres,
+    mood_tags: draft.moods,
+    chord_preset_id: draft.chordPresetId,
+    production_mode: draft.productionMode,
+    vocal_source: draft.vocalSource,
+    structure: draft.arrangement,
+    pattern: draft.sections,
+    lyrics: Object.fromEntries(Object.keys(draft.sections).map((k) => [k, draft.sections[k].lyrics])),
+  };
+}
+
+// API song -> editor draft. Merges onto a fresh emptySections() so a draft
+// saved before a section/field existed still loads with every lane present.
+function mapApiSongToDraft(apiSong) {
+  const sections = emptySections();
+  Object.entries(apiSong.pattern || {}).forEach(([key, sec]) => {
+    if (sections[key]) sections[key] = { ...sections[key], ...sec };
+  });
+  Object.entries(apiSong.lyrics || {}).forEach(([key, text]) => {
+    if (sections[key]) sections[key] = { ...sections[key], lyrics: text || '' };
+  });
+  const arrangement = apiSong.structure || [];
+  return {
+    title: apiSong.title || '',
+    genres: apiSong.genre_tags || [],
+    moods: apiSong.mood_tags || [],
+    bpm: apiSong.bpm || 100,
+    chordPresetId: apiSong.chord_preset_id || 'p1',
+    productionMode: apiSong.production_mode || 'beginner',
+    vocalSource: apiSong.vocal_source || 'self',
+    sections,
+    arrangement,
+    editingSection: arrangement[0] || SECTION_TYPES[0],
+  };
+}
+
 export const useGameStore = create((set, get) => ({
   artistNameInput: '',
   character: null,
@@ -59,7 +101,8 @@ export const useGameStore = create((set, get) => ({
   communityTab: 'feed',
   followedArtists: [],   // list of {followed_type, followed_id}
   offlineSummary: null,  // offline fan-drift / passive income since last login
-  persistedDraftId: null, // set once a draft is saved server-side for collaboration
+  persistedDraftId: null, // server id of the open draft (set on first save/load)
+  draftSavedAt: null,     // timestamp of the last successful save, for the UI indicator
 
   setArtistNameInput: (v) => set({ artistNameInput: v }),
 
@@ -298,50 +341,57 @@ export const useGameStore = create((set, get) => ({
     set({ isPlaying: false, currentStep: -1, playingId: null });
   },
 
-  // Server-authoritative: the draft is saved and re-scored by
-  // backend/app/services/scoring.py — see docs/server-architecture.md §3.
-  // Nothing computed client-side (computeRelease.js) is trusted or sent.
-  // Save the current draft server-side (so collaborators can be invited to it)
-  // and remember its id. Release reuses this id instead of creating a new draft.
-  saveDraftForCollab: async () => {
+  // Save the work-in-progress to the server. Creates the draft row the first
+  // time, PATCHes it thereafter, so repeated saves don't pile up rows.
+  // Returns the draft id. Release and collab-invite both reuse it.
+  saveDraft: async () => {
     const s = get();
-    if (s.persistedDraftId) return s.persistedDraftId;
-    const lyrics = Object.fromEntries(Object.keys(s.draft.sections).map((k) => [k, s.draft.sections[k].lyrics]));
-    const draftRow = await songsApi.createDraft({
-      title: s.draft.title, bpm: s.draft.bpm, genre_tags: s.draft.genres, mood_tags: s.draft.moods,
-      chord_preset_id: s.draft.chordPresetId, production_mode: s.draft.productionMode,
-      vocal_source: s.draft.vocalSource, structure: s.draft.arrangement, pattern: s.draft.sections, lyrics,
-    });
-    set({ persistedDraftId: draftRow.id });
+    const payload = buildDraftPayload(s.draft);
+    if (s.persistedDraftId) {
+      await songsApi.updateDraft(s.persistedDraftId, payload);
+      set({ draftSavedAt: Date.now() });
+      return s.persistedDraftId;
+    }
+    const draftRow = await songsApi.createDraft(payload);
+    set({ persistedDraftId: draftRow.id, draftSavedAt: Date.now() });
     return draftRow.id;
   },
 
+  listDrafts: () => songsApi.listMyDrafts(),
+
+  loadDraft: async (songId) => {
+    if (get().isPlaying) get().stop();
+    const apiSong = await songsApi.getSong(songId);
+    set({ draft: mapApiSongToDraft(apiSong), persistedDraftId: apiSong.id, draftSavedAt: null });
+  },
+
+  deleteDraft: async (songId) => {
+    await songsApi.deleteDraft(songId);
+    // if the open draft was the deleted one, detach so a later save creates fresh
+    if (get().persistedDraftId === songId) set({ persistedDraftId: null });
+  },
+
+  // Start a brand-new song without touching the saved draft on the server.
+  newDraft: () => {
+    if (get().isPlaying) get().stop();
+    set({ draft: initialDraft(), persistedDraftId: null, draftSavedAt: null });
+  },
+
   inviteCollaborator: async (inviteeCharacterId, role, contributionPct) => {
-    const draftId = await get().saveDraftForCollab();
+    const draftId = await get().saveDraft();
     return collabApi.invite(draftId, inviteeCharacterId, role, contributionPct);
   },
 
+  // Server-authoritative: the draft is saved and re-scored by
+  // backend/app/services/scoring.py — see docs/server-architecture.md §3.
+  // Nothing computed client-side (computeRelease.js) is trusted or sent.
   handleRelease: async () => {
     const s = get();
     if (s.isPlaying) get().stop();
 
-    let draftId = s.persistedDraftId;
-    if (!draftId) {
-      const lyrics = Object.fromEntries(Object.keys(s.draft.sections).map((k) => [k, s.draft.sections[k].lyrics]));
-      const draftRow = await songsApi.createDraft({
-        title: s.draft.title,
-        bpm: s.draft.bpm,
-        genre_tags: s.draft.genres,
-        mood_tags: s.draft.moods,
-        chord_preset_id: s.draft.chordPresetId,
-        production_mode: s.draft.productionMode,
-        vocal_source: s.draft.vocalSource,
-        structure: s.draft.arrangement,
-        pattern: s.draft.sections,
-        lyrics,
-      });
-      draftId = draftRow.id;
-    }
+    // Always flush the latest edits first, so releasing can't publish a stale
+    // server-side draft when the player edited after their last manual save.
+    const draftId = await get().saveDraft();
     const result = await songsApi.releaseSong(draftId);
     const song = result.song;
     const combined = buildCombinedPattern(song.pattern, song.structure);
@@ -386,11 +436,13 @@ export const useGameStore = create((set, get) => ({
         songs: [...state.character.songs, mapSong(song)],
       },
       lastResult,
+      // released: the row is no longer a draft, so detach from it
       persistedDraftId: null,
+      draftSavedAt: null,
     }));
     playSuccessChime();
     return lastResult;
   },
 
-  nextSong: () => set({ draft: initialDraft(), persistedDraftId: null }),
+  nextSong: () => set({ draft: initialDraft(), persistedDraftId: null, draftSavedAt: null }),
 }));
