@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Mic, Square, Trash2, Play, Pause, Link2, Link2Off, Music2 } from 'lucide-react';
+import { Mic, Square, Trash2, Play, Pause, Link2, Link2Off, Music2, Wand2 } from 'lucide-react';
 import { TopBar } from '../shared/TopBar';
 import { PageTransition } from '../ui/PageTransition';
 import { Panel } from '../ui/Panel';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { AutotunePanel } from './AutotunePanel';
 import { startRecording, isRecordingSupported } from '../../lib/audio/recorder';
 import * as recordingsApi from '../../lib/api/recordings';
 import { buildCombinedPattern } from '../../lib/patterns';
@@ -38,6 +39,7 @@ export function RecordingStudio() {
   // Diagnostics for the last take: input peak + a local blob URL, so a silent
   // result can be traced to mic capture vs. server playback.
   const [lastTake, setLastTake] = useState(null);
+  const [autotuneFor, setAutotuneFor] = useState(null); // take id with the panel open
 
   const handleRef = useRef(null);
   const timerRef = useRef(null);
@@ -264,25 +266,39 @@ export function RecordingStudio() {
           {takes && takes.length === 0 && <div className="text-xs text-faint">아직 녹음한 테이크가 없습니다.</div>}
           <div className="flex flex-col gap-2">
             {takes && takes.map((t) => (
-              <Panel key={t.id} className="py-3 px-4 flex items-center gap-3">
-                <Button size="sm" onClick={() => togglePlay(t)} aria-label={playingId === t.id ? '정지' : '재생'}>
-                  {playingId === t.id ? <Pause size={13} /> : <Play size={13} />}
-                </Button>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold truncate">{t.title}</div>
-                  <div className="text-[11px] text-muted">
-                    {fmtDuration(t.duration_sec)} · {(t.size_bytes / 1024).toFixed(0)}KB
-                    {t.song_id ? ' · 곡에 연결됨' : ''}
+              <div key={t.id}>
+                <Panel className="py-3 px-4 flex items-center gap-3">
+                  <Button size="sm" onClick={() => togglePlay(t)} aria-label={playingId === t.id ? '정지' : '재생'}>
+                    {playingId === t.id ? <Pause size={13} /> : <Play size={13} />}
+                  </Button>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold truncate">{t.title}</div>
+                    <div className="text-[11px] text-muted">
+                      {fmtDuration(t.duration_sec)} · {(t.size_bytes / 1024).toFixed(0)}KB
+                      {t.song_id ? ' · 곡에 연결됨' : ''}
+                    </div>
                   </div>
-                </div>
-                <Button size="sm" onClick={() => onToggleAttach(t)} disabled={busy}
-                  aria-label={t.song_id ? '곡에서 분리' : '현재 곡에 연결'}>
-                  {t.song_id ? <Link2Off size={13} /> : <Link2 size={13} />}
-                </Button>
-                <Button size="sm" variant="danger" onClick={() => onDelete(t.id)} disabled={busy} aria-label={`${t.title} 삭제`}>
-                  <Trash2 size={13} />
-                </Button>
-              </Panel>
+                  <Button size="sm" onClick={() => setAutotuneFor(autotuneFor === t.id ? null : t.id)}
+                    disabled={busy} aria-label={`${t.title} 오토튠`}>
+                    <Wand2 size={13} /> 오토튠
+                  </Button>
+                  <Button size="sm" onClick={() => onToggleAttach(t)} disabled={busy}
+                    aria-label={t.song_id ? '곡에서 분리' : '현재 곡에 연결'}>
+                    {t.song_id ? <Link2Off size={13} /> : <Link2 size={13} />}
+                  </Button>
+                  <Button size="sm" variant="danger" onClick={() => onDelete(t.id)} disabled={busy} aria-label={`${t.title} 삭제`}>
+                    <Trash2 size={13} />
+                  </Button>
+                </Panel>
+                {autotuneFor === t.id && (
+                  <AutotunePanel
+                    take={t}
+                    songId={persistedDraftId}
+                    onClose={() => setAutotuneFor(null)}
+                    onSaved={loadTakes}
+                  />
+                )}
+              </div>
             ))}
           </div>
 
