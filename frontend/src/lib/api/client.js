@@ -4,6 +4,14 @@ function getToken() {
   return localStorage.getItem('me_token');
 }
 
+// Set by App so an expired/invalid session can drop the player back to the
+// login screen. Registered via a setter rather than importing the auth store
+// here, which would be a circular import (store -> api/auth -> client).
+let onUnauthorized = null;
+export function setUnauthorizedHandler(fn) {
+  onUnauthorized = fn;
+}
+
 /**
  * body      -> JSON request
  * form      -> URLSearchParams (login)
@@ -33,6 +41,12 @@ export async function apiFetch(path, { method = 'GET', body, form, formData, asB
       detail = data.detail || detail;
     } catch {
       // ignore non-JSON error bodies
+    }
+    // An expired/invalid token otherwise surfaces as a raw English 401 on
+    // whatever the player happened to click. Drop the dead session and say so.
+    if (res.status === 401 && auth) {
+      onUnauthorized?.();
+      throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.');
     }
     throw new Error(detail);
   }

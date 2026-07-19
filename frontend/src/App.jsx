@@ -14,6 +14,7 @@ import { OnlineScreen } from './components/online/OnlineScreen';
 import { PageTransition } from './components/ui/PageTransition';
 import { useGameStore } from './state/useGameStore';
 import { useAuthStore } from './state/useAuthStore';
+import { setUnauthorizedHandler } from './lib/api/client';
 import { disposeEngine } from './lib/audio/engine';
 
 function RequireCharacter({ children }) {
@@ -74,6 +75,13 @@ function App() {
   const resetCharacterLoaded = useGameStore((s) => s.resetCharacterLoaded);
 
   useEffect(() => () => disposeEngine(), []);
+
+  // Any 401 clears the session, which flips RootRoute back to the login screen
+  // instead of leaving the player on a page where every action silently fails.
+  useEffect(() => {
+    setUnauthorizedHandler(() => useAuthStore.getState().logout());
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   useEffect(() => {
     if (token) loadCharacter();

@@ -6,7 +6,11 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./music_empire.db"
     jwt_secret: str = "change-me-in-production"
-    jwt_expire_minutes: int = 30
+    # Long-lived on purpose: this is a single-player-ish game, and a 30-minute
+    # token silently expired mid-session (a take would record fine, then the
+    # next action failed with a raw 401). The frontend also handles 401 by
+    # sending the player back to login rather than showing a dead screen.
+    jwt_expire_minutes: int = 60 * 24 * 14  # 14 days
     cors_origins: str = "http://localhost:5173"
 
     # Where uploaded vocal takes are written (gitignored). Only metadata and
