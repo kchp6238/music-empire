@@ -14,6 +14,31 @@ export function BassGuitarPanel({ section, onSetNote, onPaintRange, onSetVelocit
   );
 }
 
+const MELODIC = {
+  bass: { label: '베이스', pitches: BASS_PITCHES, color: '#5FBF8F' },
+  guitar: { label: '기타', pitches: GUITAR_PITCHES, color: '#E8C34D' },
+};
+
+/** A single melodic lane + its velocity strip — the channel rack shows one
+ *  instrument at a time, so bass and guitar are rendered independently. */
+export function MelodicPanel({ track, section, onSetNote, onPaintRange, onSetVelocity, currentStep }) {
+  const cfg = MELODIC[track];
+  return (
+    <>
+      <PianoRoll
+        label={cfg.label} pitches={cfg.pitches} steps={section[track]}
+        onSetNote={(i, p) => onSetNote(track, i, p)}
+        onPaintRange={(from, to, p) => onPaintRange(track, from, to, p)}
+        currentStep={currentStep} color={cfg.color}
+      />
+      <VelocityLane
+        steps={section[track]} velocities={section[`${track}Velocity`]}
+        onSetVelocity={(i, v) => onSetVelocity(track, i, v)} color={cfg.color}
+      />
+    </>
+  );
+}
+
 export function PianoPanel({ section, onSetNote, onPaintRange, onAdjustVelocity, currentStep }) {
   return (
     <PianoKeyRoll

@@ -21,6 +21,123 @@ export const DRUM_INSTRUMENTS = [
   { key: 'crash', label: '크래시', color: '#C4576B' },
 ];
 
+// Mixer channels — the 7 drum voices share one channel (they're one
+// instrument, the drum machine), the melodic voices get one each. Effects
+// chains and the channel rack are keyed by these.
+export const CHANNELS = [
+  { key: 'drums', label: 'DrumMachine', color: '#E8A33D', plugin: 'drums' },
+  { key: 'bass', label: 'Bass Synth', color: '#8B7FD1', plugin: null },
+  { key: 'piano', label: 'FM Piano', color: '#4FD1C5', plugin: null },
+  { key: 'guitar', label: 'Pluck Guitar', color: '#5FBF8F', plugin: null },
+];
+export const CHANNEL_KEYS = CHANNELS.map((c) => c.key);
+// The fader the player actually rides, applied to the channel bus. DEFAULT_MIXER
+// below stays as the factory balance between voices inside a channel (e.g. the
+// hihat sitting under the kick) and isn't edited from the UI any more.
+export const DEFAULT_CHANNEL_MIX = {
+  drums: { vol: 0, mute: false },
+  bass: { vol: 0, mute: false },
+  piano: { vol: 0, mute: false },
+  guitar: { vol: 0, mute: false },
+};
+
+// Per-channel insert effects. Params are 0-100-ish UI numbers; engine.js maps
+// them onto the actual Tone.js node properties (see toReverb/toDelay there).
+export const EFFECT_TYPES = {
+  reverb: {
+    label: 'Reverb',
+    color: '#4FD1C5',
+    params: [
+      { key: 'size', label: 'Size', min: 0, max: 100, step: 1, default: 70 },
+      { key: 'damp', label: 'Damp', min: 0, max: 100, step: 1, default: 45 },
+      { key: 'wet', label: 'Wet', min: 0, max: 100, step: 1, default: 35 },
+    ],
+  },
+  delay: {
+    label: 'Delay',
+    color: '#E893A6',
+    params: [
+      { key: 'time', label: 'Time', min: 0, max: 100, step: 1, default: 30 },
+      { key: 'feedback', label: 'F.Back', min: 0, max: 90, step: 1, default: 30 },
+      { key: 'wet', label: 'Wet', min: 0, max: 100, step: 1, default: 25 },
+    ],
+  },
+};
+export const EFFECT_TYPE_KEYS = Object.keys(EFFECT_TYPES);
+
+// Per-drum synthesis knobs shown in the DrumMachine plugin window. Pitch is
+// semitones, gain is a dB trim on top of the channel fader, decay is a
+// percentage of the voice's designed decay time.
+export const DRUM_PARAM_SPECS = [
+  { key: 'pitch', label: 'Pitch', min: -12, max: 12, step: 1, default: 0, bipolar: true, unit: 'st' },
+  { key: 'gain', label: 'Gain', min: -12, max: 12, step: 0.5, default: 0, bipolar: true, unit: 'dB' },
+  { key: 'decay', label: 'Decay', min: 25, max: 250, step: 5, default: 100, bipolar: false, unit: '%' },
+];
+export const DEFAULT_DRUM_PARAMS = Object.fromEntries(
+  DRUM_INSTRUMENTS.map((d) => [d.key, { pitch: 0, gain: 0, decay: 100 }])
+);
+
+// Preset kits — one click retunes all seven voices. Values are the same
+// pitch/gain/decay the knobs edit, so picking a kit and then nudging a knob
+// works exactly as expected (the kit just becomes '커스텀').
+const kit = (entries) => Object.fromEntries(
+  DRUM_INSTRUMENTS.map((d) => [d.key, { pitch: 0, gain: 0, decay: 100, ...(entries[d.key] || {}) }])
+);
+export const DRUM_KITS = [
+  { id: 'basic', label: '기본 킷', params: kit({}) },
+  {
+    id: '808', label: '808 킷',
+    params: kit({
+      kick: { pitch: -7, gain: 2, decay: 230 }, snare: { pitch: -2, decay: 80 },
+      hihatClosed: { pitch: 2, gain: -1, decay: 70 }, hihatOpen: { pitch: 1, gain: -1, decay: 120 },
+      clap: { gain: 1, decay: 110 }, tom: { pitch: -4, decay: 150 }, crash: { pitch: -1, gain: -2, decay: 130 },
+    }),
+  },
+  {
+    id: 'acoustic', label: '어쿠스틱 킷',
+    params: kit({
+      kick: { pitch: 2, decay: 75 }, snare: { pitch: 3, gain: 1, decay: 120 },
+      hihatClosed: { pitch: -1, decay: 95 }, hihatOpen: { pitch: -2, decay: 105 },
+      clap: { pitch: 1, gain: -2, decay: 90 }, tom: { pitch: 2, decay: 110 }, crash: { decay: 150 },
+    }),
+  },
+  {
+    id: 'lofi', label: '로파이 킷',
+    params: kit({
+      kick: { pitch: -2, gain: -1, decay: 65 }, snare: { pitch: -3, gain: -1, decay: 70 },
+      hihatClosed: { pitch: -5, gain: -3, decay: 55 }, hihatOpen: { pitch: -5, gain: -3, decay: 70 },
+      clap: { pitch: -4, gain: -2, decay: 70 }, tom: { pitch: -3, gain: -2, decay: 80 }, crash: { pitch: -6, gain: -4, decay: 60 },
+    }),
+  },
+  {
+    id: 'hard', label: '하드 킷',
+    params: kit({
+      kick: { pitch: -3, gain: 3, decay: 120 }, snare: { pitch: 1, gain: 3, decay: 95 },
+      hihatClosed: { pitch: 4, gain: 1, decay: 60 }, hihatOpen: { pitch: 3, gain: 1, decay: 90 },
+      clap: { pitch: 2, gain: 3, decay: 85 }, tom: { pitch: -1, gain: 2, decay: 105 }, crash: { pitch: 2, gain: 1, decay: 170 },
+    }),
+  },
+];
+
+// Starter drum patterns for the library pane. Written as the 16th-note step
+// indices that get hit, which is far easier to read and edit than 16 booleans;
+// applyDrumPreset tiles them across whatever length the section is.
+export const PATTERN_PRESETS = [
+  { id: 'boombap', label: '힙합 기본', desc: '느긋한 붐뱁 그루브',
+    steps: { kick: [0, 6, 10], snare: [4, 12], hihatClosed: [0, 2, 4, 6, 8, 10, 12, 14] } },
+  { id: 'trap', label: '트랩', desc: '롤링 하이햇 + 무거운 킥',
+    steps: { kick: [0, 7, 10], clap: [8], hihatClosed: [0, 2, 4, 6, 8, 10, 11, 12, 14, 15] } },
+  { id: 'house', label: '하우스', desc: '포온더플로어 댄스 비트',
+    steps: { kick: [0, 4, 8, 12], clap: [4, 12], hihatOpen: [2, 6, 10, 14] } },
+  { id: 'rock8', label: '락 8비트', desc: '기본 8비트 드럼',
+    steps: { kick: [0, 8], snare: [4, 12], hihatClosed: [0, 2, 4, 6, 8, 10, 12, 14], crash: [0] } },
+  { id: 'ballad', label: '발라드', desc: '여백이 많은 잔잔한 비트',
+    steps: { kick: [0, 8], snare: [12], hihatClosed: [0, 4, 8, 12] } },
+  { id: 'funk', label: '펑크', desc: '당김음이 많은 그루브',
+    steps: { kick: [0, 3, 6, 10, 11], snare: [4, 12], hihatClosed: [0, 2, 4, 6, 8, 10, 12, 14], tom: [14] } },
+];
+export const PRESET_STEP_LENGTH = 16;
+
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 export function buildPitchRange(startOctave, numOctaves) {
   const notes = [];
@@ -33,12 +150,10 @@ export const BASS_PITCHES = buildPitchRange(2, 2);
 export const PIANO_PITCHES = buildPitchRange(3, 2);
 export const GUITAR_PITCHES = buildPitchRange(4, 2);
 
-export const MIXER_TRACKS = [
-  ...DRUM_INSTRUMENTS.map((d) => ({ key: d.key, label: d.label })),
-  { key: 'bass', label: '베이스' },
-  { key: 'piano', label: '피아노' },
-  { key: 'guitar', label: '기타' },
-];
+// Factory balance between the individual voices — the starting relationship
+// between kick and hihat, etc. The player rides DEFAULT_CHANNEL_MIX (the rack
+// faders) and the DrumMachine's Gain knobs on top of this rather than editing
+// it directly, so it behaves like a kit's built-in mix.
 export const DEFAULT_MIXER = {
   kick: { vol: 0, mute: false }, snare: { vol: 0, mute: false },
   hihatClosed: { vol: -10, mute: false }, hihatOpen: { vol: -8, mute: false },

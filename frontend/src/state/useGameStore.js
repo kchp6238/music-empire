@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import { SECTION_TYPES, DEFAULT_MIXER, FAN_PERSONAS } from '../lib/gameData/constants';
+import {
+  SECTION_TYPES, DEFAULT_MIXER, FAN_PERSONAS, EFFECT_TYPES, DEFAULT_DRUM_PARAMS,
+  DEFAULT_CHANNEL_MIX, DRUM_INSTRUMENTS, PRESET_STEP_LENGTH,
+} from '../lib/gameData/constants';
 import { emptySections, emptySection, basicPatternForLength, buildCombinedPattern } from '../lib/patterns';
 import * as engine from '../lib/audio/engine';
 import { playStepTick, playSuccessChime } from '../lib/audio/uiSounds';
@@ -48,9 +51,25 @@ const initialDraft = () => ({
   sections: emptySections(), arrangement: [], editingSection: SECTION_TYPES[0],
 });
 
+const emptyChannelFx = () => ({ drums: [], bass: [], piano: [], guitar: [] });
+const defaultDrumParams = () => structuredClone(DEFAULT_DRUM_PARAMS);
+const defaultChannelMix = () => structuredClone(DEFAULT_CHANNEL_MIX);
+const defaultMix = () => ({
+  mixer: DEFAULT_MIXER, fx: { humanize: false }, channelMix: defaultChannelMix(),
+  channelFx: emptyChannelFx(), drumParams: defaultDrumParams(), drumKitId: 'basic',
+});
+
+// Sound design (faders, per-channel effects, drum tuning) rides along inside
+// the pattern JSON under a reserved key rather than getting its own columns.
+// Song.pattern is an opaque JSON blob server-side and
+// services/patterns.py::build_combined_pattern only ever looks up the keys
+// named in `structure`, so this round-trips untouched with zero backend
+// change — and without it a carefully tuned kit would evaporate on reload.
+const MIX_KEY = '_mix';
+
 // Editor draft -> API payload. Single source of truth for the shape, shared by
 // manual save, collab draft-persist, and release.
-function buildDraftPayload(draft) {
+function buildDraftPayload(draft, audio) {
   return {
     title: draft.title,
     bpm: draft.bpm,
@@ -60,8 +79,22 @@ function buildDraftPayload(draft) {
     production_mode: draft.productionMode,
     vocal_source: draft.vocalSource,
     structure: draft.arrangement,
-    pattern: draft.sections,
+    pattern: { ...draft.sections, [MIX_KEY]: audio },
     lyrics: Object.fromEntries(Object.keys(draft.sections).map((k) => [k, draft.sections[k].lyrics])),
+  };
+}
+
+// Reads the mix blob back out, tolerating its absence — drafts saved before
+// this existed (and any pattern the server reconstructs) simply get defaults.
+function readMixFromPattern(pattern) {
+  const saved = pattern?.[MIX_KEY] || {};
+  return {
+    mixer: { ...DEFAULT_MIXER, ...(saved.mixer || {}) },
+    fx: { humanize: false, ...(saved.fx || {}) },
+    channelMix: { ...defaultChannelMix(), ...(saved.channelMix || {}) },
+    channelFx: { ...emptyChannelFx(), ...(saved.channelFx || {}) },
+    drumParams: { ...defaultDrumParams(), ...(saved.drumParams || {}) },
+    drumKitId: saved.drumKitId || 'basic',
   };
 }
 
@@ -96,7 +129,16 @@ export const useGameStore = create((set, get) => ({
   characterLoaded: false,
   draft: initialDraft(),
   mixer: DEFAULT_MIXER,
-  fx: { reverbWet: 20, delayWet: 15, humanize: false },
+  // reverb/delay used to live here as two global sends; they're per-channel
+  // insert effects now (channelFx), so only playback-time jitter remains.
+  fx: { humanize: false },
+  channelMix: defaultChannelMix(),
+  channelFx: emptyChannelFx(),
+  drumParams: defaultDrumParams(),
+  drumKitId: 'basic',
+  selectedChannel: 'drums',
+  openPlugin: null,        // 'drums' when the DrumMachine window is open
+  openEffectIds: [],       // effect ids whose windows are open
   lastResult: null,
   isPlaying: false,
   currentStep: -1,
@@ -330,10 +372,85 @@ export const useGameStore = create((set, get) => ({
     engine.updateMixer(mixer);
     return { mixer };
   }),
-  setFx: (field, v) => set((s) => {
-    const fx = { ...s.fx, [field]: v };
-    engine.updateFx(fx);
-    return { fx };
+  setFx: (field, v) => set((s) => ({ fx: { ...s.fx, [field]: v } })),
+
+  // Everything the audio engine needs, in one object — used to seed the
+  // engine on play and to persist the mix alongside the draft.
+  audioState: () => {
+    const { mixer, fx, channelMix, channelFx, drumParams, drumKitId } = get();
+    return { mixer, fx, channelMix, channelFx, drumParams, drumKitId };
+  },
+
+  setChannelVol: (channel, v) => set((s) => {
+    const channelMix = { ...s.channelMix, [channel]: { ...s.channelMix[channel], vol: v } };
+    engine.updateChannelMix(channelMix);
+    return { channelMix };
+  }),
+  toggleChannelMute: (channel) => set((s) => {
+    const channelMix = { ...s.channelMix, [channel]: { ...s.channelMix[channel], mute: !s.channelMix[channel].mute } };
+    engine.updateChannelMix(channelMix);
+    return { channelMix };
+  }),
+  selectChannel: (channel) => set({ selectedChannel: channel }),
+  setOpenPlugin: (plugin) => set({ openPlugin: plugin }),
+  toggleEffectWindow: (effectId) => set((s) => ({
+    openEffectIds: s.openEffectIds.includes(effectId)
+      ? s.openEffectIds.filter((id) => id !== effectId)
+      : [...s.openEffectIds, effectId],
+  })),
+
+  /* --- per-channel effects ------------------------------------------------
+     Structural changes (add/remove) rebuild that channel's Tone nodes; knob
+     turns go through setChannelEffectParam, which tweaks the live node so a
+     drag doesn't click. See engine.js for why the two paths differ. */
+  addChannelEffect: (channel, type) => set((s) => {
+    const spec = EFFECT_TYPES[type];
+    if (!spec) return {};
+    const effect = { id: `${type}-${Date.now().toString(36)}`, type };
+    spec.params.forEach((p) => { effect[p.key] = p.default; });
+    const list = [...s.channelFx[channel], effect];
+    const channelFx = { ...s.channelFx, [channel]: list };
+    engine.updateChannelEffects(channel, list);
+    return { channelFx };
+  }),
+  removeChannelEffect: (channel, effectId) => set((s) => {
+    const list = s.channelFx[channel].filter((e) => e.id !== effectId);
+    const channelFx = { ...s.channelFx, [channel]: list };
+    engine.updateChannelEffects(channel, list);
+    return { channelFx, openEffectIds: s.openEffectIds.filter((id) => id !== effectId) };
+  }),
+  setChannelEffectParam: (channel, effectId, param, value) => set((s) => {
+    const list = s.channelFx[channel].map((e) => (e.id === effectId ? { ...e, [param]: value } : e));
+    engine.updateChannelEffectParam(channel, effectId, param, value);
+    return { channelFx: { ...s.channelFx, [channel]: list } };
+  }),
+
+  /* --- drum machine ------------------------------------------------------- */
+  setDrumParam: (drumKey, param, value) => set((s) => {
+    const params = { ...s.drumParams[drumKey], [param]: value };
+    engine.updateDrumParams(drumKey, params);
+    // any hand-edit takes the kit off its preset — the sound is custom now
+    return { drumParams: { ...s.drumParams, [drumKey]: params }, drumKitId: 'custom' };
+  }),
+  applyDrumKit: (kitId, kitParams) => set(() => {
+    const drumParams = structuredClone(kitParams);
+    Object.entries(drumParams).forEach(([key, params]) => engine.updateDrumParams(key, params));
+    return { drumParams, drumKitId: kitId };
+  }),
+  auditionDrum: (drumKey) => engine.auditionDrum(drumKey),
+
+  /** Drop a library preset onto the section being edited. Presets are one bar
+   *  long, so they tile across a 2-bar section rather than leaving it half
+   *  empty. Only the drum lanes are touched — melodies stay put. */
+  applyDrumPreset: (preset) => set((s) => {
+    const key = s.draft.editingSection;
+    const sec = s.draft.sections[key];
+    const drums = {};
+    DRUM_INSTRUMENTS.forEach((d) => {
+      const hits = new Set(preset.steps[d.key] || []);
+      drums[d.key] = Array.from({ length: sec.length }, (_, i) => hits.has(i % PRESET_STEP_LENGTH));
+    });
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [key]: { ...sec, drums } } } };
   }),
 
   // Follows are keyed by (followed_type, followed_id) and persisted server-side.
@@ -352,7 +469,7 @@ export const useGameStore = create((set, get) => ({
   setCommunityTab: (tab) => set({ communityTab: tab }),
 
   play: async (pattern, bpm, id) => {
-    const { mixer, fx } = get();
+    const audio = get().audioState();
     set({ isPlaying: true, playingId: id, currentStep: -1 });
     // queueMicrotask: Tone.Draw can invoke the very first step's callback
     // synchronously inside Transport.start() (called from this same click
@@ -360,7 +477,7 @@ export const useGameStore = create((set, get) => ({
     // now subscribed to currentStep (Timeline's playhead) — "Cannot update a
     // component while rendering a different component". Deferring the store
     // update by one microtask guarantees it lands after the current render.
-    await engine.playPattern(pattern, bpm, mixer, fx, (idx) => queueMicrotask(() => set({ currentStep: idx })));
+    await engine.playPattern(pattern, bpm, audio, (idx) => queueMicrotask(() => set({ currentStep: idx })));
   },
   stop: () => {
     engine.stopPattern();
@@ -372,7 +489,7 @@ export const useGameStore = create((set, get) => ({
   // Returns the draft id. Release and collab-invite both reuse it.
   saveDraft: async () => {
     const s = get();
-    const payload = buildDraftPayload(s.draft);
+    const payload = buildDraftPayload(s.draft, s.audioState());
     if (s.persistedDraftId) {
       await songsApi.updateDraft(s.persistedDraftId, payload);
       set({ draftSavedAt: Date.now() });
@@ -388,7 +505,9 @@ export const useGameStore = create((set, get) => ({
   loadDraft: async (songId) => {
     if (get().isPlaying) get().stop();
     const apiSong = await songsApi.getSong(songId);
-    set({ draft: mapApiSongToDraft(apiSong), persistedDraftId: apiSong.id, draftSavedAt: null });
+    const mix = readMixFromPattern(apiSong.pattern);
+    set({ draft: mapApiSongToDraft(apiSong), persistedDraftId: apiSong.id, draftSavedAt: null, openEffectIds: [], openPlugin: null, ...mix });
+    engine.syncAudioState(mix);
   },
 
   deleteDraft: async (songId) => {
@@ -398,9 +517,12 @@ export const useGameStore = create((set, get) => ({
   },
 
   // Start a brand-new song without touching the saved draft on the server.
+  // Sound design resets too — the mix is part of the song, not the session.
   newDraft: () => {
     if (get().isPlaying) get().stop();
-    set({ draft: initialDraft(), persistedDraftId: null, draftSavedAt: null });
+    const mix = defaultMix();
+    set({ draft: initialDraft(), persistedDraftId: null, draftSavedAt: null, openEffectIds: [], openPlugin: null, ...mix });
+    engine.syncAudioState(mix);
   },
 
   inviteCollaborator: async (inviteeCharacterId, role, contributionPct) => {

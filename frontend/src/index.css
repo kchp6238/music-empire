@@ -22,6 +22,16 @@
   --color-muted: #8B8496;
   --color-faint: #6B6577;
 
+  /* DAW surfaces — the beatmaker's channel rack, plugin windows and transport
+     bar sit a step darker than the rest of the app so the editor reads as a
+     tool rather than another content panel. Same palette, different depth. */
+  --color-rack: #17141F;
+  --color-rack-row: #1F1B2B;
+  --color-rack-row-active: #272235;
+  --color-groove: #0B0910;
+  --color-plugin: #221E2E;
+  --color-plugin-bar: #2B2639;
+
   --font-display: 'Bricolage Grotesque', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   --font-sans: 'Inter', sans-serif;
@@ -77,3 +87,16 @@ input[type=range].me-slider::-webkit-slider-thumb{ -webkit-appearance:none; widt
 .me-notebook{ background: repeating-linear-gradient(#1C1926 0px, #1C1926 27px, rgba(255,255,255,0.08) 28px), #1C1926; border:1px solid rgba(255,255,255,0.08); border-radius:10px; position:relative; padding:14px 14px 14px 40px; }
 .me-notebook::before{ content:''; position:absolute; left:26px; top:0; bottom:0; width:1px; background:rgba(196,87,107,0.35); }
 .me-notebook textarea{ background:transparent; border:none; outline:none; width:100%; min-height:170px; resize:vertical; color:#EDE9F0; font-family:'Gaegu',sans-serif; font-size:17px; line-height:28px; box-sizing:border-box; }
+
+/* DAW chrome — used only by the beatmaker's rack/plugin/transport surfaces.
+   Kept as classes rather than inline styles because the same recessed-panel
+   treatment repeats across ChannelRack, DrumMachine, EffectWindow and the
+   transport bar. */
+.me-daw{ background:var(--color-rack); }
+.me-daw-groove{ background:var(--color-groove); border:1px solid rgba(255,255,255,0.06); border-radius:6px; }
+.me-plugin{ background:var(--color-plugin); border:1px solid rgba(255,255,255,0.12); border-radius:10px; box-shadow:0 18px 44px rgba(0,0,0,0.55); }
+.me-plugin-bar{ background:var(--color-plugin-bar); border-bottom:1px solid rgba(255,255,255,0.08); border-radius:9px 9px 0 0; cursor:grab; user-select:none; }
+.me-plugin-bar:active{ cursor:grabbing; }
+.me-rack-row{ background:var(--color-rack-row); border:1px solid rgba(255,255,255,0.06); border-radius:8px; transition:border-color .15s, background .15s; }
+.me-rack-row:hover{ border-color:rgba(255,255,255,0.16); }
+.me-rack-row.active{ background:var(--color-rack-row-active); border-color:var(--color-accent2); }
