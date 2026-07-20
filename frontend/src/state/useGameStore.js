@@ -283,12 +283,9 @@ export const useGameStore = create((set, get) => ({
     return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [`${track}Velocity`]: velArr } } } };
   }),
 
-  setLyrics: (text) => set((s) => ({
-    draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...s.draft.sections[s.draft.editingSection], lyrics: text } } },
-  })),
-
-  /** Edit any section's lyrics by name — the recording studio shows the whole
-   *  song at once, so it can't rely on `editingSection`. */
+  /** Lyrics live in the recording studio, which shows the whole song at once
+   *  — so writes are addressed by section name rather than via
+   *  `editingSection` (a beatmaker concept the studio has no notion of). */
   setLyricsFor: (key, text) => set((s) => {
     if (!s.draft.sections[key]) return {};
     return { draft: { ...s.draft, sections: { ...s.draft.sections, [key]: { ...s.draft.sections[key], lyrics: text } } } };

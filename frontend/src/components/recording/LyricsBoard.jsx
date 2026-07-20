@@ -52,25 +52,33 @@ export function LyricsBoard({ locked }) {
           <FileText size={15} className="text-pink" /> 가사
         </div>
         <div className="text-xs text-muted">
-          비트메이커에서 곡 구조를 만들고 가사를 쓰면 여기에 순서대로 표시됩니다.
+          비트메이커에서 곡 구조(인트로·벌스·코러스…)를 먼저 만들면, 여기에 순서대로 가사를 적을 수 있어요.
         </div>
       </Panel>
     );
   }
 
   const hasAnyLyrics = arrangement.some((k) => sections[k]?.lyrics?.trim());
+  // Counted the way scoring counts it: per arrangement slot, so a repeated
+  // chorus contributes its words each time it plays.
+  const wordCount = arrangement.reduce((n, k) => {
+    const t = sections[k]?.lyrics?.trim();
+    return n + (t ? t.split(/\s+/).length : 0);
+  }, 0);
 
   return (
     <Panel className="mb-5">
       <div className="flex items-center gap-2 mb-1">
         <FileText size={15} className="text-pink" />
         <span className="font-bold text-sm flex-1">가사</span>
-        {backingRunning && <span className="text-[10px] font-mono text-accent2">반주 따라가는 중</span>}
+        {backingRunning
+          ? <span className="text-[10px] font-mono text-accent2">반주 따라가는 중</span>
+          : wordCount > 0 && <span className="text-[10px] font-mono text-faint">{wordCount}단어</span>}
       </div>
       <div className="text-[11px] text-muted mb-3">
         {locked
           ? '녹음 중에는 수정할 수 없어요. 지금 부르는 구간이 밝게 표시됩니다.'
-          : '여기서 바로 고쳐도 비트메이커의 가사에 그대로 반영됩니다.'}
+          : '곡 순서대로 적어보세요. 가사는 발매 시 완성도에 소폭 반영됩니다.'}
       </div>
 
       {!hasAnyLyrics && (

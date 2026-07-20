@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Image as ImageIcon } from 'lucide-react';
+import { Image as ImageIcon } from 'lucide-react';
 import { CoverEditor } from '../cover/CoverEditor';
 import { TopBar } from '../shared/TopBar';
 import { DraftBar } from './DraftBar';
@@ -33,7 +33,6 @@ export function BeatmakerScreen() {
   const setNoteStep = useGameStore((s) => s.setNoteStep);
   const paintNoteRange = useGameStore((s) => s.paintNoteRange);
   const setVelocity = useGameStore((s) => s.setVelocity);
-  const setLyrics = useGameStore((s) => s.setLyrics);
   const loadBasicPattern = useGameStore((s) => s.loadBasicPattern);
   const clearSection = useGameStore((s) => s.clearSection);
   const clearChannel = useGameStore((s) => s.clearChannel);
@@ -176,19 +175,6 @@ export function BeatmakerScreen() {
                 >
                   {(isPlaying && playingId === 'section-preview') ? '■ 정지' : `▶ ${draft.editingSection} 미리듣기`}
                 </button>
-              </div>
-            </div>
-
-            <div className="me-panel mb-5">
-              <div className="me-display text-lg font-extrabold mb-1 flex items-center gap-2">
-                <FileText size={18} style={{ color: '#E893A6' }} /> 가사 노트 — {draft.editingSection}
-              </div>
-              <div className="text-[11px] text-muted mb-3">섹션을 바꾸려면 위 "섹션 편집" 탭을 클릭하세요.</div>
-              <div className="me-notebook">
-                <textarea value={editingSec.lyrics} onChange={(e) => setLyrics(e.target.value)} placeholder="가사를 적어보세요..." />
-              </div>
-              <div className="text-[10px] text-faint mt-2">
-                {editingSec.lyrics.trim() ? `${editingSec.lyrics.trim().split(/\s+/).length}단어` : '아직 가사가 없어요'} · 완성도에 소폭 반영돼요
               </div>
             </div>
 
