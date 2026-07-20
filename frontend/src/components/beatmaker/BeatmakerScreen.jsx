@@ -36,6 +36,8 @@ export function BeatmakerScreen() {
   const setLyrics = useGameStore((s) => s.setLyrics);
   const loadBasicPattern = useGameStore((s) => s.loadBasicPattern);
   const clearSection = useGameStore((s) => s.clearSection);
+  const clearChannel = useGameStore((s) => s.clearChannel);
+  const clearDrumLane = useGameStore((s) => s.clearDrumLane);
   const handleRelease = useGameStore((s) => s.handleRelease);
   const selectedChannel = useGameStore((s) => s.selectedChannel);
   const channelFx = useGameStore((s) => s.channelFx);
@@ -93,7 +95,9 @@ export function BeatmakerScreen() {
     list.filter((e) => openEffectIds.includes(e.id)).map((effect) => ({ channel, effect }))
   );
 
-  const channelLabel = CHANNELS.find((c) => c.key === selectedChannel)?.label || '';
+  const channel = CHANNELS.find((c) => c.key === selectedChannel);
+  const channelLabel = channel?.label || '';
+  const channelIcon = channel?.icon || '';
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -132,7 +136,9 @@ export function BeatmakerScreen() {
                   selection, the way clicking a channel in a DAW swaps the editor. */}
               <div className="me-scroll overflow-x-auto mb-2">
                 <div style={{ minWidth: 520 }}>
-                  {selectedChannel === 'drums' && <DrumGrid section={editingSec} onToggle={toggleDrumStep} currentStep={sectionStep} />}
+                  {selectedChannel === 'drums' && (
+                    <DrumGrid section={editingSec} onToggle={toggleDrumStep} onClearLane={clearDrumLane} currentStep={sectionStep} />
+                  )}
                   {(selectedChannel === 'bass' || selectedChannel === 'guitar') && (
                     <MelodicPanel
                       track={selectedChannel} section={editingSec} onSetNote={setNoteStep}
@@ -150,7 +156,20 @@ export function BeatmakerScreen() {
 
               <div className="flex gap-2 flex-wrap">
                 <button className="me-btn-ghost" onClick={loadBasicPattern}>기본 패턴 불러오기</button>
-                <button className="me-btn-ghost" onClick={clearSection}>이 섹션 지우기</button>
+                <button
+                  className="me-btn-ghost"
+                  onClick={() => clearChannel(selectedChannel)}
+                  title={`${draft.editingSection} 구간의 ${channelLabel} 파트만 지웁니다`}
+                >
+                  {channelIcon} {channelLabel} 지우기
+                </button>
+                <button
+                  className="me-btn-ghost"
+                  onClick={clearSection}
+                  title={`${draft.editingSection} 구간의 모든 악기를 지웁니다 (가사는 남습니다)`}
+                >
+                  전체 지우기
+                </button>
                 <button
                   className="me-btn-ghost"
                   onClick={() => (isPlaying && playingId === 'section-preview') ? stop() : play(buildCombinedPattern(draft.sections, [draft.editingSection]), draft.bpm, 'section-preview')}

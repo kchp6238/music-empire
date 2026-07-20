@@ -1,8 +1,11 @@
+import { X } from 'lucide-react';
 import { auditionDrum } from '../../lib/audio/engine';
 
 // One drum lane. Toggling a step also fires that drum so you hear what you're
 // placing; the label itself is a pad you can hit without editing anything.
-export function DrumRow({ instKey, label, icon, steps, onToggle, currentStep, color }) {
+// The ✕ clears just this lane — otherwise wiping a hihat is 16 clicks.
+export function DrumRow({ instKey, label, icon, steps, onToggle, onClear, currentStep, color }) {
+  const hasAny = steps.some(Boolean);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
       <button
@@ -14,6 +17,19 @@ export function DrumRow({ instKey, label, icon, steps, onToggle, currentStep, co
         }}
       >
         {icon && <span style={{ marginRight: 4 }}>{icon}</span>}{label}
+      </button>
+      <button
+        onClick={() => onClear?.(instKey)}
+        disabled={!hasAny}
+        title={`${label} 라인만 지우기`}
+        aria-label={`${label} 라인 지우기`}
+        style={{
+          width: 16, height: 16, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'transparent', border: 'none', padding: 0,
+          color: '#6B6577', cursor: hasAny ? 'pointer' : 'default', opacity: hasAny ? 1 : 0.25,
+        }}
+      >
+        <X size={11} />
       </button>
       <div style={{ display: 'flex', gap: 5 }}>
         {steps.map((on, i) => (

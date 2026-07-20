@@ -314,10 +314,33 @@ export const useGameStore = create((set, get) => ({
     return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...loaded, lyrics: sec.lyrics } } } };
   }),
 
+  /** Wipe everything in the open section (lyrics survive — they're written,
+   *  not played, and losing a verse to a "clear the beat" click stings). */
   clearSection: () => set((s) => {
     const sec = s.draft.sections[s.draft.editingSection];
     const cleared = emptySection(sec.length);
     return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...cleared, lyrics: sec.lyrics } } } };
+  }),
+
+  /** Wipe just one instrument, leaving the rest of the section intact — the
+   *  usual case is redoing one part, not starting the whole section over. */
+  clearChannel: (channel) => set((s) => {
+    const key = s.draft.editingSection;
+    const sec = s.draft.sections[key];
+    const blank = emptySection(sec.length);
+    const next = channel === 'drums'
+      ? { ...sec, drums: blank.drums }
+      : { ...sec, [channel]: blank[channel], [`${channel}Velocity`]: blank[`${channel}Velocity`] };
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [key]: next } } };
+  }),
+
+  /** One drum lane — clearing a hihat by hand is 16 clicks otherwise. */
+  clearDrumLane: (drumKey) => set((s) => {
+    const key = s.draft.editingSection;
+    const sec = s.draft.sections[key];
+    if (!sec.drums[drumKey]) return {};
+    const drums = { ...sec.drums, [drumKey]: Array(sec.length).fill(false) };
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [key]: { ...sec, drums } } } };
   }),
 
   addToArrangement: (type) => set((s) => ({ draft: { ...s.draft, arrangement: [...s.draft.arrangement, type], editingSection: type } })),
