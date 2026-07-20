@@ -6,6 +6,7 @@ import { Panel } from '../ui/Panel';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { AutotunePanel } from './AutotunePanel';
+import { LyricsBoard } from './LyricsBoard';
 import { startRecording, isRecordingSupported } from '../../lib/audio/recorder';
 import * as recordingsApi from '../../lib/api/recordings';
 import { buildCombinedPattern } from '../../lib/patterns';
@@ -232,6 +233,10 @@ export function RecordingStudio() {
             )}
             {recording && <div className="text-[11px] text-accent2 mt-2">녹음 중… 정지를 누르면 서버에 저장됩니다.</div>}
           </Panel>
+
+          {/* Right under the transport, so it's where your eyes already are
+              when the take starts rolling. */}
+          <LyricsBoard locked={recording} />
 
           {lastTake && (
             <Panel className={`mb-6 ${lastTake.peak < 0.02 ? 'border-danger/60' : 'border-accent2/40'}`}>

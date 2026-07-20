@@ -287,6 +287,13 @@ export const useGameStore = create((set, get) => ({
     draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...s.draft.sections[s.draft.editingSection], lyrics: text } } },
   })),
 
+  /** Edit any section's lyrics by name — the recording studio shows the whole
+   *  song at once, so it can't rely on `editingSection`. */
+  setLyricsFor: (key, text) => set((s) => {
+    if (!s.draft.sections[key]) return {};
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [key]: { ...s.draft.sections[key], lyrics: text } } } };
+  }),
+
   setSectionLength: (length) => set((s) => {
     const sec = s.draft.sections[s.draft.editingSection];
     const resize = (arr, fill) => { const out = arr.slice(0, length); while (out.length < length) out.push(fill); return out; };
