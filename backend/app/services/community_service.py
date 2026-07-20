@@ -5,22 +5,29 @@ from app.models.song import Song
 from app.models.npc import NpcArtist, NpcSong
 from app.models.community import Follow
 from app.services.patterns import build_combined_pattern
+from app.services import covers_service
 
 
 def get_feed(db: Session) -> list[dict]:
     items = []
-    for song, character in db.query(Song, Character).join(Character, Song.character_id == Character.id).filter(Song.released_at.isnot(None)).all():
+    rows = db.query(Song, Character).join(Character, Song.character_id == Character.id).filter(Song.released_at.isnot(None)).all()
+    # One id-only query rather than joining the cover table — the point of
+    # keeping art in its own table is that listing never touches the bytes.
+    with_cover = covers_service.song_ids_with_cover(db, [s.id for s, _ in rows])
+    for song, character in rows:
         items.append({
             "id": song.id, "title": song.title, "artist_name": character.artist_name,
             "artist_id": character.id, "artist_type": "character", "tier": song.tier,
             "overall_score": song.overall_score, "source": "user", "bpm": song.bpm,
+            "has_cover": song.id in with_cover,
             "pattern": build_combined_pattern(song.pattern, song.structure),
         })
     for npc_song, artist in db.query(NpcSong, NpcArtist).join(NpcArtist, NpcSong.npc_artist_id == NpcArtist.id).all():
         items.append({
             "id": npc_song.id, "title": npc_song.title, "artist_name": artist.name,
             "artist_id": artist.id, "artist_type": "npc", "tier": npc_song.tier,
-            "overall_score": float(npc_song.score), "source": "npc", "bpm": npc_song.bpm, "pattern": npc_song.pattern,
+            "overall_score": float(npc_song.score), "source": "npc", "bpm": npc_song.bpm,
+            "has_cover": False, "pattern": npc_song.pattern,
         })
     return items
 

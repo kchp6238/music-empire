@@ -400,6 +400,19 @@ export async function auditionDrum(drumKey) {
   if (s[drumKey]) s[drumKey].triggerAttackRelease('8n', Tone.now());
 }
 
+/** One-shot preview of a pitched voice — what you hear when clicking a cell
+ *  in the piano roll, so placing a note tells you what it sounds like. */
+export async function auditionNote(channel, pitch, duration = '8n') {
+  if (!pitch) return;
+  await Tone.start();
+  const s = ensureBuilt();
+  const voice = s[channel];
+  if (!voice) return;
+  // PluckSynth self-decays and takes no release — same branch as playPattern.
+  if (channel === 'guitar') voice.triggerAttack(pitch, Tone.now());
+  else voice.triggerAttackRelease(pitch, duration, Tone.now());
+}
+
 export function stopPattern() {
   if (sequence) { sequence.stop(); sequence.dispose(); sequence = null; }
   Tone.Transport.stop();

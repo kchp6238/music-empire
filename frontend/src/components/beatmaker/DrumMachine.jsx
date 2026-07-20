@@ -50,7 +50,10 @@ export function DrumMachine() {
                 style={{ background: d.color, color: '#12101A' }}
                 onClick={() => auditionDrum(d.key)}
                 title={`${d.label} 듣기`}
-              >{d.label}</button>
+              >
+                <span className="block text-[13px] leading-none mb-0.5" aria-hidden>{d.icon}</span>
+                {d.label}
+              </button>
               {DRUM_PARAM_SPECS.map((spec) => (
                 <Knob
                   key={spec.key}

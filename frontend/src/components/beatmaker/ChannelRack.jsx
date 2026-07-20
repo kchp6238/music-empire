@@ -34,7 +34,7 @@ export function ChannelRack() {
         return (
           <div key={ch.key} className={`me-rack-row p-2.5 ${selected ? 'active' : ''}`}>
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ch.color }} />
+              <span className="text-[13px] leading-none shrink-0" aria-hidden>{ch.icon}</span>
               <button
                 className="flex-1 text-left text-xs font-semibold truncate bg-transparent border-0 p-0 cursor-pointer"
                 style={{ color: selected ? 'var(--color-text)' : 'var(--color-muted)' }}

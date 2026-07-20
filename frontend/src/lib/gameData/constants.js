@@ -11,24 +11,26 @@ export const SECTION_COLORS = {
   아웃트로: '#5FBF8F',
 };
 
+// `icon` is shown next to every label so the instrument is recognisable at a
+// glance without reading — playtesters asked for it.
 export const DRUM_INSTRUMENTS = [
-  { key: 'kick', label: '킥', color: '#E8A33D' },
-  { key: 'snare', label: '스네어', color: '#4FD1C5' },
-  { key: 'hihatClosed', label: '클로즈 하이햇', color: '#8B7FD1' },
-  { key: 'hihatOpen', label: '오픈 하이햇', color: '#7FA8D1' },
-  { key: 'clap', label: '클랩', color: '#E893A6' },
-  { key: 'tom', label: '톰', color: '#D18B4C' },
-  { key: 'crash', label: '크래시', color: '#C4576B' },
+  { key: 'kick', label: '킥', icon: '🥁', color: '#E8A33D' },
+  { key: 'snare', label: '스네어', icon: '🪘', color: '#4FD1C5' },
+  { key: 'hihatClosed', label: '클로즈 하이햇', icon: '🎩', color: '#8B7FD1' },
+  { key: 'hihatOpen', label: '오픈 하이햇', icon: '👒', color: '#7FA8D1' },
+  { key: 'clap', label: '클랩', icon: '👏', color: '#E893A6' },
+  { key: 'tom', label: '톰', icon: '🛢️', color: '#D18B4C' },
+  { key: 'crash', label: '크래시', icon: '💥', color: '#C4576B' },
 ];
 
 // Mixer channels — the 7 drum voices share one channel (they're one
 // instrument, the drum machine), the melodic voices get one each. Effects
 // chains and the channel rack are keyed by these.
 export const CHANNELS = [
-  { key: 'drums', label: 'DrumMachine', color: '#E8A33D', plugin: 'drums' },
-  { key: 'bass', label: 'Bass Synth', color: '#8B7FD1', plugin: null },
-  { key: 'piano', label: 'FM Piano', color: '#4FD1C5', plugin: null },
-  { key: 'guitar', label: 'Pluck Guitar', color: '#5FBF8F', plugin: null },
+  { key: 'drums', label: 'DrumMachine', icon: '🥁', color: '#E8A33D', plugin: 'drums' },
+  { key: 'bass', label: 'Bass Synth', icon: '🎸', color: '#8B7FD1', plugin: null },
+  { key: 'piano', label: 'FM Piano', icon: '🎹', color: '#4FD1C5', plugin: null },
+  { key: 'guitar', label: 'Pluck Guitar', icon: '🎻', color: '#5FBF8F', plugin: null },
 ];
 export const CHANNEL_KEYS = CHANNELS.map((c) => c.key);
 // The fader the player actually rides, applied to the channel bus. DEFAULT_MIXER

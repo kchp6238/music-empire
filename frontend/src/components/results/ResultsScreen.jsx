@@ -3,6 +3,7 @@ import { Heart, Smile, Meh, Frown, Flame, Star, Users, RotateCcw } from 'lucide-
 import { TopBar } from '../shared/TopBar';
 import { Fader } from '../shared/Fader';
 import { TIER_COLOR, pickLine, tierKeyFromScore } from '../../lib/gameData/constants';
+import { CoverThumb } from '../cover/CoverThumb';
 import { won } from '../../lib/utils';
 import { useGameStore } from '../../state/useGameStore';
 
@@ -36,6 +37,9 @@ export function ResultsScreen() {
       <TopBar character={character} />
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px 60px' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+            <CoverThumb songId={lastResult.songId} title={lastResult.songTitle} size={132} rounded={14} />
+          </div>
           <div style={{ fontSize: 12, color: '#8B8496', marginBottom: 6 }}>"{lastResult.songTitle}" 발매 결과</div>
           <div className="me-display" style={{ fontSize: 56, fontWeight: 800, color: TIER_COLOR[lastResult.tier] }}>{Math.round(lastResult.overallScore)}</div>
           <div className="me-display" style={{ fontSize: 22, fontWeight: 700, color: TIER_COLOR[lastResult.tier] }}>{lastResult.tier}</div>

@@ -279,8 +279,8 @@ export function RecordingStudio() {
                     </div>
                   </div>
                   <Button size="sm" onClick={() => setAutotuneFor(autotuneFor === t.id ? null : t.id)}
-                    disabled={busy} aria-label={`${t.title} 오토튠`}>
-                    <Wand2 size={13} /> 오토튠
+                    disabled={busy} aria-label={`${t.title} 목소리 효과`}>
+                    <Wand2 size={13} /> 목소리 효과
                   </Button>
                   <Button size="sm" onClick={() => onToggleAttach(t)} disabled={busy}
                     aria-label={t.song_id ? '곡에서 분리' : '현재 곡에 연결'}>

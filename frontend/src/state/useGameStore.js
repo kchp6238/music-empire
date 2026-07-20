@@ -5,7 +5,7 @@ import {
 } from '../lib/gameData/constants';
 import { emptySections, emptySection, basicPatternForLength, buildCombinedPattern } from '../lib/patterns';
 import * as engine from '../lib/audio/engine';
-import { playStepTick, playSuccessChime } from '../lib/audio/uiSounds';
+import { playSuccessChime } from '../lib/audio/uiSounds';
 import * as charactersApi from '../lib/api/characters';
 import * as songsApi from '../lib/api/songs';
 import * as communityApi from '../lib/api/community';
@@ -234,8 +234,10 @@ export const useGameStore = create((set, get) => ({
 
   setEditingSection: (key) => set((s) => ({ draft: { ...s.draft, editingSection: key } })),
 
+  // The grids audition the real instrument on mousedown (see DrumRow /
+  // PianoRoll), so these no longer fire the generic UI tick — hearing the
+  // actual kick or the actual note is the whole point of the feedback.
   toggleDrumStep: (instKey, idx) => {
-    playStepTick();
     set((s) => {
       const sec = s.draft.sections[s.draft.editingSection];
       const arr = [...sec.drums[instKey]];
@@ -247,7 +249,6 @@ export const useGameStore = create((set, get) => ({
   // Single-cell click: toggle. Used by PianoRoll/PianoKeyRoll's plain click
   // (no drag) — see paintNoteRange for the multi-step drag gesture.
   setNoteStep: (track, idx, pitch) => {
-    playStepTick();
     set((s) => {
       const sec = s.draft.sections[s.draft.editingSection];
       const arr = [...sec[track]];
@@ -264,7 +265,6 @@ export const useGameStore = create((set, get) => ({
   // spanning multiple steps (engine.js merges these into one sustained
   // trigger on playback instead of retriggering every step).
   paintNoteRange: (track, fromIdx, toIdx, pitch) => {
-    playStepTick();
     set((s) => {
       const sec = s.draft.sections[s.draft.editingSection];
       const arr = [...sec[track]];
@@ -438,6 +438,41 @@ export const useGameStore = create((set, get) => ({
     return { drumParams, drumKitId: kitId };
   }),
   auditionDrum: (drumKey) => engine.auditionDrum(drumKey),
+
+  /** Write a whole transcribed drum take into the open section at once.
+   *  `hits` is { drumKey: [stepIndex, ...] }. Bulk-setting rather than
+   *  looping toggleDrumStep, which would flip existing hits back off and fire
+   *  one audition per note. Lanes not mentioned are left alone. */
+  applyDrumTranscription: (hits) => set((s) => {
+    const key = s.draft.editingSection;
+    const sec = s.draft.sections[key];
+    const drums = { ...sec.drums };
+    Object.entries(hits).forEach(([drumKey, indices]) => {
+      if (!drums[drumKey]) return;
+      const arr = Array(sec.length).fill(false);
+      indices.forEach((i) => { if (i >= 0 && i < sec.length) arr[i] = true; });
+      drums[drumKey] = arr;
+    });
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [key]: { ...sec, drums } } } };
+  }),
+
+  /** Same for a hummed melody: replaces one lane's notes wholesale. */
+  applyMelodyTranscription: (track, notes) => set((s) => {
+    const key = s.draft.editingSection;
+    const sec = s.draft.sections[key];
+    const arr = Array(sec.length).fill(null);
+    const velArr = [...sec[`${track}Velocity`]];
+    notes.slice(0, sec.length).forEach((n, i) => {
+      arr[i] = n || null;
+      if (n) velArr[i] = 100;
+    });
+    return {
+      draft: {
+        ...s.draft,
+        sections: { ...s.draft.sections, [key]: { ...sec, [track]: arr, [`${track}Velocity`]: velArr } },
+      },
+    };
+  }),
 
   /** Drop a library preset onto the section being edited. Presets are one bar
    *  long, so they tile across a 2-bar section rather than leaving it half

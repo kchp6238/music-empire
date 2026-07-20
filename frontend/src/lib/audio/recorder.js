@@ -35,7 +35,14 @@ function pickMimeType() {
  * monitor: route the mic to the speakers so the singer hears themselves
  * (needs headphones — on speakers it will feed back).
  */
-export async function startRecording({ onLevel, monitor = false } = {}) {
+/**
+ * @param {object} opts
+ * @param {boolean} [opts.raw] Disable the browser's voice-call processing.
+ *   Auto-gain in particular flattens the amplitude envelope, which is exactly
+ *   the signal the beatbox transcriber reads onsets from, and noise
+ *   suppression eats the transients. Leave it on for ordinary vocal takes.
+ */
+export async function startRecording({ onLevel, monitor = false, raw = false } = {}) {
   if (!isRecordingSupported()) {
     throw new Error('이 브라우저는 녹음을 지원하지 않습니다');
   }
@@ -43,7 +50,9 @@ export async function startRecording({ onLevel, monitor = false } = {}) {
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      audio: raw
+        ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        : { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     });
   } catch (e) {
     // Distinguish the common failures so the UI can tell the user what to fix.

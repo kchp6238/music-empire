@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText } from 'lucide-react';
+import { FileText, Image as ImageIcon } from 'lucide-react';
+import { CoverEditor } from '../cover/CoverEditor';
 import { TopBar } from '../shared/TopBar';
 import { DraftBar } from './DraftBar';
 import { Timeline } from './Timeline';
@@ -11,6 +12,7 @@ import { DrumMachine } from './DrumMachine';
 import { EffectWindow } from './EffectWindow';
 import { TransportBar } from './TransportBar';
 import { PresetLibrary } from './PresetLibrary';
+import { VoiceToPattern } from './VoiceToPattern';
 import { CollabInvitePanel } from './CollabInvitePanel';
 import { SECTION_TYPES, CHANNELS } from '../../lib/gameData/constants';
 import { buildCombinedPattern, analyzeCombinedPattern, sectionHasContent } from '../../lib/patterns';
@@ -39,8 +41,24 @@ export function BeatmakerScreen() {
   const channelFx = useGameStore((s) => s.channelFx);
   const openPlugin = useGameStore((s) => s.openPlugin);
   const openEffectIds = useGameStore((s) => s.openEffectIds);
+  const saveDraft = useGameStore((s) => s.saveDraft);
+  const persistedDraftId = useGameStore((s) => s.persistedDraftId);
   const [releasing, setReleasing] = useState(false);
   const [releaseError, setReleaseError] = useState('');
+  const [coverSongId, setCoverSongId] = useState(null);
+  const [coverSaved, setCoverSaved] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
+
+  // The cover attaches to the song row, so an unsaved draft has to be
+  // persisted first — same thing the collab invite does.
+  async function openCoverEditor() {
+    setReleaseError('');
+    try {
+      setCoverSongId(persistedDraftId || await saveDraft());
+    } catch (e) {
+      setReleaseError(e.message || '커버를 열기 전에 곡을 저장하지 못했습니다');
+    }
+  }
 
   if (!character) return null;
 
@@ -164,13 +182,18 @@ export function BeatmakerScreen() {
                   patternInfo.totalActive < 6 ? `최소 6칸 이상 입력해야 발매할 수 있어요 (현재 ${patternInfo.totalActive}개)` :
                   `${patternInfo.totalActive}개 스텝 · ${draft.arrangement.length}개 섹션 구성 완료`}
               </div>
-              <button className="me-btn-primary" onClick={onRelease} disabled={!canRelease || releasing}>
-                {releasing ? '발매 중...' : '곡 발매하기'}
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button className="me-btn-ghost inline-flex items-center gap-1.5" onClick={openCoverEditor}>
+                  <ImageIcon size={13} /> {coverSaved ? '커버 다시 그리기' : '앨범 커버 만들기'}
+                </button>
+                <button className="me-btn-primary" onClick={onRelease} disabled={!canRelease || releasing}>
+                  {releasing ? '발매 중...' : '곡 발매하기'}
+                </button>
+              </div>
             </div>
           </div>
 
-          <PresetLibrary />
+          <PresetLibrary onOpenVoice={() => setVoiceOpen(true)} />
         </div>
       </div>
 
@@ -180,6 +203,15 @@ export function BeatmakerScreen() {
       {openEffects.map(({ channel, effect }, i) => (
         <EffectWindow key={effect.id} channel={channel} effect={effect} index={i} />
       ))}
+      {voiceOpen && <VoiceToPattern onClose={() => setVoiceOpen(false)} />}
+      {coverSongId && (
+        <CoverEditor
+          songId={coverSongId}
+          songTitle={draft.title}
+          onClose={() => setCoverSongId(null)}
+          onSaved={() => setCoverSaved(true)}
+        />
+      )}
     </div>
   );
 }

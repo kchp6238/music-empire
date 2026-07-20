@@ -6,6 +6,7 @@ import { TrendBanner } from '../shared/TrendBanner';
 import { TimePassedToast } from '../shared/TimePassedToast';
 import { AchievementsPanel } from '../shared/AchievementsPanel';
 import { TrainingPanel } from './TrainingPanel';
+import { CoverThumb } from '../cover/CoverThumb';
 import { GENRES, MOODS, CHORD_PRESETS, TIER_COLOR } from '../../lib/gameData/constants';
 import { useGameStore } from '../../state/useGameStore';
 
@@ -123,7 +124,8 @@ export function StudioScreen() {
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>발매 기록</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 200, overflowY: 'auto' }} className="me-scroll">
                 {character.songs.slice().reverse().map((s) => (
-                  <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                  <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                    <CoverThumb songId={s.id} title={s.title} size={24} rounded={5} />
                     <button className="me-btn-ghost" style={{ padding: '2px 8px', fontSize: 11, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id)}>
                       {(isPlaying && playingId === s.id) ? '■' : '▶'}
                     </button>

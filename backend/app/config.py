@@ -25,6 +25,9 @@ class Settings(BaseSettings):
 
     max_recording_bytes: int = 10 * 1024 * 1024        # 10MB per take
     max_recording_bytes_per_character: int = 200 * 1024 * 1024  # 200MB per player
+    # Covers are canvas PNGs at 640px — a few hundred KB in practice. The cap
+    # is generous headroom, not an expected size.
+    max_cover_bytes: int = 3 * 1024 * 1024
 
     @property
     def cors_origin_list(self) -> list[str]:

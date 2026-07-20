@@ -1,10 +1,14 @@
 import { useState } from 'react';
+import { auditionNote } from '../../lib/audio/engine';
 
 // Click a cell to toggle a single-step note. Mousedown + vertical drag across
 // rows in the SAME pitch column paints one sustained note (mirrors
 // PianoRoll's horizontal paint gesture — here steps run top-to-bottom).
 // Scroll-wheel over an active note adjusts its velocity (shown as opacity).
-export function PianoKeyRoll({ label, pitches, steps, velocities, onSetNote, onPaintRange, onAdjustVelocity, currentStep, color }) {
+//
+// The drawn keyboard along the top is playable: pressing a key auditions that
+// pitch without writing anything, so you can hunt for a note first.
+export function PianoKeyRoll({ label, icon, track, pitches, steps, velocities, onSetNote, onPaintRange, onAdjustVelocity, currentStep, color }) {
   const cellW = 22;
   const rowH = 18;
   const whiteKeyH = 46;
@@ -13,6 +17,7 @@ export function PianoKeyRoll({ label, pitches, steps, velocities, onSetNote, onP
   const [drag, setDrag] = useState(null); // { pitch, start, end }
 
   function startPaint(pitch, row) {
+    auditionNote(track, pitch);
     setDrag({ pitch, start: row, end: row });
     function onUp() {
       window.removeEventListener('mouseup', onUp);
@@ -30,7 +35,9 @@ export function PianoKeyRoll({ label, pitches, steps, velocities, onSetNote, onP
 
   return (
     <div style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 11, color: '#8B8496', marginBottom: 6 }}>{label} — 실제 건반처럼 가로로 배열, 스텝은 아래로 진행. 드래그로 노트 길이, 스크롤로 벨로시티 조절.</div>
+      <div style={{ fontSize: 11, color: '#8B8496', marginBottom: 6 }}>
+        {icon && <span style={{ marginRight: 4 }}>{icon}</span>}{label} — 위 건반을 눌러 소리를 들어보세요. 드래그로 노트 길이, 스크롤로 벨로시티 조절.
+      </div>
       <div className="me-scroll" style={{ overflowX: 'auto' }}>
         <div style={{ position: 'relative', width, height: whiteKeyH }}>
           <div style={{ position: 'absolute', top: 0, left: 0, width, height: whiteKeyH, background: '#EDE9F0', borderRadius: '4px 4px 0 0', boxShadow: 'inset 0 -3px 4px rgba(0,0,0,0.15)' }} />
@@ -48,6 +55,20 @@ export function PianoKeyRoll({ label, pitches, steps, velocities, onSetNote, onP
             !p.includes('#') && p.startsWith('C') ? (
               <div key={p + '-lbl'} className="me-mono" style={{ position: 'absolute', left: idx * cellW, bottom: 4, width: cellW, textAlign: 'center', fontSize: 8, color: '#12101A', pointerEvents: 'none' }}>{p}</div>
             ) : null
+          ))}
+          {/* Transparent hit targets over the drawn keys — black keys last so
+              they sit above the white ones they overlap. */}
+          {pitches.map((p, idx) => (
+            <div
+              key={p + '-hit'}
+              onMouseDown={(e) => { e.preventDefault(); auditionNote(track, p); }}
+              title={`${p} 듣기`}
+              style={{
+                position: 'absolute', left: idx * cellW + (p.includes('#') ? 4 : 0), top: 0,
+                width: p.includes('#') ? 14 : cellW, height: p.includes('#') ? blackKeyH : whiteKeyH,
+                zIndex: p.includes('#') ? 2 : 1, cursor: 'pointer',
+              }}
+            />
           ))}
         </div>
         <div style={{ width }}>

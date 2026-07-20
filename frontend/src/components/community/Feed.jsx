@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Users } from 'lucide-react';
 import { getFeed } from '../../lib/api/community';
 import { TIER_COLOR, pickLine, tierKeyFromScore } from '../../lib/gameData/constants';
+import { CoverThumb } from '../cover/CoverThumb';
 import { useGameStore } from '../../state/useGameStore';
 
 export function Feed() {
@@ -35,6 +36,7 @@ export function Feed() {
         {mine.map((s) => (
           <div key={s.id} className="me-panel" style={{ padding: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+              <CoverThumb songId={s.id} hasCover={s.has_cover} title={s.title} size={38} />
               <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id)}>
                 {(isPlaying && playingId === s.id) ? '■' : '▶'}
               </button>
@@ -54,6 +56,7 @@ export function Feed() {
         {others.map((s) => (
           <div key={s.id} className="me-panel" style={{ padding: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+              <CoverThumb songId={s.id} hasCover={s.has_cover} title={s.title} size={38} />
               <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id)}>
                 {(isPlaying && playingId === s.id) ? '■' : '▶'}
               </button>

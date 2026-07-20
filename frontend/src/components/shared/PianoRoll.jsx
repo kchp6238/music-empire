@@ -1,13 +1,18 @@
 import { useState } from 'react';
+import { auditionNote } from '../../lib/audio/engine';
 
 // Click a cell to toggle a single-step note (unchanged). Mousedown + drag
 // across cells in the SAME row paints one sustained note spanning the
 // dragged steps — engine.js merges same-pitch runs into one triggered note
 // with duration = run length, instead of retriggering every step.
-export function PianoRoll({ label, pitches, steps, onSetNote, onPaintRange, currentStep, color }) {
+//
+// Every cell press also auditions the real instrument at that pitch, so you
+// can hear what you're placing instead of guessing from the grid.
+export function PianoRoll({ label, icon, track, pitches, steps, onSetNote, onPaintRange, currentStep, color }) {
   const [drag, setDrag] = useState(null); // { pitch, start, end }
 
   function startPaint(pitch, col) {
+    auditionNote(track, pitch);
     setDrag({ pitch, start: col, end: col });
     function onUp() {
       window.removeEventListener('mouseup', onUp);
@@ -25,7 +30,9 @@ export function PianoRoll({ label, pitches, steps, onSetNote, onPaintRange, curr
 
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 16 }}>
-      <div style={{ width: 84, fontSize: 11, color: '#8B8496', flexShrink: 0, paddingTop: 2 }}>{label}</div>
+      <div style={{ width: 84, fontSize: 11, color: '#8B8496', flexShrink: 0, paddingTop: 2 }}>
+        {icon && <span style={{ marginRight: 4 }}>{icon}</span>}{label}
+      </div>
       <div className="me-scroll" style={{ overflowX: 'auto' }}>
         <div style={{ display: 'flex' }}>
           <div style={{ flexShrink: 0 }}>

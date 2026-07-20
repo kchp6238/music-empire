@@ -1,4 +1,4 @@
-import { Library } from 'lucide-react';
+import { Library, Mic } from 'lucide-react';
 import { PATTERN_PRESETS, PRESET_STEP_LENGTH, DRUM_INSTRUMENTS } from '../../lib/gameData/constants';
 import { useGameStore } from '../../state/useGameStore';
 
@@ -28,14 +28,27 @@ function PresetPreview({ steps }) {
 
 /** Right-hand library pane — click a groove to lay it into the section that's
  *  currently open in the editor. */
-export function PresetLibrary() {
+export function PresetLibrary({ onOpenVoice }) {
   const applyDrumPreset = useGameStore((s) => s.applyDrumPreset);
   const editingSection = useGameStore((s) => s.draft.editingSection);
   const selectChannel = useGameStore((s) => s.selectChannel);
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="text-[10px] font-mono uppercase tracking-widest text-faint px-1 flex items-center gap-1.5">
+      <button
+        className="me-rack-row p-2.5 text-left cursor-pointer w-full"
+        style={{ borderColor: 'rgba(232,147,166,0.45)' }}
+        onClick={onOpenVoice}
+      >
+        <div className="text-[11px] font-semibold text-text flex items-center gap-1.5">
+          <Mic size={12} className="text-pink" /> 목소리로 찍기
+        </div>
+        <div className="text-[9px] text-faint leading-tight mt-0.5">
+          입으로 리듬을 내거나 멜로디를 흥얼거리면 그대로 찍힙니다
+        </div>
+      </button>
+
+      <div className="text-[10px] font-mono uppercase tracking-widest text-faint px-1 flex items-center gap-1.5 mt-1">
         <Library size={11} /> Pattern Library
       </div>
       <div className="text-[10px] text-faint px-1 -mt-1">
