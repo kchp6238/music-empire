@@ -15,4 +15,5 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
-    character: Mapped["Character | None"] = relationship(back_populates="user", uselist=False)
+    # One career per world, so a user holds as many as they have saves.
+    characters: Mapped[list["Character"]] = relationship(back_populates="user")

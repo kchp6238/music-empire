@@ -1,5 +1,6 @@
 from app.db.base import Base
 from app.models.user import User
+from app.models.world import World
 from app.models.character import Character
 from app.models.song import Song
 from app.models.fan import FanPersona, CharacterFanLoyalty, SongReaction
@@ -16,6 +17,7 @@ from app.models.season import SeasonRecord
 __all__ = [
     "Base",
     "User",
+    "World",
     "Character",
     "Song",
     "FanPersona",

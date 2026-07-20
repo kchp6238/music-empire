@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone, date
 
-from sqlalchemy import String, DateTime, Date, Numeric, Integer, ForeignKey, JSON
+from sqlalchemy import String, DateTime, Date, Numeric, Integer, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -13,9 +13,14 @@ GAME_EPOCH = date(2026, 1, 1)
 
 class Character(Base):
     __tablename__ = "characters"
+    # One career per save, not one per account: a player holds several saves at
+    # once (a solo world plus whatever multi rooms they've joined), so the old
+    # unique(user_id) is now scoped by world.
+    __table_args__ = (UniqueConstraint("user_id", "world_id", name="uq_character_user_world"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), unique=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    world_id: Mapped[str] = mapped_column(String(36), ForeignKey("worlds.id"), nullable=False, index=True)
     artist_name: Mapped[str] = mapped_column(String(120), nullable=False)
     background_id: Mapped[str] = mapped_column(String(40), nullable=False)
     background_name: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -43,7 +48,8 @@ class Character(Base):
         DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
     )
 
-    user: Mapped["User"] = relationship(back_populates="character")
+    user: Mapped["User"] = relationship(back_populates="characters")
+    world: Mapped["World"] = relationship()
     songs: Mapped[list["Song"]] = relationship(back_populates="character", cascade="all, delete-orphan")
     loyalty: Mapped[list["CharacterFanLoyalty"]] = relationship(back_populates="character", cascade="all, delete-orphan")
 
