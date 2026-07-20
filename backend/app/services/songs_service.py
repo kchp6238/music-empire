@@ -8,7 +8,7 @@ from app.models.song import Song
 from app.models.fan import FanPersona, CharacterFanLoyalty, SongReaction
 from app.models.collab import SongCollaborator
 from app.services.patterns import build_combined_pattern
-from app.services import scoring, economy, achievements, time_service
+from app.services import scoring, economy, achievements, time_service, reactions
 from app.services.trends import trend_multiplier
 
 
@@ -77,8 +77,11 @@ def release_song(db: Session, song: Song, character: Character) -> dict:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Song already released")
 
     combined = build_combined_pattern(song.pattern, song.structure)
+    # name/color ride along because services/reactions.py needs the persona's
+    # identity to pick a speech register — scoring itself ignores them.
     fan_personas = [
-        {"id": p.id, "genre_pref": p.genre_pref, "mood_pref": p.mood_pref, "openness": float(p.openness)}
+        {"id": p.id, "name": p.name, "color": p.color,
+         "genre_pref": p.genre_pref, "mood_pref": p.mood_pref, "openness": float(p.openness)}
         for p in db.query(FanPersona).all()
     ]
     loyalty_rows = db.query(CharacterFanLoyalty).filter(CharacterFanLoyalty.character_id == character.id).all()
@@ -113,10 +116,18 @@ def release_song(db: Session, song: Song, character: Character) -> dict:
     song.released_at = datetime.now(timezone.utc)
     song.released_on = character.game_date
 
+    # Comments are written once, here — not invented at render time — so the
+    # results screen and the feed quote the same fan saying the same thing.
+    comments = reactions.build_for_reactions(
+        {p["id"]: p for p in fan_personas}, result["persona_results"],
+        song_input, result, persona_loyalty, song.id,
+    )
     for r in result["persona_results"]:
+        pid = r["persona"]["id"]
         db.add(SongReaction(
-            song_id=song.id, persona_id=r["persona"]["id"], reached=r["reached"],
-            affinity=r["affinity"], reaction_score=r["reaction_score"], comment_line=None,
+            song_id=song.id, persona_id=pid, reached=r["reached"],
+            affinity=r["affinity"], reaction_score=r["reaction_score"],
+            comment_line=comments.get(pid),
         ))
 
     character.fame = max(0, min(100, float(character.fame) + result["fame_delta"]))

@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Heart, Smile, Meh, Frown, Flame, Star, Users, RotateCcw } from 'lucide-react';
 import { TopBar } from '../shared/TopBar';
 import { Fader } from '../shared/Fader';
-import { TIER_COLOR, pickLine, tierKeyFromScore } from '../../lib/gameData/constants';
+import { TIER_COLOR, tierKeyFromScore } from '../../lib/gameData/constants';
 import { CoverThumb } from '../cover/CoverThumb';
 import { won } from '../../lib/utils';
 import { useGameStore } from '../../state/useGameStore';
@@ -156,7 +156,7 @@ export function ResultsScreen() {
                   <Icon size={14} style={{ marginLeft: 'auto', color: key ? TIER_COLOR[TIER_NAME_BY_KEY[key]] : '#8B8496' }} />
                 </div>
                 <div style={{ fontSize: 11, color: '#B8B2C4', lineHeight: 1.4 }}>
-                  {r.reached ? pickLine(key) : '아직 이 곡을 발견하지 못했다'}
+                  {r.reached ? r.commentLine : '아직 이 곡을 발견하지 못했다'}
                 </div>
               </div>
             );

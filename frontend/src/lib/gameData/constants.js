@@ -221,14 +221,9 @@ export const FAN_PERSONAS = [
   { id: 9, name: 'R&B 소울 리스너', color: '#7FA8D1', genrePref: { 'R&B': 0.9, 힙합: 0.4, 발라드: 0.3, EDM: -0.4 }, moodPref: { 로맨틱: 0.7, 감성적: 0.5, 강렬: -0.2 }, openness: 0.4 },
 ];
 
-export const REACTION_LINES = {
-  love: ['완전 내 스타일이야, 계속 돌려 듣는 중', '이 아티스트 진짜 물건이다', '이번 곡 알고리즘에 감사해야겠어'],
-  good: ['괜찮네, 플레이리스트에 저장했어', '한 번 더 들어볼 만해', '기대 이상인데?'],
-  meh: ['나쁘진 않은데 딱히 또 찾아 듣진 않을 듯', '무난하네', '한 번 듣고 말 것 같아'],
-  bad: ['내 취향은 확실히 아니네', '음... 패스', '다음 곡을 기대해볼게'],
-  awful: ['이건 좀 스킵하게 되네', '왜 이렇게 만들었을까', '아쉬운 시도였어'],
-};
-export function pickLine(key) { const arr = REACTION_LINES[key]; return arr[Math.floor(Math.random() * arr.length)]; }
+// Fan comments come from the server now (backend/app/services/reactions.py) —
+// written once at release from what each listener actually heard, instead of
+// drawn from a handful of canned lines on every render.
 export function tierKeyFromScore(score) {
   if (score >= 80) return 'love';
   if (score >= 60) return 'good';

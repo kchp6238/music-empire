@@ -628,6 +628,7 @@ export const useGameStore = create((set, get) => ({
         affinity: r.affinity,
         reached: r.reached,
         reactionScore: r.reaction_score,
+        commentLine: r.comment_line,
       })),
       revenueBreakdown: result.revenue_breakdown,
       newlyUnlocked: result.newly_unlocked || [],

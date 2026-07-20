@@ -54,14 +54,22 @@ BACKGROUNDS_BY_ID = {b["id"]: b for b in BACKGROUNDS}
 # Seed-only: inserted into fan_personas by app/seed.py, then read back from the
 # DB at request time (see services/scoring.py) so character_fan_loyalty stays
 # authoritative and in sync with persona ids.
+# `voice` picks which speech register services/reactions.py writes a comment
+# in. Without it every persona said the same 15 canned lines, so the fan panel
+# read as decoration rather than as nine people with different ears.
+#
+# Deliberately NOT a fan_personas column: it's fixed per persona identity, so a
+# column would mean a migration plus a backfill on every deployed DB (seeding is
+# count-gated and never re-runs) to store something the code already knows.
+# reactions.py looks it up by name off this list.
 FAN_PERSONAS_SEED = [
-    {"name": "감성 발라드 러버", "color": "#E893A6", "genre_pref": {"발라드": 0.9, "R&B": 0.5, "EDM": -0.6, "힙합": -0.3}, "mood_pref": {"감성적": 0.8, "우울": 0.3, "신남": -0.4}, "openness": 0.2},
-    {"name": "클럽 EDM 매니아", "color": "#4FD1C5", "genre_pref": {"EDM": 0.9, "팝": 0.4, "발라드": -0.5, "트로트": -0.7}, "mood_pref": {"신남": 0.8, "강렬": 0.6, "우울": -0.5}, "openness": 0.3},
-    {"name": "힙합 헤드", "color": "#E8A33D", "genre_pref": {"힙합": 0.9, "R&B": 0.5, "록": 0.2, "발라드": -0.4}, "mood_pref": {"강렬": 0.7, "신남": 0.3, "로맨틱": -0.3}, "openness": 0.4},
-    {"name": "인디 시네필", "color": "#8B7FD1", "genre_pref": {"인디": 0.9, "재즈": 0.4, "팝": -0.3, "트로트": -0.5}, "mood_pref": {"몽환적": 0.7, "편안함": 0.4, "신남": -0.3}, "openness": 0.8},
-    {"name": "올드스쿨 트로트 팬", "color": "#D18B4C", "genre_pref": {"트로트": 0.9, "발라드": 0.4, "EDM": -0.8, "힙합": -0.7}, "mood_pref": {"편안함": 0.6, "감성적": 0.5, "강렬": -0.5}, "openness": 0.1},
-    {"name": "실험음악 얼리어답터", "color": "#5FBF8F", "genre_pref": {"인디": 0.6, "재즈": 0.5, "EDM": 0.3}, "mood_pref": {"실험적": 0.9, "몽환적": 0.5, "편안함": -0.4}, "openness": 0.9},
-    {"name": "대중 팝 리스너", "color": "#E8C34D", "genre_pref": {"팝": 0.8, "발라드": 0.3, "R&B": 0.3, "EDM": 0.2}, "mood_pref": {"신남": 0.5, "로맨틱": 0.4, "실험적": -0.4}, "openness": 0.3},
-    {"name": "록 마니아", "color": "#C4576B", "genre_pref": {"록": 0.9, "인디": 0.4, "트로트": -0.6, "발라드": -0.2}, "mood_pref": {"강렬": 0.8, "신남": 0.4, "편안함": -0.4}, "openness": 0.3},
-    {"name": "R&B 소울 리스너", "color": "#7FA8D1", "genre_pref": {"R&B": 0.9, "힙합": 0.4, "발라드": 0.3, "EDM": -0.4}, "mood_pref": {"로맨틱": 0.7, "감성적": 0.5, "강렬": -0.2}, "openness": 0.4},
+    {"name": "감성 발라드 러버", "color": "#E893A6", "voice": "soft", "genre_pref": {"발라드": 0.9, "R&B": 0.5, "EDM": -0.6, "힙합": -0.3}, "mood_pref": {"감성적": 0.8, "우울": 0.3, "신남": -0.4}, "openness": 0.2},
+    {"name": "클럽 EDM 매니아", "color": "#4FD1C5", "voice": "hype", "genre_pref": {"EDM": 0.9, "팝": 0.4, "발라드": -0.5, "트로트": -0.7}, "mood_pref": {"신남": 0.8, "강렬": 0.6, "우울": -0.5}, "openness": 0.3},
+    {"name": "힙합 헤드", "color": "#E8A33D", "voice": "blunt", "genre_pref": {"힙합": 0.9, "R&B": 0.5, "록": 0.2, "발라드": -0.4}, "mood_pref": {"강렬": 0.7, "신남": 0.3, "로맨틱": -0.3}, "openness": 0.4},
+    {"name": "인디 시네필", "color": "#8B7FD1", "voice": "critic", "genre_pref": {"인디": 0.9, "재즈": 0.4, "팝": -0.3, "트로트": -0.5}, "mood_pref": {"몽환적": 0.7, "편안함": 0.4, "신남": -0.3}, "openness": 0.8},
+    {"name": "올드스쿨 트로트 팬", "color": "#D18B4C", "voice": "elder", "genre_pref": {"트로트": 0.9, "발라드": 0.4, "EDM": -0.8, "힙합": -0.7}, "mood_pref": {"편안함": 0.6, "감성적": 0.5, "강렬": -0.5}, "openness": 0.1},
+    {"name": "실험음악 얼리어답터", "color": "#5FBF8F", "voice": "critic", "genre_pref": {"인디": 0.6, "재즈": 0.5, "EDM": 0.3}, "mood_pref": {"실험적": 0.9, "몽환적": 0.5, "편안함": -0.4}, "openness": 0.9},
+    {"name": "대중 팝 리스너", "color": "#E8C34D", "voice": "casual", "genre_pref": {"팝": 0.8, "발라드": 0.3, "R&B": 0.3, "EDM": 0.2}, "mood_pref": {"신남": 0.5, "로맨틱": 0.4, "실험적": -0.4}, "openness": 0.3},
+    {"name": "록 마니아", "color": "#C4576B", "voice": "blunt", "genre_pref": {"록": 0.9, "인디": 0.4, "트로트": -0.6, "발라드": -0.2}, "mood_pref": {"강렬": 0.8, "신남": 0.4, "편안함": -0.4}, "openness": 0.3},
+    {"name": "R&B 소울 리스너", "color": "#7FA8D1", "voice": "soft", "genre_pref": {"R&B": 0.9, "힙합": 0.4, "발라드": 0.3, "EDM": -0.4}, "mood_pref": {"로맨틱": 0.7, "감성적": 0.5, "강렬": -0.2}, "openness": 0.4},
 ]

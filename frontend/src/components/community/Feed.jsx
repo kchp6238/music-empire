@@ -1,9 +1,28 @@
 import { useEffect, useState } from 'react';
 import { Users } from 'lucide-react';
 import { getFeed } from '../../lib/api/community';
-import { TIER_COLOR, pickLine, tierKeyFromScore } from '../../lib/gameData/constants';
+import { TIER_COLOR } from '../../lib/gameData/constants';
 import { CoverThumb } from '../cover/CoverThumb';
 import { useGameStore } from '../../state/useGameStore';
+
+/** Fan comments written at release time by the server, so they name who said
+ *  it and stay put instead of reshuffling on every render. */
+function SongReactions({ reactions }) {
+  if (!reactions?.length) {
+    return <div style={{ fontSize: 11, color: '#6B6577' }}>아직 반응이 없어요.</div>;
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      {reactions.map((r, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11 }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: r.persona_color || '#8B8496', flexShrink: 0, transform: 'translateY(-1px)' }} />
+          <span style={{ color: r.persona_color || '#8B8496', fontWeight: 600, flexShrink: 0 }}>{r.persona_name}</span>
+          <span style={{ color: '#B8B2C4' }}>{r.comment_line}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function Feed() {
   const character = useGameStore((s) => s.character);
@@ -44,9 +63,7 @@ export function Feed() {
               <div style={{ fontSize: 11, color: '#8B8496' }}>· {s.title}</div>
               <div className="me-mono" style={{ marginLeft: 'auto', fontSize: 12, color: TIER_COLOR[s.tier] }}>{s.tier} · {Math.round(s.overall_score)}</div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {[0, 1, 2].map((i) => (<div key={i} style={{ fontSize: 11, color: '#B8B2C4' }}>💬 {pickLine(tierKeyFromScore(s.overall_score))}</div>))}
-            </div>
+            <SongReactions reactions={s.reactions} />
           </div>
         ))}
       </div>
@@ -67,9 +84,7 @@ export function Feed() {
                 {isFollowing(s) ? '팔로잉' : '+ 팔로우'}
               </button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {[0, 1].map((i) => (<div key={i} style={{ fontSize: 11, color: '#B8B2C4' }}>💬 {pickLine(tierKeyFromScore(s.overall_score))}</div>))}
-            </div>
+            <SongReactions reactions={s.reactions} />
           </div>
         ))}
       </div>
