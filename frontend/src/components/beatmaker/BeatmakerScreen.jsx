@@ -138,7 +138,7 @@ export function BeatmakerScreen() {
                   {selectedChannel === 'drums' && (
                     <DrumGrid section={editingSec} onToggle={toggleDrumStep} onClearLane={clearDrumLane} currentStep={sectionStep} />
                   )}
-                  {(selectedChannel === 'bass' || selectedChannel === 'guitar') && (
+                  {selectedChannel !== 'drums' && selectedChannel !== 'piano' && (
                     <MelodicPanel
                       track={selectedChannel} section={editingSec} onSetNote={setNoteStep}
                       onPaintRange={paintNoteRange} onSetVelocity={setVelocity} currentStep={sectionStep}

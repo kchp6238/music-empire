@@ -1,19 +1,15 @@
 import { PianoRoll } from '../shared/PianoRoll';
 import { PianoKeyRoll } from '../shared/PianoKeyRoll';
 import { VelocityLane } from '../shared/VelocityLane';
-import { BASS_PITCHES, GUITAR_PITCHES, PIANO_PITCHES, CHANNELS } from '../../lib/gameData/constants';
+import { PIANO_PITCHES, CHANNELS, MELODIC_BY_KEY } from '../../lib/gameData/constants';
 
 const iconFor = (key) => CHANNELS.find((c) => c.key === key)?.icon;
 
-const MELODIC = {
-  bass: { label: '베이스', pitches: BASS_PITCHES, color: '#5FBF8F' },
-  guitar: { label: '기타', pitches: GUITAR_PITCHES, color: '#E8C34D' },
-};
-
 /** A single melodic lane + its velocity strip — the channel rack shows one
- *  instrument at a time, so bass and guitar are rendered independently. */
+ *  instrument at a time, so each pitched track is rendered independently. Any
+ *  track in MELODIC_BY_KEY works here (bass/guitar and the newer roster). */
 export function MelodicPanel({ track, section, onSetNote, onPaintRange, onSetVelocity, currentStep }) {
-  const cfg = MELODIC[track];
+  const cfg = MELODIC_BY_KEY[track];
   return (
     <>
       <PianoRoll

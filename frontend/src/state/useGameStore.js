@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import {
   SECTION_TYPES, DEFAULT_MIXER, FAN_PERSONAS, EFFECT_TYPES, DEFAULT_DRUM_PARAMS,
-  DEFAULT_CHANNEL_MIX, DRUM_INSTRUMENTS, PRESET_STEP_LENGTH,
+  DEFAULT_CHANNEL_MIX, DRUM_INSTRUMENTS, PRESET_STEP_LENGTH, CHANNEL_KEYS, MELODIC_KEYS,
 } from '../lib/gameData/constants';
 import { emptySections, emptySection, basicPatternForLength, buildCombinedPattern } from '../lib/patterns';
 import * as engine from '../lib/audio/engine';
@@ -60,7 +60,7 @@ const initialDraft = () => ({
   sections: emptySections(), arrangement: [], editingSection: SECTION_TYPES[0],
 });
 
-const emptyChannelFx = () => ({ drums: [], bass: [], piano: [], guitar: [] });
+const emptyChannelFx = () => Object.fromEntries(CHANNEL_KEYS.map((k) => [k, []]));
 const defaultDrumParams = () => structuredClone(DEFAULT_DRUM_PARAMS);
 const defaultChannelMix = () => structuredClone(DEFAULT_CHANNEL_MIX);
 const defaultMix = () => ({
@@ -328,18 +328,15 @@ export const useGameStore = create((set, get) => ({
     const resize = (arr, fill) => { const out = arr.slice(0, length); while (out.length < length) out.push(fill); return out; };
     const newDrums = {};
     Object.keys(sec.drums).forEach((k) => { newDrums[k] = resize(sec.drums[k], false); });
+    const resized = { ...sec, length, drums: newDrums };
+    MELODIC_KEYS.forEach((k) => {
+      resized[k] = resize(sec[k] || [], null);
+      resized[`${k}Velocity`] = resize(sec[`${k}Velocity`] || [], 100);
+    });
     return {
       draft: {
         ...s.draft,
-        sections: {
-          ...s.draft.sections,
-          [s.draft.editingSection]: {
-            ...sec, length, drums: newDrums,
-            bass: resize(sec.bass, null), bassVelocity: resize(sec.bassVelocity, 100),
-            piano: resize(sec.piano, null), pianoVelocity: resize(sec.pianoVelocity, 100),
-            guitar: resize(sec.guitar, null), guitarVelocity: resize(sec.guitarVelocity, 100),
-          },
-        },
+        sections: { ...s.draft.sections, [s.draft.editingSection]: resized },
       },
     };
   }),

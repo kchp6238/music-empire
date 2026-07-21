@@ -31,17 +31,19 @@ export const CHANNELS = [
   { key: 'bass', label: 'Bass Synth', icon: '🎸', color: '#8B7FD1', plugin: null },
   { key: 'piano', label: 'FM Piano', icon: '🎹', color: '#4FD1C5', plugin: null },
   { key: 'guitar', label: 'Pluck Guitar', icon: '🎻', color: '#5FBF8F', plugin: null },
+  { key: 'elecGuitar', label: 'Elec Guitar', icon: '⚡', color: '#E86A4D', plugin: null },
+  { key: 'brass', label: 'Brass', icon: '🎺', color: '#E8A33D', plugin: null },
+  { key: 'synthLead', label: 'Synth Lead', icon: '🎛️', color: '#E893A6', plugin: null },
+  { key: 'pad', label: 'Synth Pad', icon: '🌊', color: '#8B7FD1', plugin: null },
+  { key: 'strings', label: 'Strings', icon: '🎼', color: '#7FA8D1', plugin: null },
 ];
 export const CHANNEL_KEYS = CHANNELS.map((c) => c.key);
 // The fader the player actually rides, applied to the channel bus. DEFAULT_MIXER
 // below stays as the factory balance between voices inside a channel (e.g. the
 // hihat sitting under the kick) and isn't edited from the UI any more.
-export const DEFAULT_CHANNEL_MIX = {
-  drums: { vol: 0, mute: false },
-  bass: { vol: 0, mute: false },
-  piano: { vol: 0, mute: false },
-  guitar: { vol: 0, mute: false },
-};
+export const DEFAULT_CHANNEL_MIX = Object.fromEntries(
+  CHANNEL_KEYS.map((k) => [k, { vol: 0, mute: false }])
+);
 
 // Per-channel insert effects. Params are 0-100-ish UI numbers; engine.js maps
 // them onto the actual Tone.js node properties (see toReverb/toDelay there).
@@ -151,6 +153,30 @@ export function buildPitchRange(startOctave, numOctaves) {
 export const BASS_PITCHES = buildPitchRange(2, 2);
 export const PIANO_PITCHES = buildPitchRange(3, 2);
 export const GUITAR_PITCHES = buildPitchRange(4, 2);
+export const ELEC_GUITAR_PITCHES = buildPitchRange(3, 2);
+export const BRASS_PITCHES = buildPitchRange(3, 2);
+export const SYNTH_LEAD_PITCHES = buildPitchRange(4, 2);
+export const PAD_PITCHES = buildPitchRange(3, 2);
+export const STRINGS_PITCHES = buildPitchRange(3, 2);
+
+// Every pitched (non-drum) instrument, as one source of truth: the beatmaker
+// editor, the piano-roll config, the pattern helpers (empty/build/analyze) and
+// the audio engine all iterate this rather than hard-coding bass/piano/guitar.
+// `chordal` voices (pad/strings) auto-voice each note into an open fifth at
+// playback so a single melody line sounds full without a chord data model.
+export const MELODIC_TRACKS = [
+  { key: 'bass', label: '베이스', pitches: BASS_PITCHES, color: '#5FBF8F', chordal: false },
+  { key: 'piano', label: '피아노', pitches: PIANO_PITCHES, color: '#B794F4', chordal: false },
+  { key: 'guitar', label: '어쿠스틱 기타', pitches: GUITAR_PITCHES, color: '#E8C34D', chordal: false },
+  { key: 'elecGuitar', label: '일렉 기타', pitches: ELEC_GUITAR_PITCHES, color: '#E86A4D', chordal: false },
+  { key: 'brass', label: '브라스(관악)', pitches: BRASS_PITCHES, color: '#E8A33D', chordal: false },
+  { key: 'synthLead', label: '신스 리드', pitches: SYNTH_LEAD_PITCHES, color: '#E893A6', chordal: false },
+  { key: 'pad', label: '신스 패드', pitches: PAD_PITCHES, color: '#8B7FD1', chordal: true },
+  { key: 'strings', label: '스트링', pitches: STRINGS_PITCHES, color: '#7FA8D1', chordal: true },
+];
+export const MELODIC_KEYS = MELODIC_TRACKS.map((t) => t.key);
+export const MELODIC_BY_KEY = Object.fromEntries(MELODIC_TRACKS.map((t) => [t.key, t]));
+export const CHORDAL_KEYS = MELODIC_TRACKS.filter((t) => t.chordal).map((t) => t.key);
 
 // Factory balance between the individual voices — the starting relationship
 // between kick and hihat, etc. The player rides DEFAULT_CHANNEL_MIX (the rack
@@ -161,6 +187,8 @@ export const DEFAULT_MIXER = {
   hihatClosed: { vol: -10, mute: false }, hihatOpen: { vol: -8, mute: false },
   clap: { vol: -4, mute: false }, tom: { vol: -2, mute: false }, crash: { vol: -6, mute: false },
   bass: { vol: -3, mute: false }, piano: { vol: -4, mute: false }, guitar: { vol: -6, mute: false },
+  elecGuitar: { vol: -7, mute: false }, brass: { vol: -6, mute: false }, synthLead: { vol: -7, mute: false },
+  pad: { vol: -10, mute: false }, strings: { vol: -8, mute: false },
 };
 
 export const CHORD_PRESETS = [

@@ -7,11 +7,13 @@ import { startRecording, isRecordingSupported } from '../../lib/audio/recorder';
 import { decodeToMono, transcribeDrums, transcribeMelody } from '../../lib/audio/transcribe';
 import { KEYS, SCALES } from '../../lib/audio/autotune';
 import {
-  DRUM_INSTRUMENTS, CHANNELS, BASS_PITCHES, PIANO_PITCHES, GUITAR_PITCHES,
+  DRUM_INSTRUMENTS, CHANNELS, MELODIC_BY_KEY,
 } from '../../lib/gameData/constants';
 import { useGameStore } from '../../state/useGameStore';
 
-const PITCHES_BY_TRACK = { bass: BASS_PITCHES, piano: PIANO_PITCHES, guitar: GUITAR_PITCHES };
+const PITCHES_BY_TRACK = Object.fromEntries(
+  Object.entries(MELODIC_BY_KEY).map(([k, t]) => [k, t.pitches])
+);
 const DRUM_LABEL = Object.fromEntries(DRUM_INSTRUMENTS.map((d) => [d.key, `${d.icon} ${d.label}`]));
 
 /**
@@ -154,7 +156,7 @@ export function VoiceToPattern({ onClose }) {
                 borderColor: mode === c.key ? c.color : 'var(--color-border)',
                 color: mode === c.key ? c.color : 'var(--color-muted)', background: 'transparent',
               }}
-            >{c.icon} {c.key === 'bass' ? '베이스' : c.key === 'piano' ? '피아노' : '기타'}</button>
+            >{c.icon} {MELODIC_BY_KEY[c.key]?.label || c.label}</button>
           ))}
         </div>
 

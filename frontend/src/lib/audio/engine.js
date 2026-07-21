@@ -1,5 +1,5 @@
 import * as Tone from 'tone';
-import { DRUM_INSTRUMENTS, EFFECT_TYPES } from '../gameData/constants';
+import { DRUM_INSTRUMENTS, EFFECT_TYPES, CHANNEL_KEYS, MELODIC_KEYS, CHORDAL_KEYS } from '../gameData/constants';
 
 /**
  * Single app-wide audio engine (module-level singleton, not a React ref) —
@@ -34,8 +34,21 @@ let drumParamsState = {};
 let channelMixState = {};
 
 const DRUM_KEYS = DRUM_INSTRUMENTS.map((d) => d.key);
+// Self-decaying pluck voices take triggerAttack only; chordal voices get their
+// single melody note fanned into an open fifth. Kept as Sets for O(1) lookup
+// inside the per-step sequence callback.
+const PLUCK_KEYS = new Set(['guitar']);
+const CHORDAL_SET = new Set(CHORDAL_KEYS);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const semitoneRatio = (semitones) => 2 ** (semitones / 12);
+
+// root -> [root, fifth, octave]; key-neutral so it works in major and minor.
+const openFifth = (pitch) => {
+  try {
+    const root = Tone.Frequency(pitch);
+    return [pitch, root.transpose(7).toNote(), root.transpose(12).toNote()];
+  } catch { return [pitch]; }
+};
 
 // Wraps a Tone.Channel (real volume/mute/connect/dispose) with a custom
 // triggerAttackRelease built from one or more internal voices — lets a
@@ -287,6 +300,47 @@ function buildSynths() {
   // real timbre upgrade over a bare triangle oscillator for ~free.
   voices.guitar = new Tone.PluckSynth({ attackNoise: 1, dampening: 3500, resonance: 0.92 });
 
+  // ---- expanded instrument roster (all pitched, one per new channel) ----
+
+  // Electric guitar: a driven sawtooth MonoSynth pushed through overdrive.
+  const elecDrive = new Tone.Distortion({ distortion: 0.36, wet: 0.85 });
+  voices.elecGuitar = new Tone.MonoSynth({
+    oscillator: { type: 'sawtooth' },
+    envelope: { attack: 0.006, decay: 0.2, sustain: 0.6, release: 0.35 },
+    filter: { type: 'lowpass', rolloff: -12, Q: 1 },
+    filterEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.5, release: 0.4, baseFrequency: 500, octaves: 3 },
+  });
+
+  // Brass/wind: bright sawtooth ensemble with the slightly-slow attack that
+  // reads as a horn section rather than a synth stab.
+  voices.brass = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'sawtooth' },
+    envelope: { attack: 0.06, decay: 0.2, sustain: 0.85, release: 0.3 },
+  });
+  const brassFilter = new Tone.Filter({ type: 'lowpass', frequency: 3200, Q: 0.5 });
+
+  // Synth lead: square-wave mono line with a snappy filter envelope.
+  voices.synthLead = new Tone.MonoSynth({
+    oscillator: { type: 'square' },
+    envelope: { attack: 0.01, decay: 0.15, sustain: 0.7, release: 0.2 },
+    filter: { type: 'lowpass', rolloff: -24, Q: 2 },
+    filterEnvelope: { attack: 0.02, decay: 0.12, sustain: 0.6, release: 0.3, baseFrequency: 650, octaves: 2.6 },
+  });
+
+  // Pad: slow, wide, low-passed — sits under everything as a bed.
+  voices.pad = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'sawtooth' },
+    envelope: { attack: 0.6, decay: 0.5, sustain: 0.9, release: 1.4 },
+  });
+  const padFilter = new Tone.Filter({ type: 'lowpass', frequency: 1400, Q: 0.4 });
+
+  // Strings: AM voices + chorus for an ensemble shimmer, slow bowed attack.
+  voices.strings = new Tone.PolySynth(Tone.AMSynth, {
+    harmonicity: 2,
+    envelope: { attack: 0.3, decay: 0.3, sustain: 0.9, release: 0.9 },
+  });
+  const stringsChorus = new Tone.Chorus({ frequency: 1.6, delayTime: 3.5, depth: 0.6 }).start();
+
   // Master bus: everything feeds compressor -> limiter -> speakers, instead
   // of each voice going straight toDestination(). Glue/loudness only.
   const compressor = new Tone.Compressor({ threshold: -20, ratio: 3, attack: 0.01, release: 0.2 });
@@ -296,20 +350,25 @@ function buildSynths() {
 
   // One bus per mixer channel — the insertion point for that channel's
   // effects chain, and what makes per-channel processing possible at all.
-  const chanBusses = {
-    drums: new Tone.Channel().connect(compressor),
-    bass: new Tone.Channel().connect(compressor),
-    piano: new Tone.Channel().connect(compressor),
-    guitar: new Tone.Channel().connect(compressor),
-  };
+  const chanBusses = Object.fromEntries(
+    CHANNEL_KEYS.map((k) => [k, new Tone.Channel().connect(compressor)])
+  );
 
   DRUM_KEYS.forEach((key) => voices[key].connect(chanBusses.drums));
   voices.bass.connect(chanBusses.bass);
   voices.piano.connect(pianoChorus);
   pianoChorus.connect(chanBusses.piano);
   voices.guitar.connect(chanBusses.guitar);
+  voices.elecGuitar.chain(elecDrive, chanBusses.elecGuitar);
+  voices.brass.chain(brassFilter, chanBusses.brass);
+  voices.synthLead.connect(chanBusses.synthLead);
+  voices.pad.chain(padFilter, chanBusses.pad);
+  voices.strings.chain(stringsChorus, chanBusses.strings);
 
-  return { voices, controls, chanBusses, fx: { compressor, limiter, pianoChorus } };
+  return {
+    voices, controls, chanBusses,
+    fx: { compressor, limiter, pianoChorus, elecDrive, brassFilter, padFilter, stringsChorus },
+  };
 }
 
 function ensureBuilt() {
@@ -319,7 +378,7 @@ function ensureBuilt() {
   drumCtl = built.controls;
   busses = built.chanBusses;
   fxNodes = built.fx;
-  channelFxNodes = { drums: {}, bass: {}, piano: {}, guitar: {} };
+  channelFxNodes = Object.fromEntries(CHANNEL_KEYS.map((k) => [k, {}]));
 
   Object.keys(synths).forEach((key) => { synths[key].volume.value = voiceVolume(key); });
   Object.entries(channelMixState).forEach(([ch, val]) => {
@@ -408,8 +467,10 @@ export async function auditionNote(channel, pitch, duration = '8n') {
   const s = ensureBuilt();
   const voice = s[channel];
   if (!voice) return;
-  // PluckSynth self-decays and takes no release — same branch as playPattern.
-  if (channel === 'guitar') voice.triggerAttack(pitch, Tone.now());
+  // Mirror playPattern's per-voice branches so the preview click sounds like
+  // the real playback: pluck = attack only, pad/strings = open fifth.
+  if (PLUCK_KEYS.has(channel)) voice.triggerAttack(pitch, Tone.now());
+  else if (CHORDAL_SET.has(channel)) voice.triggerAttackRelease(openFifth(pitch), duration, Tone.now());
   else voice.triggerAttackRelease(pitch, duration, Tone.now());
 }
 
@@ -450,9 +511,10 @@ export async function playPattern(pattern, bpm, audio, onStep) {
   Tone.Transport.bpm.value = bpm;
   const totalSteps = pattern.bass.length;
   const stepSeconds = Tone.Time('16n').toSeconds();
-  const bassRuns = computeRuns(pattern.bass);
-  const pianoRuns = computeRuns(pattern.piano);
-  const guitarRuns = computeRuns(pattern.guitar);
+  // One run map per pitched lane present in the pattern (older data may lack
+  // the newer lanes entirely — skip those rather than crash).
+  const runsByTrack = {};
+  MELODIC_KEYS.forEach((k) => { runsByTrack[k] = computeRuns(pattern[k] || []); });
   const humanize = Boolean(fx?.humanize);
 
   const jTime = (time) => humanize ? time + (Math.random() - 0.5) * 0.012 : time;
@@ -463,14 +525,24 @@ export async function playPattern(pattern, bpm, audio, onStep) {
     DRUM_INSTRUMENTS.forEach((di) => {
       if (pattern.drums[di.key][idx]) s[di.key].triggerAttackRelease('8n', jTime(time));
     });
-    const bassRun = bassRuns[idx];
-    if (bassRun) s.bass.triggerAttackRelease(bassRun.pitch, stepSeconds * bassRun.length, jTime(time), velAt(pattern.bassVelocity, idx));
-    const pianoRun = pianoRuns[idx];
-    if (pianoRun) s.piano.triggerAttackRelease(pianoRun.pitch, stepSeconds * pianoRun.length, jTime(time), velAt(pattern.pianoVelocity, idx));
-    const guitarRun = guitarRuns[idx];
-    // PluckSynth (Karplus-Strong) self-decays — triggerAttack only, no
-    // release phase to schedule, and "duration" wouldn't do anything anyway.
-    if (guitarRun) s.guitar.triggerAttack(guitarRun.pitch, jTime(time), velAt(pattern.guitarVelocity, idx));
+    MELODIC_KEYS.forEach((k) => {
+      const voice = s[k];
+      const run = runsByTrack[k]?.[idx];
+      if (!voice || !run) return;
+      const vel = velAt(pattern[`${k}Velocity`], idx);
+      if (PLUCK_KEYS.has(k)) {
+        // PluckSynth (Karplus-Strong) self-decays — triggerAttack only, no
+        // release phase to schedule, and "duration" wouldn't do anything.
+        voice.triggerAttack(run.pitch, jTime(time), vel);
+      } else if (CHORDAL_SET.has(k)) {
+        // Pad/strings voice one melody line as an open fifth (root+5th+octave)
+        // so it fills without a chord data model, and stays key-neutral (no
+        // third) so it never clashes with a major or minor song.
+        voice.triggerAttackRelease(openFifth(run.pitch), stepSeconds * run.length, jTime(time), vel);
+      } else {
+        voice.triggerAttackRelease(run.pitch, stepSeconds * run.length, jTime(time), vel);
+      }
+    });
     Tone.Draw.schedule(() => onStep(idx), time);
   }, Array.from({ length: totalSteps }, (_, i) => i), '16n');
   seq.start(0);
@@ -488,9 +560,7 @@ export function disposeEngine() {
   if (busses) { Object.values(busses).forEach((b) => b.dispose()); busses = null; }
   if (synths) { Object.values(synths).forEach((s) => s.dispose()); synths = null; }
   if (fxNodes) {
-    fxNodes.compressor.dispose();
-    fxNodes.limiter.dispose();
-    fxNodes.pianoChorus.dispose();
+    Object.values(fxNodes).forEach((n) => n?.dispose?.());
     fxNodes = null;
   }
   drumCtl = null;
