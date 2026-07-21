@@ -63,6 +63,48 @@ function makeVoice(buildNodes) {
   return { channel, control };
 }
 
+/* ---------- sampled (real-recording) voices -------------------------------
+   Synthesis can't convincingly imitate an acoustic piano, a bowed violin or a
+   plucked steel-string, so those play back real multisampled recordings via
+   Tone.Sampler (it pitch-shifts the nearest sample per note). Samples stream
+   from a CDN-hosted, freely-licensed instrument set; while they load, a synth
+   fallback keeps the instrument audible so the first play is never silent. */
+const SAMPLE_BASE = 'https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/';
+
+// notes are given in file form ('Fs4'); the Sampler key wants Tone's '#' form.
+function sampleUrls(notes) {
+  const urls = {};
+  notes.forEach((n) => { urls[n.replace('s', '#')] = `${n}.mp3`; });
+  return urls;
+}
+
+// Same Tone.Channel wrapper contract as makeVoice: a real .volume/.connect node
+// with triggerAttack(Release) that routes to the Sampler once its buffers are
+// loaded, and to the fallback synth until then.
+function makeSampledVoice(folder, notes, buildFallback) {
+  const channel = new Tone.Channel();
+  const sampler = new Tone.Sampler({
+    urls: sampleUrls(notes),
+    baseUrl: `${SAMPLE_BASE}${folder}/`,
+    release: 1,
+  }).connect(channel);
+  const fallback = buildFallback().connect(channel);
+  const active = () => (sampler.loaded ? sampler : fallback);
+  channel.triggerAttackRelease = (pitch, dur, time, vel) => active().triggerAttackRelease(pitch, dur, time, vel);
+  channel.triggerAttack = (pitch, time, vel) => active().triggerAttack(pitch, time, vel);
+  const disposeChannel = channel.dispose.bind(channel);
+  channel.dispose = () => { sampler.dispose(); fallback.dispose(); disposeChannel(); };
+  return channel;
+}
+
+// Multisample note maps — a spread across each instrument's range so pitch
+// shifting between neighbours stays subtle. (All verified present in the set.)
+const SAMPLE_NOTES = {
+  piano: ['C2', 'Fs2', 'C3', 'Fs3', 'C4', 'Fs4', 'C5', 'Fs5', 'C6', 'Fs6'],
+  violin: ['G3', 'C4', 'E4', 'A4', 'C5', 'E5', 'A5', 'C6'],
+  guitar: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4', 'A4'],
+};
+
 /* ---------- drum voices ---------------------------------------------------
    Each builder closes over a mutable `p` holding the live knob values, so the
    trigger closure reads the current pitch on every hit. MembraneSynth takes
@@ -288,17 +330,19 @@ function buildSynths() {
     filterEnvelope: { attack: 0.02, decay: 0.25, sustain: 0.35, release: 0.3, baseFrequency: 90, octaves: 3.5 },
   });
 
-  const pianoChorus = new Tone.Chorus({ frequency: 3.5, delayTime: 2.5, depth: 0.4 }).start();
-  voices.piano = new Tone.PolySynth(Tone.FMSynth, {
+  // Grand piano: real multisampled recordings (Salamander). Fallback while the
+  // samples stream in is the old FM-piano synth.
+  voices.piano = makeSampledVoice('piano', SAMPLE_NOTES.piano, () => new Tone.PolySynth(Tone.FMSynth, {
     harmonicity: 2.5, modulationIndex: 3.5,
     envelope: { attack: 0.006, decay: 0.6, sustain: 0.25, release: 0.8 },
     modulation: { type: 'sine' },
     modulationEnvelope: { attack: 0.02, decay: 0.2, sustain: 0.1, release: 0.4 },
-  });
+  }));
 
-  // Karplus-Strong plucked-string synthesis — ships in Tone.js already, a
-  // real timbre upgrade over a bare triangle oscillator for ~free.
-  voices.guitar = new Tone.PluckSynth({ attackNoise: 1, dampening: 3500, resonance: 0.92 });
+  // Acoustic guitar: real plucked-string recordings. Fallback is Karplus-Strong
+  // PluckSynth. Triggered attack-only (see PLUCK_KEYS) so the sample rings out.
+  voices.guitar = makeSampledVoice('guitar-acoustic', SAMPLE_NOTES.guitar,
+    () => new Tone.PluckSynth({ attackNoise: 1, dampening: 3500, resonance: 0.92 }));
 
   // ---- expanded instrument roster (all pitched, one per new channel) ----
 
@@ -367,13 +411,13 @@ function buildSynths() {
 
   // ---- orchestral strings family ----
 
-  // Solo violin: bowed sawtooth, slow-ish attack + a little portamento.
-  voices.violin = new Tone.MonoSynth({
+  // Solo violin: real bowed-string recordings. Fallback is the sawtooth synth.
+  voices.violin = makeSampledVoice('violin', SAMPLE_NOTES.violin, () => new Tone.MonoSynth({
     oscillator: { type: 'sawtooth' }, portamento: 0.02,
     envelope: { attack: 0.14, decay: 0.2, sustain: 0.9, release: 0.3 },
     filter: { type: 'lowpass', rolloff: -12, Q: 0.8 },
     filterEnvelope: { attack: 0.12, decay: 0.2, sustain: 0.8, release: 0.3, baseFrequency: 900, octaves: 2 },
-  });
+  }));
   // Solo cello: same bowing, darker and lower.
   voices.cello = new Tone.MonoSynth({
     oscillator: { type: 'sawtooth' }, portamento: 0.03,
@@ -419,8 +463,7 @@ function buildSynths() {
 
   DRUM_KEYS.forEach((key) => voices[key].connect(chanBusses.drums));
   voices.bass.connect(chanBusses.bass);
-  voices.piano.connect(pianoChorus);
-  pianoChorus.connect(chanBusses.piano);
+  voices.piano.connect(chanBusses.piano);
   voices.guitar.connect(chanBusses.guitar);
   voices.elecGuitar.chain(elecDrive, chanBusses.elecGuitar);
   voices.brass.chain(brassFilter, chanBusses.brass);
@@ -439,7 +482,7 @@ function buildSynths() {
   return {
     voices, controls, chanBusses,
     fx: {
-      compressor, limiter, pianoChorus, elecDrive, brassFilter, padFilter, stringsChorus,
+      compressor, limiter, elecDrive, brassFilter, padFilter, stringsChorus,
       ePianoChorus, harpsichordHP,
     },
   };
