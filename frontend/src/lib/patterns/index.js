@@ -90,6 +90,21 @@ export function analyzeCombinedPattern(combined) {
   return { density, variety, totalActive, totalSteps };
 }
 
+/** Start time (seconds) of each section's FIRST appearance in the arrangement
+ *  — the client twin of recordings_service.section_offsets, used to schedule a
+ *  section's vocal take to enter at the right moment. */
+export function sectionOffsets(sections, arrangement, bpm) {
+  const stepSec = 60 / (bpm || 100) / 4; // one 16th-note step
+  const offsets = {};
+  let cumSteps = 0;
+  (arrangement || []).forEach((key) => {
+    if (!(key in offsets)) offsets[key] = cumSteps * stepSec;
+    const sec = sections?.[key];
+    cumSteps += sec?.length || sec?.bass?.length || 16;
+  });
+  return offsets;
+}
+
 export function lyricsWordCount(sections, arrangement) {
   return arrangement.reduce((sum, key) => {
     const sec = sections[key];
