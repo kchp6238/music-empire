@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthScreen } from './components/auth/AuthScreen';
-import { IntroScreen } from './components/intro/IntroScreen';
+import { WorldSelect } from './components/world/WorldSelect';
 import { CharacterCreation } from './components/character/CharacterCreation';
 import { StudioScreen } from './components/studio/StudioScreen';
 import { BeatmakerScreen } from './components/beatmaker/BeatmakerScreen';
@@ -41,8 +41,10 @@ function RootRoute() {
 
   if (!token) return <AuthScreen />;
   if (!characterLoaded) return null;
+  // With an active save loaded, go straight into the game; otherwise the
+  // save-select screen is home — where saves are picked, created and joined.
   if (character) return <Navigate to="/studio" replace />;
-  return <IntroScreen />;
+  return <WorldSelect />;
 }
 
 // Mount-only fade/slide transition per route (see components/ui/PageTransition.jsx).

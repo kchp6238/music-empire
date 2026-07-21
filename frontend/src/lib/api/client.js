@@ -4,6 +4,20 @@ function getToken() {
   return localStorage.getItem('me_token');
 }
 
+// The active save. Every authenticated request carries it so the backend
+// knows which world it's acting in — see routers/songs.py::get_current_character.
+// A ref rather than reading localStorage each call keeps the two in sync when
+// the player switches saves without a reload.
+let activeCharacterId = localStorage.getItem('me_character_id');
+export function setActiveCharacterId(id) {
+  activeCharacterId = id || null;
+  if (id) localStorage.setItem('me_character_id', id);
+  else localStorage.removeItem('me_character_id');
+}
+export function getActiveCharacterId() {
+  return activeCharacterId;
+}
+
 // Set by App so an expired/invalid session can drop the player back to the
 // login screen. Registered via a setter rather than importing the auth store
 // here, which would be a circular import (store -> api/auth -> client).
@@ -26,6 +40,9 @@ export async function apiFetch(path, { method = 'GET', body, form, formData, asB
   if (auth) {
     const token = getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    // Names the save this request acts in. Omitted before a save is chosen
+    // (the /worlds screen), where the backend has no character to resolve yet.
+    if (activeCharacterId) headers['X-Character-Id'] = activeCharacterId;
   }
 
   const res = await fetch(`${API_BASE}${path}`, {

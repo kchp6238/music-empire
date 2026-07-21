@@ -10,6 +10,7 @@ import * as charactersApi from '../lib/api/characters';
 import * as songsApi from '../lib/api/songs';
 import * as communityApi from '../lib/api/community';
 import * as collabApi from '../lib/api/collab';
+import { setActiveCharacterId, getActiveCharacterId } from '../lib/api/client';
 import * as timeApi from '../lib/api/time';
 
 const FAN_PERSONAS_BY_ID = Object.fromEntries(FAN_PERSONAS.map((p) => [p.id, p]));
@@ -154,9 +155,20 @@ export const useGameStore = create((set, get) => ({
   // The server resolves backgrounds (including "random"'s jitter) itself —
   // see backend/app/services/characters_service.py — so the client only
   // sends the artist name and chosen background id.
+  // Which save is being created/played. Set by the world-select screen before
+  // routing into the game, so createCharacter/loadCharacter know the world and
+  // every request carries the save's character id.
+  activeWorldId: null,
+  selectSave: (worldId, characterId) => {
+    setActiveCharacterId(characterId || null);
+    set({ activeWorldId: worldId || null });
+  },
+
   confirmBackground: async (bg) => {
     const artistName = get().artistNameInput.trim() || '무명';
-    const apiChar = await charactersApi.createCharacter(artistName, bg.id);
+    const apiChar = await charactersApi.createCharacter(artistName, bg.id, get().activeWorldId);
+    // The new character is now this session's active save.
+    setActiveCharacterId(apiChar.id);
     set({ character: mapCharacter(apiChar) });
   },
 
@@ -165,6 +177,11 @@ export const useGameStore = create((set, get) => ({
   // Loading no longer advances anything: the in-game calendar only moves on
   // player actions (backend services/time_service.py).
   loadCharacter: async () => {
+    // No save chosen yet — the world-select screen decides where to go.
+    if (!getActiveCharacterId()) {
+      set({ character: null, characterLoaded: true });
+      return;
+    }
     try {
       const res = await charactersApi.getMyCharacter();
       const character = mapCharacter(res.character);
@@ -186,6 +203,13 @@ export const useGameStore = create((set, get) => ({
     }
   },
   resetCharacterLoaded: () => set({ character: null, characterLoaded: false, lastTimeSummary: null, followedArtists: [] }),
+
+  // Leave the current save and return to save selection — no reload needed.
+  switchSave: () => {
+    if (get().isPlaying) get().stop();
+    setActiveCharacterId(null);
+    set({ character: null, characterLoaded: true, activeWorldId: null, lastTimeSummary: null, followedArtists: [] });
+  },
 
   // Timed actions: the server moves the in-game calendar and reports what
   // happened in the gap (fans, income, weeks/seasons settled). Both refresh

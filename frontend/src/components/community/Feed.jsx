@@ -44,8 +44,10 @@ export function Feed() {
   if (error) return <div style={{ fontSize: 12, color: '#C4576B' }}>{error}</div>;
   if (!items) return <div style={{ fontSize: 12, color: '#6B6577' }}>불러오는 중...</div>;
 
-  const mine = items.filter((i) => i.source === 'user' && i.artist_name === character.artistName);
-  const others = items.filter((i) => !(i.source === 'user' && i.artist_name === character.artistName));
+  // By character id, not name — two artists in a multi world can share a name.
+  const isMine = (i) => i.source === 'user' && i.artist_id === character.id;
+  const mine = items.filter(isMine);
+  const others = items.filter((i) => !isMine(i));
 
   return (
     <div>

@@ -1,11 +1,13 @@
 import { apiFetch } from './client';
 
+// Auth is required now: the feed/chart are scoped to the viewer's world, so
+// the request must carry the active save (Authorization + X-Character-Id).
 export function getFeed() {
-  return apiFetch('/community/feed', { auth: false });
+  return apiFetch('/community/feed');
 }
 
 export function getChart() {
-  return apiFetch('/community/chart', { auth: false });
+  return apiFetch('/community/chart');
 }
 
 export function getFollows() {
