@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Image as ImageIcon } from 'lucide-react';
+import { Image as ImageIcon, Trash2 } from 'lucide-react';
 import { CoverEditor } from '../cover/CoverEditor';
 import { TopBar } from '../shared/TopBar';
 import { DraftBar } from './DraftBar';
@@ -153,7 +153,13 @@ export function BeatmakerScreen() {
                 </div>
               </div>
 
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
+                <button
+                  className="me-btn-ghost"
+                  onClick={() => (isPlaying && playingId === 'section-preview') ? stop() : play(buildCombinedPattern(draft.sections, [draft.editingSection]), draft.bpm, 'section-preview')}
+                >
+                  {(isPlaying && playingId === 'section-preview') ? '■ 정지' : `▶ ${draft.editingSection} 미리듣기`}
+                </button>
                 <button className="me-btn-ghost" onClick={loadBasicPattern}>기본 패턴 불러오기</button>
                 <button
                   className="me-btn-ghost"
@@ -162,18 +168,18 @@ export function BeatmakerScreen() {
                 >
                   {channelIcon} {channelLabel} 지우기
                 </button>
+                {/* Destructive "wipe the whole section" — pushed to the far
+                    right, away from the play/load buttons, and behind a confirm
+                    so it can't be triggered by an accidental click. */}
                 <button
-                  className="me-btn-ghost"
-                  onClick={clearSection}
+                  className="me-btn-ghost ml-auto inline-flex items-center gap-1 opacity-70 hover:opacity-100"
+                  style={{ color: 'var(--color-danger)' }}
+                  onClick={() => {
+                    if (window.confirm(`${draft.editingSection} 구간의 모든 악기를 지울까요?\n(가사는 남습니다. 되돌릴 수 없어요.)`)) clearSection();
+                  }}
                   title={`${draft.editingSection} 구간의 모든 악기를 지웁니다 (가사는 남습니다)`}
                 >
-                  전체 지우기
-                </button>
-                <button
-                  className="me-btn-ghost"
-                  onClick={() => (isPlaying && playingId === 'section-preview') ? stop() : play(buildCombinedPattern(draft.sections, [draft.editingSection]), draft.bpm, 'section-preview')}
-                >
-                  {(isPlaying && playingId === 'section-preview') ? '■ 정지' : `▶ ${draft.editingSection} 미리듣기`}
+                  <Trash2 size={13} /> 전체 지우기
                 </button>
               </div>
             </div>
