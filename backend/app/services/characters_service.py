@@ -27,11 +27,12 @@ def resolve_background(background_id: str) -> dict:
     }
 
 
-def create_character(db: Session, user_id: str, artist_name: str, background_id: str) -> Character:
+def create_character(db: Session, user_id: str, artist_name: str, background_id: str, world_id: str) -> Character:
     resolved = resolve_background(background_id)
     start_age = resolved.get("start_age", 22)
     character = Character(
         user_id=user_id,
+        world_id=world_id,
         artist_name=artist_name.strip() or "무명",
         background_id=resolved["id"],
         background_name=resolved["name"],
@@ -58,5 +59,38 @@ def create_character(db: Session, user_id: str, artist_name: str, background_id:
     return character
 
 
+def list_for_user(db: Session, user_id: str) -> list[Character]:
+    """Every save this player holds, newest first."""
+    return (
+        db.query(Character)
+        .filter(Character.user_id == user_id)
+        .order_by(Character.created_at.desc())
+        .all()
+    )
+
+
 def get_by_user(db: Session, user_id: str) -> Character | None:
-    return db.query(Character).filter(Character.user_id == user_id).first()
+    """The player's sole character, or None when they have none — or several.
+
+    Only meaningful as a fallback for clients that predate save selection; with
+    more than one save there is no "the" character and the caller must say
+    which. See routers/songs.py::get_current_character.
+    """
+    rows = db.query(Character).filter(Character.user_id == user_id).limit(2).all()
+    return rows[0] if len(rows) == 1 else None
+
+
+def get_owned(db: Session, character_id: str, user_id: str) -> Character | None:
+    return (
+        db.query(Character)
+        .filter(Character.id == character_id, Character.user_id == user_id)
+        .first()
+    )
+
+
+def get_in_world(db: Session, user_id: str, world_id: str) -> Character | None:
+    return (
+        db.query(Character)
+        .filter(Character.user_id == user_id, Character.world_id == world_id)
+        .first()
+    )

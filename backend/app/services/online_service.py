@@ -12,6 +12,19 @@ from app.models.song import Song
 from app.models.online import Concert, ConcertTicket, MarketplaceListing
 
 
+def _require_same_world(db: Session, actor: Character, other_character_id: str) -> Character:
+    """Both sides of a trade must be in the same save.
+
+    Concert tickets and marketplace sales are the only paths that move money
+    between characters, so this is where a solo save's economy would otherwise
+    leak into a shared one.
+    """
+    other = db.get(Character, other_character_id)
+    if other is None or other.world_id != actor.world_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="다른 세이브의 항목입니다")
+    return other
+
+
 # ---- Concerts ----
 
 def create_concert(db: Session, host: Character, title: str, venue_capacity: int, ticket_price: float, scheduled_at: datetime) -> Concert:
@@ -41,7 +54,13 @@ def _concert_dict(db: Session, concert: Concert, viewer_id: str) -> dict:
 
 def list_upcoming(db: Session, viewer: Character) -> list[dict]:
     now = datetime.now(timezone.utc).replace(tzinfo=None)
-    concerts = db.query(Concert).filter(Concert.scheduled_at >= now).order_by(Concert.scheduled_at).all()
+    concerts = (
+        db.query(Concert)
+        .join(Character, Concert.host_character_id == Character.id)
+        .filter(Concert.scheduled_at >= now, Character.world_id == viewer.world_id)
+        .order_by(Concert.scheduled_at)
+        .all()
+    )
     return [_concert_dict(db, c, viewer.id) for c in concerts]
 
 
@@ -51,6 +70,7 @@ def buy_ticket(db: Session, buyer: Character, concert_id: str) -> dict:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="콘서트를 찾을 수 없습니다")
     if concert.host_character_id == buyer.id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="자신의 콘서트는 예매할 수 없습니다")
+    _require_same_world(db, buyer, concert.host_character_id)
     if db.get(ConcertTicket, (concert_id, buyer.id)) is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="이미 예매했습니다")
     sold = db.query(ConcertTicket).filter(ConcertTicket.concert_id == concert_id).count()
@@ -97,7 +117,7 @@ def list_open(db: Session, viewer: Character) -> list[dict]:
         db.query(MarketplaceListing, Song, Character)
         .join(Song, MarketplaceListing.song_id == Song.id)
         .join(Character, MarketplaceListing.seller_character_id == Character.id)
-        .filter(MarketplaceListing.status == "open")
+        .filter(MarketplaceListing.status == "open", Character.world_id == viewer.world_id)
         .order_by(MarketplaceListing.created_at.desc())
         .all()
     )
@@ -115,6 +135,7 @@ def buy_listing(db: Session, buyer: Character, listing_id: str) -> dict:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="판매 목록을 찾을 수 없습니다")
     if listing.seller_character_id == buyer.id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="자신의 곡은 구매할 수 없습니다")
+    _require_same_world(db, buyer, listing.seller_character_id)
     price = float(listing.price)
     if float(buyer.money) < price:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="자금이 부족합니다")

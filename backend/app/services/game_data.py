@@ -73,3 +73,45 @@ FAN_PERSONAS_SEED = [
     {"name": "록 마니아", "color": "#C4576B", "voice": "blunt", "genre_pref": {"록": 0.9, "인디": 0.4, "트로트": -0.6, "발라드": -0.2}, "mood_pref": {"강렬": 0.8, "신남": 0.4, "편안함": -0.4}, "openness": 0.3},
     {"name": "R&B 소울 리스너", "color": "#7FA8D1", "voice": "soft", "genre_pref": {"R&B": 0.9, "힙합": 0.4, "발라드": 0.3, "EDM": -0.4}, "mood_pref": {"로맨틱": 0.7, "감성적": 0.5, "강렬": -0.2}, "openness": 0.4},
 ]
+
+# Rival artists. Global roster (every world shares the same 12 names/genres),
+# but each world grows its own discography — services/npc_service.py generates
+# their releases per world so a solo save has a living chart to climb.
+#
+# `skill` is the centre of an artist's score band and `consistency` how tightly
+# their releases cluster around it: a star lands high every time, a rookie is a
+# gamble. `cycle_days` is roughly how often they put something out, so the chart
+# turns over at different rates. `moods`/`bpm` shape the generated songs.
+NPC_ARTISTS = [
+    {"name": "네온 하버", "color": "#4FD1C5", "genre": "EDM", "bio": "클럽 신에서 잔뼈가 굵은 듀오",
+     "skill": 80, "consistency": 0.8, "cycle_days": 34, "moods": ["신남", "강렬"], "bpm": (124, 132)},
+    {"name": "조용한 새벽", "color": "#E893A6", "genre": "발라드", "bio": "새벽 감성으로 유명한 싱어송라이터",
+     "skill": 74, "consistency": 0.75, "cycle_days": 45, "moods": ["감성적", "우울"], "bpm": (68, 82)},
+    {"name": "골목길", "color": "#E8A33D", "genre": "힙합", "bio": "로컬 힙합 신의 라이징 스타",
+     "skill": 82, "consistency": 0.7, "cycle_days": 28, "moods": ["강렬", "신남"], "bpm": (88, 100)},
+    {"name": "유리병 편지", "color": "#8B7FD1", "genre": "인디", "bio": "몽환적인 사운드의 인디 밴드",
+     "skill": 66, "consistency": 0.6, "cycle_days": 52, "moods": ["몽환적", "편안함"], "bpm": (92, 108)},
+    {"name": "트로트 여왕", "color": "#D18B4C", "genre": "트로트", "bio": "전국 노래자랑 출신의 신흥 강자",
+     "skill": 72, "consistency": 0.85, "cycle_days": 40, "moods": ["편안함", "신남"], "bpm": (104, 116)},
+    {"name": "미드나잇 소울", "color": "#7FA8D1", "genre": "R&B", "bio": "심야 라디오를 장악한 보컬리스트",
+     "skill": 78, "consistency": 0.8, "cycle_days": 38, "moods": ["로맨틱", "감성적"], "bpm": (72, 92)},
+    {"name": "백드롭", "color": "#C4576B", "genre": "록", "bio": "홍대 라이브의 전설로 불리는 4인조",
+     "skill": 76, "consistency": 0.65, "cycle_days": 46, "moods": ["강렬", "신남"], "bpm": (120, 150)},
+    {"name": "코랄 리프", "color": "#E8C34D", "genre": "팝", "bio": "라디오 히트를 몰고 다니는 프로듀서",
+     "skill": 84, "consistency": 0.85, "cycle_days": 30, "moods": ["신남", "로맨틱"], "bpm": (100, 118)},
+    {"name": "안개주의보", "color": "#5FBF8F", "genre": "인디", "bio": "실험적 편곡으로 평단의 지지를 받는 밴드",
+     "skill": 70, "consistency": 0.5, "cycle_days": 58, "moods": ["실험적", "몽환적"], "bpm": (86, 110)},
+    {"name": "루프탑 파티", "color": "#4FD1C5", "genre": "EDM", "bio": "페스티벌 무대를 노리는 신예",
+     "skill": 62, "consistency": 0.55, "cycle_days": 33, "moods": ["신남", "강렬"], "bpm": (126, 138)},
+    {"name": "종이비행기", "color": "#E893A6", "genre": "발라드", "bio": "오디션 프로그램에서 발굴된 목소리",
+     "skill": 60, "consistency": 0.6, "cycle_days": 50, "moods": ["감성적", "로맨틱"], "bpm": (66, 80)},
+    {"name": "슬로우 모션", "color": "#B794F4", "genre": "R&B", "bio": "느린 그루브를 고집하는 언더그라운드 아티스트",
+     "skill": 68, "consistency": 0.7, "cycle_days": 44, "moods": ["감성적", "몽환적"], "bpm": (70, 88)},
+]
+
+# Title fragments the generator combines — deliberately generic so any pairing
+# reads as a plausible song name regardless of which artist drew it.
+NPC_TITLE_A = ["새벽", "네온", "골목", "여름", "빗속", "야간", "은하", "잔상", "파도", "먼지", "바람", "심장",
+               "우주", "폭우", "노을", "정오", "겨울밤", "불면", "화양", "리듬"]
+NPC_TITLE_B = ["의 끝", "속으로", "이 지나면", "라이트", "무브먼트", "세레나데", "블루스", "그리고 너",
+               "런웨이", "드라이브", "레터", "웨이브", "", "", ""]

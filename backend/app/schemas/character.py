@@ -6,11 +6,13 @@ from pydantic import BaseModel
 class CharacterCreate(BaseModel):
     artist_name: str
     background_id: str
+    world_id: str
 
 
 class CharacterOut(BaseModel):
     id: str
     user_id: str
+    world_id: str
     artist_name: str
     background_id: str
     background_name: str

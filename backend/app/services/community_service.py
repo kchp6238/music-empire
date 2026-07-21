@@ -1,3 +1,4 @@
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.character import Character
@@ -43,9 +44,24 @@ def _reactions_by_song(db: Session, song_ids: list[str]) -> dict[str, list[dict]
     return out
 
 
-def get_feed(db: Session) -> list[dict]:
+def get_feed(db: Session, viewer: Character) -> list[dict]:
+    """The scene as this save sees it — only songs from the viewer's own world.
+
+    Solo saves see themselves and the NPC rivals; a multi room shows everyone
+    who joined it. Nothing crosses between worlds.
+    """
+    # Catch the rivals up to this save's date first, so the chart reflects
+    # everything that "should" have come out by now. Cheap once caught up.
+    from app.services import npc_service
+    npc_service.ensure_catalogue(db, viewer.world_id, viewer.game_date)
+
     items = []
-    rows = db.query(Song, Character).join(Character, Song.character_id == Character.id).filter(Song.released_at.isnot(None)).all()
+    rows = (
+        db.query(Song, Character)
+        .join(Character, Song.character_id == Character.id)
+        .filter(Song.released_at.isnot(None), Character.world_id == viewer.world_id)
+        .all()
+    )
     song_ids = [s.id for s, _ in rows]
     # One id-only query rather than joining the cover table — the point of
     # keeping art in its own table is that listing never touches the bytes.
@@ -61,7 +77,14 @@ def get_feed(db: Session) -> list[dict]:
             "pattern": build_combined_pattern(song.pattern, song.structure),
         })
 
-    npc_rows = db.query(NpcSong, NpcArtist).join(NpcArtist, NpcSong.npc_artist_id == NpcArtist.id).all()
+    # Rivals from this world only, and only what has come out by the viewer's
+    # own date — players in a shared room can be at different points in time.
+    npc_rows = (
+        db.query(NpcSong, NpcArtist)
+        .join(NpcArtist, NpcSong.npc_artist_id == NpcArtist.id)
+        .filter(NpcSong.world_id == viewer.world_id, NpcSong.released_on <= viewer.game_date)
+        .all()
+    )
     # NPC songs have no stored reactions — theirs are generated on the fly from
     # the same writer, seeded on the song id so they stay put between loads.
     personas = db.query(FanPersona).all() if npc_rows else []
@@ -82,12 +105,20 @@ def list_follows(db: Session, follower_character_id: str) -> list[dict]:
     return [{"followed_type": r.followed_type, "followed_id": r.followed_id} for r in rows]
 
 
-def get_chart(db: Session) -> list[dict]:
-    items = get_feed(db)
+def get_chart(db: Session, viewer: Character) -> list[dict]:
+    items = get_feed(db, viewer)
     return sorted(items, key=lambda x: (x["overall_score"] or 0), reverse=True)
 
 
-def follow(db: Session, follower_character_id: str, followed_type: str, followed_id: str) -> Follow:
+def follow(db: Session, follower: Character, followed_type: str, followed_id: str) -> Follow:
+    # Follow.followed_id is polymorphic with no FK, so the same-world rule can
+    # only be enforced here — the DB can't do it.
+    if followed_type == "character":
+        target = db.get(Character, followed_id)
+        if target is None or target.world_id != follower.world_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="그 아티스트를 찾을 수 없습니다")
+
+    follower_character_id = follower.id
     existing = (
         db.query(Follow)
         .filter(Follow.follower_character_id == follower_character_id, Follow.followed_type == followed_type, Follow.followed_id == followed_id)

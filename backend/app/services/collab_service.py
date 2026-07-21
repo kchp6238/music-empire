@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.character import Character
 from app.models.song import Song
+from app.models.world import World, SOLO
 from app.models.collab import CollabInvite, SongCollaborator, COLLAB_ROLES
 
 
@@ -20,8 +21,14 @@ def invite(db: Session, inviter: Character, song_id: str, invitee_character_id: 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid role: {role}")
     if invitee_character_id == inviter.id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot invite yourself")
-    if db.get(Character, invitee_character_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invitee not found")
+    # Collaboration is a multiplayer act: there is nobody else in a solo save,
+    # and a cross-world invite would split release revenue between economies.
+    world = db.get(World, inviter.world_id)
+    if world is not None and world.kind == SOLO:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="혼자 하는 세이브에서는 협업할 수 없습니다")
+    invitee = db.get(Character, invitee_character_id)
+    if invitee is None or invitee.world_id != inviter.world_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="같은 세이브의 아티스트가 아닙니다")
     if not (0 < contribution_pct < 100):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="contribution_pct must be between 0 and 100")
 
