@@ -25,8 +25,12 @@ def run_seed():
         if db.query(FanPersona).count() == 0:
             for p in FAN_PERSONAS_SEED:
                 db.add(FanPersona(name=p["name"], color=p["color"], genre_pref=p["genre_pref"], mood_pref=p["mood_pref"], openness=p["openness"]))
-        if db.query(NpcArtist).count() == 0:
-            for a in NPC_ARTISTS:
+        # Add any roster artist that isn't already present, by name — the roster
+        # grew from 5 to 12, and a plain count==0 guard would leave a database
+        # seeded under the old roster stuck with only the original five rivals.
+        existing_names = {n for (n,) in db.query(NpcArtist.name).all()}
+        for a in NPC_ARTISTS:
+            if a["name"] not in existing_names:
                 db.add(NpcArtist(name=a["name"], color=a["color"], genre=a["genre"], bio=a["bio"]))
         db.commit()
         print(f"Seeded: {db.query(FanPersona).count()} fan personas, {db.query(NpcArtist).count()} npc artists (songs generated per world)")
