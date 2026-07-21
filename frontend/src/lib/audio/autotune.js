@@ -330,6 +330,21 @@ export function autotuneChannel(input, sampleRate, {
 
   let data = pitchShiftVarying(source, ratioAt);
 
+  if (effect === 'harmonyVoice') {
+    // ONE transposed in-scale voice, no lead mixed in — meant to be uploaded as
+    // its own take that stacks over the original through the layered player, so
+    // each harmony line can be kept or deleted independently.
+    const semi = harmonyIntervals[0] ?? 3;
+    const voiceRatioAt = (i) => {
+      const b = Math.max(0, Math.min(targets.length - 1, Math.round(blockAt(i))));
+      const target = targets[b];
+      if (target === null) return baseRatioAt(i);
+      const harmonized = snapMidiToScale(target + semi, keyIndex, scale);
+      return baseRatioAt(i) * 2 ** ((harmonized - target) / 12);
+    };
+    data = pitchShiftVarying(source, voiceRatioAt);
+  }
+
   if (effect === 'harmony') {
     // Each voice is the same correction transposed to another in-scale degree,
     // so the stack stays in key instead of running parallel semitones.

@@ -39,12 +39,13 @@ async def upload_recording(
     duration_sec: float = Form(0),
     song_id: str | None = Form(None),
     section: str | None = Form(None),
+    pitch_shift: int | None = Form(None),
     db: Session = Depends(get_db),
     character: Character = Depends(get_current_character),
 ):
     data = await file.read()
     rec = recordings_service.create_recording(
-        db, character, data, file.content_type or "", title, duration_sec, song_id or None, section or None
+        db, character, data, file.content_type or "", title, duration_sec, song_id or None, section or None, pitch_shift
     )
     return _out(rec)
 

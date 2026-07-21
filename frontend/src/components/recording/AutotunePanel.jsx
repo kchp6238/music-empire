@@ -75,6 +75,9 @@ export function AutotunePanel({ take, songId, onClose, onSaved }) {
         mimeType: 'audio/wav',
         durationSec: result.durationSec,
         songId: take.song_id || songId,
+        // Keep the source take's section so a processed/harmony copy lands on
+        // the same part of the song and lines up in layered playback.
+        section: take.section || null,
         title: `${take.title} (${preset.label})`,
       });
       onSaved?.();

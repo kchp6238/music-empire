@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Mic, Square, Trash2, Play, Pause, Link2, Link2Off, Music2, Wand2 } from 'lucide-react';
+import { Mic, Square, Trash2, Play, Pause, Link2, Link2Off, Music2, Wand2, Users } from 'lucide-react';
 import { TopBar } from '../shared/TopBar';
 import { PageTransition } from '../ui/PageTransition';
 import { Panel } from '../ui/Panel';
@@ -8,6 +8,7 @@ import { Input } from '../ui/Input';
 import { AutotunePanel } from './AutotunePanel';
 import { LyricsBoard } from './LyricsBoard';
 import { startRecording, isRecordingSupported } from '../../lib/audio/recorder';
+import { autotuneBlob } from '../../lib/audio/autotune';
 import * as recordingsApi from '../../lib/api/recordings';
 import { buildCombinedPattern, sectionOffsets } from '../../lib/patterns';
 import { SECTION_TYPES } from '../../lib/gameData/constants';
@@ -46,6 +47,7 @@ export function RecordingStudio() {
   // result can be traced to mic capture vs. server playback.
   const [lastTake, setLastTake] = useState(null);
   const [autotuneFor, setAutotuneFor] = useState(null); // take id with the panel open
+  const [harmonyFor, setHarmonyFor] = useState(null); // take id with the quick-harmony menu open
   // Which part of the song the next take sings. Sections actually used in the
   // arrangement, in song order, plus a whole-song option.
   const arrangementSections = SECTION_TYPES.filter((t) => draft.arrangement.includes(t));
@@ -203,6 +205,38 @@ export function RecordingStudio() {
     }));
     await play(buildCombinedPattern(draft.sections, draft.arrangement), draft.bpm, 'comp-preview', vocals);
   }
+
+  // One-click harmony: pitch-shift a take into an in-scale voice and upload it
+  // as a *separate* take on the same section, so it stacks over the original in
+  // layered playback (and can be deleted on its own). pitch_shift labels it.
+  async function makeHarmony(take, semitones) {
+    setHarmonyFor(null);
+    setBusy(true); setError('');
+    try {
+      const srcUrl = await recordingsApi.fetchRecordingUrl(take.id);
+      const srcBlob = await (await fetch(srcUrl)).blob();
+      URL.revokeObjectURL(srcUrl);
+      const { blob, durationSec } = await autotuneBlob(srcBlob, {
+        effect: 'harmonyVoice', harmonyIntervals: [semitones],
+        keyIndex: 0, scale: 'major', strength: 0.85,
+      });
+      const songId = take.song_id || persistedDraftId || (draft.arrangement.length ? await saveDraft() : null);
+      await recordingsApi.uploadRecording({
+        blob, mimeType: 'audio/wav', durationSec,
+        songId, section: take.section || null, pitchShift: semitones,
+        title: `${take.title} 화음(${semitones > 0 ? '+' : ''}${semitones})`,
+      });
+      await loadTakes();
+    } catch (e) {
+      setError(e.message || '화음 생성에 실패했습니다');
+    } finally { setBusy(false); }
+  }
+
+  const HARMONY_OPTIONS = [
+    { semitones: 4, label: '3도 위' },
+    { semitones: 7, label: '5도 위' },
+    { semitones: -12, label: '옥타브 아래' },
+  ];
 
   const attachedCount = (takes || []).filter((t) => t.song_id && t.song_id === persistedDraftId).length;
 
@@ -387,7 +421,11 @@ export function RecordingStudio() {
                       {t.song_id ? <span className="text-accent2"> · 곡에 들어감 (재생 시 함께 들려요)</span> : ''}
                     </div>
                   </div>
-                  <Button size="sm" onClick={() => setAutotuneFor(autotuneFor === t.id ? null : t.id)}
+                  <Button size="sm" onClick={() => { setHarmonyFor(harmonyFor === t.id ? null : t.id); setAutotuneFor(null); }}
+                    disabled={busy} aria-label={`${t.title} 자동 화음`}>
+                    <Users size={13} /> 자동 화음
+                  </Button>
+                  <Button size="sm" onClick={() => { setAutotuneFor(autotuneFor === t.id ? null : t.id); setHarmonyFor(null); }}
                     disabled={busy} aria-label={`${t.title} 목소리 효과`}>
                     <Wand2 size={13} /> 목소리 효과
                   </Button>
@@ -399,6 +437,17 @@ export function RecordingStudio() {
                     <Trash2 size={13} />
                   </Button>
                 </Panel>
+                {harmonyFor === t.id && (
+                  <div className="mt-2 flex items-center gap-2 flex-wrap px-2 py-2 rounded-lg border border-pink/40 bg-pink/5">
+                    <span className="text-[11px] text-muted flex items-center gap-1"><Users size={12} className="text-pink" /> 화음 성부 만들기</span>
+                    {HARMONY_OPTIONS.map((h) => (
+                      <Button key={h.semitones} size="sm" onClick={() => makeHarmony(t, h.semitones)} disabled={busy}>
+                        {h.label}
+                      </Button>
+                    ))}
+                    <span className="text-[10px] text-faint">— {t.section || '곡 전체'}에 화음으로 쌓입니다</span>
+                  </div>
+                )}
                 {autotuneFor === t.id && (
                   <AutotunePanel
                     take={t}
