@@ -103,6 +103,9 @@ const SAMPLE_NOTES = {
   piano: ['C2', 'Fs2', 'C3', 'Fs3', 'C4', 'Fs4', 'C5', 'Fs5', 'C6', 'Fs6'],
   violin: ['G3', 'C4', 'E4', 'A4', 'C5', 'E5', 'A5', 'C6'],
   guitar: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4', 'A4'],
+  cello: ['C2', 'G2', 'C3', 'G3', 'C4', 'E4', 'G4', 'C5'],
+  flute: ['C4', 'E4', 'A4', 'C5', 'E5', 'A5', 'C6'],
+  clarinet: ['D3', 'F3', 'As3', 'D4', 'F4', 'As4', 'D5'],
 };
 
 /* ---------- drum voices ---------------------------------------------------
@@ -418,13 +421,13 @@ function buildSynths() {
     filter: { type: 'lowpass', rolloff: -12, Q: 0.8 },
     filterEnvelope: { attack: 0.12, decay: 0.2, sustain: 0.8, release: 0.3, baseFrequency: 900, octaves: 2 },
   }));
-  // Solo cello: same bowing, darker and lower.
-  voices.cello = new Tone.MonoSynth({
+  // Solo cello: real bowed-string recordings. Fallback is the sawtooth synth.
+  voices.cello = makeSampledVoice('cello', SAMPLE_NOTES.cello, () => new Tone.MonoSynth({
     oscillator: { type: 'sawtooth' }, portamento: 0.03,
     envelope: { attack: 0.12, decay: 0.2, sustain: 0.9, release: 0.4 },
     filter: { type: 'lowpass', rolloff: -12, Q: 0.8 },
     filterEnvelope: { attack: 0.1, decay: 0.2, sustain: 0.7, release: 0.4, baseFrequency: 320, octaves: 2 },
-  });
+  }));
   // Harp: plucked, bright, long ringing decay.
   voices.harp = new Tone.PolySynth(Tone.FMSynth, {
     harmonicity: 2, modulationIndex: 2,
@@ -433,20 +436,20 @@ function buildSynths() {
 
   // ---- woodwind family ----
 
-  // Flute: soft, breathy sine with a gentle attack.
-  voices.flute = new Tone.MonoSynth({
+  // Flute: real flute recordings. Fallback is the breathy sine synth.
+  voices.flute = makeSampledVoice('flute', SAMPLE_NOTES.flute, () => new Tone.MonoSynth({
     oscillator: { type: 'sine' },
     envelope: { attack: 0.08, decay: 0.1, sustain: 0.9, release: 0.25 },
     filter: { type: 'lowpass', Q: 0.5 },
     filterEnvelope: { attack: 0.05, decay: 0.1, sustain: 0.8, release: 0.2, baseFrequency: 1200, octaves: 1.5 },
-  });
-  // Clarinet: hollow, woody square (odd harmonics) rolled off up top.
-  voices.clarinet = new Tone.MonoSynth({
+  }));
+  // Clarinet: real clarinet recordings. Fallback is the woody square synth.
+  voices.clarinet = makeSampledVoice('clarinet', SAMPLE_NOTES.clarinet, () => new Tone.MonoSynth({
     oscillator: { type: 'square' },
     envelope: { attack: 0.05, decay: 0.1, sustain: 0.9, release: 0.2 },
     filter: { type: 'lowpass', rolloff: -12, Q: 0.7 },
     filterEnvelope: { attack: 0.04, decay: 0.1, sustain: 0.7, release: 0.2, baseFrequency: 700, octaves: 1.8 },
-  });
+  }));
 
   // Master bus: everything feeds compressor -> limiter -> speakers, instead
   // of each voice going straight toDestination(). Glue/loudness only.
