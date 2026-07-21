@@ -7,7 +7,7 @@ from app.models.npc import NpcArtist, NpcSong
 from app.models.community import Follow
 from app.models.fan import FanPersona, SongReaction
 from app.services.patterns import build_combined_pattern
-from app.services import covers_service, reactions as reactions_service
+from app.services import covers_service, reactions as reactions_service, recordings_service
 
 # How many fan comments a feed card quotes. The card has room for a couple of
 # lines; the rest of a song's reactions live on its results screen.
@@ -67,12 +67,14 @@ def get_feed(db: Session, viewer: Character) -> list[dict]:
     # keeping art in its own table is that listing never touches the bytes.
     with_cover = covers_service.song_ids_with_cover(db, song_ids)
     comments = _reactions_by_song(db, song_ids)
+    vocal_by_song = recordings_service.vocal_ids_for_songs(db, song_ids)
     for song, character in rows:
         items.append({
             "id": song.id, "title": song.title, "artist_name": character.artist_name,
             "artist_id": character.id, "artist_type": "character", "tier": song.tier,
             "overall_score": song.overall_score, "source": "user", "bpm": song.bpm,
             "has_cover": song.id in with_cover,
+            "vocal_recording_id": vocal_by_song.get(song.id),
             "reactions": comments.get(song.id, []),
             "pattern": build_combined_pattern(song.pattern, song.structure),
         })
@@ -93,7 +95,7 @@ def get_feed(db: Session, viewer: Character) -> list[dict]:
             "id": npc_song.id, "title": npc_song.title, "artist_name": artist.name,
             "artist_id": artist.id, "artist_type": "npc", "tier": npc_song.tier,
             "overall_score": float(npc_song.score), "source": "npc", "bpm": npc_song.bpm,
-            "has_cover": False,
+            "has_cover": False, "vocal_recording_id": None,
             "reactions": reactions_service.build_npc_comments(npc_song, personas, FEED_COMMENTS),
             "pattern": npc_song.pattern,
         })

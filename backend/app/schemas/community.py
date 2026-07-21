@@ -23,6 +23,7 @@ class FeedSongItem(BaseModel):
     # service sets has to be listed here — has_cover silently vanished for a
     # while precisely because it wasn't.
     has_cover: bool = False
+    vocal_recording_id: str | None = None
     reactions: list[FeedReaction] = []
     pattern: dict  # combined (flattened) pattern, ready for the audio engine
 
@@ -38,6 +39,7 @@ class ChartEntry(BaseModel):
     source: str
     bpm: int
     has_cover: bool = False
+    vocal_recording_id: str | None = None
     reactions: list[FeedReaction] = []
     pattern: dict
 

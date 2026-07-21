@@ -10,10 +10,17 @@ import * as charactersApi from '../lib/api/characters';
 import * as songsApi from '../lib/api/songs';
 import * as communityApi from '../lib/api/community';
 import * as collabApi from '../lib/api/collab';
+import * as recordingsApi from '../lib/api/recordings';
 import { setActiveCharacterId, getActiveCharacterId } from '../lib/api/client';
 import * as timeApi from '../lib/api/time';
 
 const FAN_PERSONAS_BY_ID = Object.fromEntries(FAN_PERSONAS.map((p) => [p.id, p]));
+
+// The vocal take currently layered over a playing beat, and a per-recording
+// cache of object URLs so replaying a song doesn't re-download the audio.
+// Module-level (not store state) — they're playback plumbing, not UI.
+let vocalAudio = null;
+const vocalUrlCache = new Map();
 
 function mapCharacter(apiChar) {
   return {
@@ -43,6 +50,7 @@ function mapSong(apiSong) {
     tier: apiSong.tier,
     score: Math.round(apiSong.overall_score),
     bpm: apiSong.bpm,
+    vocalRecordingId: apiSong.vocal_recording_id || null,
     pattern: buildCombinedPattern(apiSong.pattern, apiSong.structure),
   };
 }
@@ -554,9 +562,26 @@ export const useGameStore = create((set, get) => ({
   },
   setCommunityTab: (tab) => set({ communityTab: tab }),
 
-  play: async (pattern, bpm, id) => {
+  // When a song has an attached vocal take, its recording id is passed here
+  // and the voice is layered over the Tone.js beat — both started together so
+  // they line up (the take was recorded over this same backing from the top).
+  play: async (pattern, bpm, id, vocalRecordingId = null) => {
     const audio = get().audioState();
     set({ isPlaying: true, playingId: id, currentStep: -1 });
+
+    // Fetch + cache the vocal blob URL before starting the beat, so the voice
+    // isn't seconds late. Fetch failures just fall back to the beat alone.
+    if (vocalRecordingId) {
+      try {
+        if (!vocalUrlCache.has(vocalRecordingId)) {
+          vocalUrlCache.set(vocalRecordingId, await recordingsApi.fetchRecordingUrl(vocalRecordingId));
+        }
+        const el = new Audio(vocalUrlCache.get(vocalRecordingId));
+        vocalAudio = el;
+        el.play().catch(() => {});
+      } catch { /* no voice, beat still plays */ }
+    }
+
     // queueMicrotask: Tone.Draw can invoke the very first step's callback
     // synchronously inside Transport.start() (called from this same click
     // handler), which raced with React's in-flight render of the components
@@ -567,6 +592,7 @@ export const useGameStore = create((set, get) => ({
   },
   stop: () => {
     engine.stopPattern();
+    if (vocalAudio) { vocalAudio.pause(); vocalAudio = null; }
     set({ isPlaying: false, currentStep: -1, playingId: null });
   },
 
@@ -660,6 +686,7 @@ export const useGameStore = create((set, get) => ({
       songId: song.id,
       pattern: combined,
       bpm: song.bpm,
+      vocalRecordingId: song.vocal_recording_id || null,
     };
 
     set((state) => ({

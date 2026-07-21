@@ -177,4 +177,7 @@ def get_song_for_collaborator(db: Session, character: Character, song_id: str) -
     song = db.get(Song, song_id)
     if song is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
+    # So the preview here layers the attached vocal over the beat, like everywhere else.
+    from app.services import songs_service
+    songs_service._attach_vocal_ids(db, [song])
     return song

@@ -13,12 +13,23 @@ from app.services.trends import trend_multiplier
 
 
 def list_released(db: Session, character: Character) -> list[Song]:
-    return (
+    songs = (
         db.query(Song)
         .filter(Song.character_id == character.id, Song.released_at.isnot(None))
         .order_by(Song.released_at.desc())
         .all()
     )
+    _attach_vocal_ids(db, songs)
+    return songs
+
+
+def _attach_vocal_ids(db: Session, songs: list[Song]) -> None:
+    """Stamp each song with the id of its attached vocal take (or None), so
+    SongOut can expose it and playback can layer the voice over the beat."""
+    from app.services import recordings_service
+    vocal_by_song = recordings_service.vocal_ids_for_songs(db, [s.id for s in songs])
+    for s in songs:
+        s.vocal_recording_id = vocal_by_song.get(s.id)
 
 
 def list_drafts(db: Session, character: Character) -> list[Song]:
@@ -151,6 +162,7 @@ def release_song(db: Session, song: Song, character: Character) -> dict:
 
     db.commit()
     db.refresh(song)
+    _attach_vocal_ids(db, [song])  # so the results screen can play the take with the beat
 
     # A release eats a week of calendar: fans drift, the trend may rotate, and
     # any week/season boundary crossed gets settled. Runs after the release is

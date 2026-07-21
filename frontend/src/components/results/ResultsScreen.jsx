@@ -45,7 +45,7 @@ export function ResultsScreen() {
           <div className="me-display" style={{ fontSize: 22, fontWeight: 700, color: TIER_COLOR[lastResult.tier] }}>{lastResult.tier}</div>
           <button
             className="me-btn-ghost" style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-            onClick={() => (isPlaying && playingId === lastResult.songId) ? stop() : play(lastResult.pattern, lastResult.bpm, lastResult.songId)}
+            onClick={() => (isPlaying && playingId === lastResult.songId) ? stop() : play(lastResult.pattern, lastResult.bpm, lastResult.songId, lastResult.vocalRecordingId)}
           >
             {(isPlaying && playingId === lastResult.songId) ? '■ 정지' : '▶ 다시 듣기'}
           </button>

@@ -61,6 +61,27 @@ def list_for_character(db: Session, character: Character, song_id: str | None = 
     return q.order_by(VocalRecording.created_at.desc()).all()
 
 
+def vocal_ids_for_songs(db: Session, song_ids: list[str]) -> dict[str, str]:
+    """song_id -> the recording id to play over its beat, for a batch of songs.
+
+    When a song has more than one attached take the newest wins — that's the
+    one the player kept. Selects ids only, never the audio bytes, so listing a
+    feed of songs stays cheap.
+    """
+    if not song_ids:
+        return {}
+    rows = (
+        db.query(VocalRecording.id, VocalRecording.song_id, VocalRecording.created_at)
+        .filter(VocalRecording.song_id.in_(song_ids))
+        .order_by(VocalRecording.created_at.desc())
+        .all()
+    )
+    out: dict[str, str] = {}
+    for rec_id, song_id, _ in rows:
+        out.setdefault(song_id, rec_id)  # first seen = newest, since ordered desc
+    return out
+
+
 def get_owned(db: Session, recording_id: str, character: Character) -> VocalRecording:
     rec = db.get(VocalRecording, recording_id)
     if rec is None or rec.character_id != character.id:

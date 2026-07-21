@@ -57,6 +57,10 @@ class SongOut(BaseModel):
     released_at: datetime | None
     released_on: date | None = None
     created_at: datetime
+    # The vocal take to play over this song's beat, if one is attached. Set as
+    # a transient attribute in songs_service, not a real column — the link
+    # lives on VocalRecording.song_id.
+    vocal_recording_id: str | None = None
 
     model_config = {"from_attributes": True}
 

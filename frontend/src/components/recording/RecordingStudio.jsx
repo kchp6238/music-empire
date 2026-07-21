@@ -173,8 +173,10 @@ export function RecordingStudio() {
           <div className="font-display text-2xl font-extrabold mb-1 flex items-center gap-2">
             <Mic size={20} className="text-pink" /> 녹음실
           </div>
-          <div className="text-muted text-xs mb-5">
-            마이크로 보컬을 직접 녹음합니다. 녹음한 테이크는 서버에 저장되고, 현재 작업 중인 곡에 연결할 수 있어요.
+          <div className="text-muted text-xs mb-5 leading-relaxed">
+            ① <b className="text-text">반주와 함께</b> 켠 채로 녹음하면 비트에 맞춰 노래할 수 있어요.
+            ② 마음에 드는 테이크의 <b className="text-accent2">곡에 넣기</b> 버튼을 누르면 지금 작업 중인 곡에 목소리가 얹혀요.
+            ③ 그 뒤로는 스튜디오·커뮤니티·차트 어디서 곡을 재생하든 <b className="text-text">비트와 목소리가 같이</b> 들립니다.
           </div>
 
           {!supported && (
@@ -280,16 +282,16 @@ export function RecordingStudio() {
                     <div className="text-sm font-semibold truncate">{t.title}</div>
                     <div className="text-[11px] text-muted">
                       {fmtDuration(t.duration_sec)} · {(t.size_bytes / 1024).toFixed(0)}KB
-                      {t.song_id ? ' · 곡에 연결됨' : ''}
+                      {t.song_id ? <span className="text-accent2"> · 곡에 들어감 (재생 시 함께 들려요)</span> : ''}
                     </div>
                   </div>
                   <Button size="sm" onClick={() => setAutotuneFor(autotuneFor === t.id ? null : t.id)}
                     disabled={busy} aria-label={`${t.title} 목소리 효과`}>
                     <Wand2 size={13} /> 목소리 효과
                   </Button>
-                  <Button size="sm" onClick={() => onToggleAttach(t)} disabled={busy}
-                    aria-label={t.song_id ? '곡에서 분리' : '현재 곡에 연결'}>
-                    {t.song_id ? <Link2Off size={13} /> : <Link2 size={13} />}
+                  <Button size="sm" variant={t.song_id ? 'ghost' : 'primary'} onClick={() => onToggleAttach(t)} disabled={busy}
+                    aria-label={t.song_id ? '곡에서 빼기' : '현재 곡에 넣기'}>
+                    {t.song_id ? <><Link2Off size={13} /> 곡에서 빼기</> : <><Link2 size={13} /> 곡에 넣기</>}
                   </Button>
                   <Button size="sm" variant="danger" onClick={() => onDelete(t.id)} disabled={busy} aria-label={`${t.title} 삭제`}>
                     <Trash2 size={13} />
