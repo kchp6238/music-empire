@@ -3,6 +3,15 @@ from datetime import datetime, date
 from pydantic import BaseModel
 
 
+class VocalRef(BaseModel):
+    """One attached vocal take and when it enters the song. offset_sec is the
+    start of its section (0 for a whole-song take); same-section takes stack as
+    harmony because they share an offset."""
+    recording_id: str
+    section: str | None = None
+    offset_sec: float = 0.0
+
+
 class SongDraftCreate(BaseModel):
     title: str = ""
     bpm: int = 100
@@ -61,6 +70,9 @@ class SongOut(BaseModel):
     # a transient attribute in songs_service, not a real column — the link
     # lives on VocalRecording.song_id.
     vocal_recording_id: str | None = None
+    # Every attached take with its section offset — layered playback plays them
+    # all, stacking same-section takes into harmony. Transient, like above.
+    vocals: list[VocalRef] = []
 
     model_config = {"from_attributes": True}
 

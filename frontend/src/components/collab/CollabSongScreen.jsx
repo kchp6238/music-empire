@@ -65,7 +65,7 @@ export function CollabSongScreen() {
               </div>
               <button
                 className="me-btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
-                onClick={() => (playingThis ? stop() : play(song.pattern, song.bpm, songId, song.vocal_recording_id))}
+                onClick={() => (playingThis ? stop() : play(song.pattern, song.bpm, songId, song.vocals))}
               >
                 {playingThis ? <Square size={15} /> : <Play size={15} />} {playingThis ? '정지' : '미리 듣기'}
               </button>

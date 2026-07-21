@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from app.schemas.song import VocalRef
+
 
 class FeedReaction(BaseModel):
     """One fan's line about a song, quoted in the feed. Written at release time
@@ -24,6 +26,7 @@ class FeedSongItem(BaseModel):
     # while precisely because it wasn't.
     has_cover: bool = False
     vocal_recording_id: str | None = None
+    vocals: list[VocalRef] = []
     reactions: list[FeedReaction] = []
     pattern: dict  # combined (flattened) pattern, ready for the audio engine
 
@@ -40,6 +43,7 @@ class ChartEntry(BaseModel):
     bpm: int
     has_cover: bool = False
     vocal_recording_id: str | None = None
+    vocals: list[VocalRef] = []
     reactions: list[FeedReaction] = []
     pattern: dict
 

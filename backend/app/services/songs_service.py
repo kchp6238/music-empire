@@ -24,12 +24,23 @@ def list_released(db: Session, character: Character) -> list[Song]:
 
 
 def _attach_vocal_ids(db: Session, songs: list[Song]) -> None:
-    """Stamp each song with the id of its attached vocal take (or None), so
-    SongOut can expose it and playback can layer the voice over the beat."""
+    """Stamp each song with its attached vocal takes, so SongOut can expose them
+    and playback can layer each voice over the beat at its section's offset.
+
+    `vocals` is the full per-section list (harmony stacks and all); the legacy
+    `vocal_recording_id` (newest single take) is kept for older callers.
+    """
     from app.services import recordings_service
-    vocal_by_song = recordings_service.vocal_ids_for_songs(db, [s.id for s in songs])
+    by_song = recordings_service.vocals_for_songs(db, [s.id for s in songs])
     for s in songs:
-        s.vocal_recording_id = vocal_by_song.get(s.id)
+        rows = by_song.get(s.id, [])
+        offsets = recordings_service.section_offsets(s)
+        s.vocals = [
+            {"recording_id": rid, "section": section, "offset_sec": offsets.get(section, 0.0)}
+            for rid, section, _ in rows
+        ]
+        # rows are oldest-first, so the last is the newest take.
+        s.vocal_recording_id = rows[-1][0] if rows else None
 
 
 def list_drafts(db: Session, character: Character) -> list[Song]:

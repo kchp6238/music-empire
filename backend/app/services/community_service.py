@@ -67,14 +67,21 @@ def get_feed(db: Session, viewer: Character) -> list[dict]:
     # keeping art in its own table is that listing never touches the bytes.
     with_cover = covers_service.song_ids_with_cover(db, song_ids)
     comments = _reactions_by_song(db, song_ids)
-    vocal_by_song = recordings_service.vocal_ids_for_songs(db, song_ids)
+    vocals_by_song = recordings_service.vocals_for_songs(db, song_ids)
     for song, character in rows:
+        rec_rows = vocals_by_song.get(song.id, [])
+        offsets = recordings_service.section_offsets(song)
+        vocals = [
+            {"recording_id": rid, "section": section, "offset_sec": offsets.get(section, 0.0)}
+            for rid, section, _ in rec_rows
+        ]
         items.append({
             "id": song.id, "title": song.title, "artist_name": character.artist_name,
             "artist_id": character.id, "artist_type": "character", "tier": song.tier,
             "overall_score": song.overall_score, "source": "user", "bpm": song.bpm,
             "has_cover": song.id in with_cover,
-            "vocal_recording_id": vocal_by_song.get(song.id),
+            "vocal_recording_id": rec_rows[-1][0] if rec_rows else None,
+            "vocals": vocals,
             "reactions": comments.get(song.id, []),
             "pattern": build_combined_pattern(song.pattern, song.structure),
         })
@@ -95,7 +102,7 @@ def get_feed(db: Session, viewer: Character) -> list[dict]:
             "id": npc_song.id, "title": npc_song.title, "artist_name": artist.name,
             "artist_id": artist.id, "artist_type": "npc", "tier": npc_song.tier,
             "overall_score": float(npc_song.score), "source": "npc", "bpm": npc_song.bpm,
-            "has_cover": False, "vocal_recording_id": None,
+            "has_cover": False, "vocal_recording_id": None, "vocals": [],
             "reactions": reactions_service.build_npc_comments(npc_song, personas, FEED_COMMENTS),
             "pattern": npc_song.pattern,
         })

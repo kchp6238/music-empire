@@ -16,11 +16,33 @@ import * as timeApi from '../lib/api/time';
 
 const FAN_PERSONAS_BY_ID = Object.fromEntries(FAN_PERSONAS.map((p) => [p.id, p]));
 
-// The vocal take currently layered over a playing beat, and a per-recording
-// cache of object URLs so replaying a song doesn't re-download the audio.
+// The vocal takes currently layered over a playing beat (a harmony stack can be
+// several at once), the timers that bring section takes in at the right moment,
+// and a per-recording cache of object URLs so replaying doesn't re-download.
 // Module-level (not store state) — they're playback plumbing, not UI.
-let vocalAudio = null;
+let vocalAudios = [];
+let vocalTimers = [];
 const vocalUrlCache = new Map();
+
+// Normalize a vocals list (API snake_case or local camelCase) to {recordingId,
+// offsetSec}; also accepts a bare recording-id string for the old single-take
+// callers. Returns [] for null/empty.
+function normalizeVocals(vocals) {
+  if (!vocals) return [];
+  const arr = Array.isArray(vocals) ? vocals : [vocals];
+  return arr
+    .map((v) => (typeof v === 'string'
+      ? { recordingId: v, offsetSec: 0 }
+      : { recordingId: v.recordingId ?? v.recording_id, offsetSec: v.offsetSec ?? v.offset_sec ?? 0 }))
+    .filter((v) => v.recordingId);
+}
+
+function stopVocals() {
+  vocalTimers.forEach((t) => clearTimeout(t));
+  vocalTimers = [];
+  vocalAudios.forEach((el) => { try { el.pause(); } catch { /* already gone */ } });
+  vocalAudios = [];
+}
 
 function mapCharacter(apiChar) {
   return {
@@ -51,6 +73,7 @@ function mapSong(apiSong) {
     score: Math.round(apiSong.overall_score),
     bpm: apiSong.bpm,
     vocalRecordingId: apiSong.vocal_recording_id || null,
+    vocals: apiSong.vocals || [],
     pattern: buildCombinedPattern(apiSong.pattern, apiSong.structure),
   };
 }
@@ -559,24 +582,33 @@ export const useGameStore = create((set, get) => ({
   },
   setCommunityTab: (tab) => set({ communityTab: tab }),
 
-  // When a song has an attached vocal take, its recording id is passed here
-  // and the voice is layered over the Tone.js beat — both started together so
-  // they line up (the take was recorded over this same backing from the top).
-  play: async (pattern, bpm, id, vocalRecordingId = null) => {
+  // When a song has attached vocal takes, `vocals` (an array of {recordingId,
+  // offsetSec}, or the API's snake_case twin, or a bare id) is passed here and
+  // each voice is layered over the Tone.js beat. A take with offset 0 starts
+  // with the beat; a section take is delayed to its section's start; multiple
+  // takes sharing an offset stack as harmony.
+  play: async (pattern, bpm, id, vocals = null) => {
     const audio = get().audioState();
     set({ isPlaying: true, playingId: id, currentStep: -1 });
+    stopVocals();
 
-    // Fetch + cache the vocal blob URL before starting the beat, so the voice
-    // isn't seconds late. Fetch failures just fall back to the beat alone.
-    if (vocalRecordingId) {
-      try {
-        if (!vocalUrlCache.has(vocalRecordingId)) {
-          vocalUrlCache.set(vocalRecordingId, await recordingsApi.fetchRecordingUrl(vocalRecordingId));
-        }
-        const el = new Audio(vocalUrlCache.get(vocalRecordingId));
-        vocalAudio = el;
-        el.play().catch(() => {});
-      } catch { /* no voice, beat still plays */ }
+    const list = normalizeVocals(vocals);
+    if (list.length) {
+      // Fetch + cache every take's blob URL up front, so a delayed section take
+      // isn't late to its own entrance. Fetch failures skip that take only.
+      await Promise.all(list.map(async (v) => {
+        if (vocalUrlCache.has(v.recordingId)) return;
+        try { vocalUrlCache.set(v.recordingId, await recordingsApi.fetchRecordingUrl(v.recordingId)); }
+        catch { /* skip this take */ }
+      }));
+      list.forEach((v) => {
+        const url = vocalUrlCache.get(v.recordingId);
+        if (!url) return;
+        const startTake = () => { const el = new Audio(url); vocalAudios.push(el); el.play().catch(() => {}); };
+        const offsetMs = Math.max(0, (v.offsetSec || 0) * 1000);
+        if (offsetMs < 20) startTake();
+        else vocalTimers.push(setTimeout(startTake, offsetMs));
+      });
     }
 
     // queueMicrotask: Tone.Draw can invoke the very first step's callback
@@ -589,7 +621,7 @@ export const useGameStore = create((set, get) => ({
   },
   stop: () => {
     engine.stopPattern();
-    if (vocalAudio) { vocalAudio.pause(); vocalAudio = null; }
+    stopVocals();
     set({ isPlaying: false, currentStep: -1, playingId: null });
   },
 
@@ -684,6 +716,7 @@ export const useGameStore = create((set, get) => ({
       pattern: combined,
       bpm: song.bpm,
       vocalRecordingId: song.vocal_recording_id || null,
+      vocals: song.vocals || [],
     };
 
     set((state) => ({

@@ -16,7 +16,7 @@ from app.models.recording import VocalRecording
 ALLOWED_MIME_PREFIX = "audio/"
 
 
-def create_recording(db: Session, character: Character, data: bytes, mime_type: str, title: str, duration_sec: float, song_id: str | None) -> VocalRecording:
+def create_recording(db: Session, character: Character, data: bytes, mime_type: str, title: str, duration_sec: float, song_id: str | None, section: str | None = None, pitch_shift: int | None = None) -> VocalRecording:
     if not data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="빈 녹음 파일입니다")
     if len(data) > settings.max_recording_bytes:
@@ -42,6 +42,7 @@ def create_recording(db: Session, character: Character, data: bytes, mime_type: 
 
     rec = VocalRecording(
         character_id=character.id, song_id=song_id,
+        section=(section or None), pitch_shift=pitch_shift,
         title=(title or "").strip() or "무제 테이크",
         audio_data=data, mime_type=base_mime,
         duration_sec=max(0.0, float(duration_sec or 0)), size_bytes=len(data),
@@ -89,15 +90,69 @@ def get_owned(db: Session, recording_id: str, character: Character) -> VocalReco
     return rec
 
 
-def attach_to_song(db: Session, rec: VocalRecording, character: Character, song_id: str | None) -> VocalRecording:
+def attach_to_song(db: Session, rec: VocalRecording, character: Character, song_id: str | None, section: str | None = "__keep__") -> VocalRecording:
     if song_id is not None:
         song = db.get(Song, song_id)
         if song is None or song.character_id != character.id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="곡을 찾을 수 없습니다")
     rec.song_id = song_id
+    # Detaching clears the section too; the sentinel lets a caller leave section
+    # untouched while only changing attachment.
+    if section != "__keep__":
+        rec.section = section or None
+    if song_id is None:
+        rec.section = None
     db.commit()
     db.refresh(rec)
     return rec
+
+
+def section_offsets(song: Song) -> dict[str, float]:
+    """Start time in seconds of each section's FIRST appearance in the song, so
+    a take tagged to a section can be scheduled to come in at the right moment.
+    A section that repeats plays its take at the first occurrence only."""
+    sections = song.pattern or {}
+    arrangement = song.structure or []
+    step_sec = 60.0 / (song.bpm or 100) / 4  # one 16th-note step
+    offsets: dict[str, float] = {}
+    cum_steps = 0
+    for key in arrangement:
+        if key not in offsets:
+            offsets[key] = cum_steps * step_sec
+        sec = sections.get(key) or {}
+        length = sec.get("length") or len(sec.get("bass") or []) or 16
+        cum_steps += length
+    return offsets
+
+
+def vocals_for_songs(db: Session, song_ids: list[str]) -> dict[str, list[tuple]]:
+    """song_id -> [(recording_id, section, pitch_shift), ...] oldest-first, for a
+    batch of songs. Ids/metadata only, never the audio bytes."""
+    if not song_ids:
+        return {}
+    rows = (
+        db.query(VocalRecording.id, VocalRecording.song_id, VocalRecording.section, VocalRecording.pitch_shift)
+        .filter(VocalRecording.song_id.in_(song_ids))
+        .order_by(VocalRecording.created_at.asc())
+        .all()
+    )
+    out: dict[str, list[tuple]] = {}
+    for rec_id, song_id, section, pitch_shift in rows:
+        out.setdefault(song_id, []).append((rec_id, section, pitch_shift))
+    return out
+
+
+def song_vocals(db: Session, song: Song) -> list[dict]:
+    """Every take attached to one song, each with the second-offset it enters at
+    — the shape the client's layered playback consumes."""
+    rows = vocals_for_songs(db, [song.id]).get(song.id, [])
+    if not rows:
+        return []
+    offsets = section_offsets(song)
+    return [
+        {"recording_id": rid, "section": section, "offset_sec": offsets.get(section, 0.0)}
+        for rid, section, _ in rows
+    ]
 
 
 def delete_recording(db: Session, rec: VocalRecording) -> None:

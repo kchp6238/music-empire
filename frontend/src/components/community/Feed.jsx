@@ -58,7 +58,7 @@ export function Feed() {
           <div key={s.id} className="me-panel" style={{ padding: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
               <CoverThumb songId={s.id} hasCover={s.has_cover} title={s.title} size={38} />
-              <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocal_recording_id)}>
+              <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocals)}>
                 {(isPlaying && playingId === s.id) ? '■' : '▶'}
               </button>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{s.artist_name}</div>
@@ -76,7 +76,7 @@ export function Feed() {
           <div key={s.id} className="me-panel" style={{ padding: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
               <CoverThumb songId={s.id} hasCover={s.has_cover} title={s.title} size={38} />
-              <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocal_recording_id)}>
+              <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocals)}>
                 {(isPlaying && playingId === s.id) ? '■' : '▶'}
               </button>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{s.artist_name}</div>

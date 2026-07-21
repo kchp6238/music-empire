@@ -14,6 +14,7 @@ router = APIRouter(prefix="/recordings", tags=["recordings"])
 def _out(rec) -> dict:
     return {
         "id": rec.id, "title": rec.title, "song_id": rec.song_id,
+        "section": rec.section, "pitch_shift": rec.pitch_shift,
         "mime_type": rec.mime_type, "duration_sec": float(rec.duration_sec),
         "size_bytes": rec.size_bytes, "created_at": rec.created_at,
     }
@@ -21,6 +22,9 @@ def _out(rec) -> dict:
 
 class AttachPayload(BaseModel):
     song_id: str | None = None
+    # Sentinel default so attach can change only the song link and leave the
+    # section as-is; an explicit null clears it.
+    section: str | None = "__keep__"
 
 
 @router.get("")
@@ -34,12 +38,13 @@ async def upload_recording(
     title: str = Form(""),
     duration_sec: float = Form(0),
     song_id: str | None = Form(None),
+    section: str | None = Form(None),
     db: Session = Depends(get_db),
     character: Character = Depends(get_current_character),
 ):
     data = await file.read()
     rec = recordings_service.create_recording(
-        db, character, data, file.content_type or "", title, duration_sec, song_id or None
+        db, character, data, file.content_type or "", title, duration_sec, song_id or None, section or None
     )
     return _out(rec)
 
@@ -53,7 +58,7 @@ def get_audio(recording_id: str, db: Session = Depends(get_db), character: Chara
 @router.patch("/{recording_id}")
 def attach(recording_id: str, payload: AttachPayload, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
     rec = recordings_service.get_owned(db, recording_id, character)
-    return _out(recordings_service.attach_to_song(db, rec, character, payload.song_id))
+    return _out(recordings_service.attach_to_song(db, rec, character, payload.song_id, payload.section))
 
 
 @router.delete("/{recording_id}", status_code=status.HTTP_204_NO_CONTENT)

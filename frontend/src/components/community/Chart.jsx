@@ -29,7 +29,7 @@ export function Chart() {
           <div key={s.id} className="me-panel" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div className="me-mono" style={{ width: 22, fontSize: 14, fontWeight: 700, color: idx === 0 ? '#E8A33D' : idx === 1 ? '#4FD1C5' : idx === 2 ? '#E893A6' : '#8B8496' }}>{idx + 1}</div>
             <CoverThumb songId={s.id} hasCover={s.has_cover} title={s.title} size={40} />
-            <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocal_recording_id)}>
+            <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocals)}>
               {(isPlaying && playingId === s.id) ? '■' : '▶'}
             </button>
             <div style={{ flex: 1, minWidth: 0 }}>

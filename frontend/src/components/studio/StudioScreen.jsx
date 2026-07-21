@@ -126,7 +126,7 @@ export function StudioScreen() {
                 {character.songs.slice().reverse().map((s) => (
                   <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, fontSize: 12 }}>
                     <CoverThumb songId={s.id} title={s.title} size={24} rounded={5} />
-                    <button className="me-btn-ghost" style={{ padding: '2px 8px', fontSize: 11, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocalRecordingId)}>
+                    <button className="me-btn-ghost" style={{ padding: '2px 8px', fontSize: 11, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocals)}>
                       {(isPlaying && playingId === s.id) ? '■' : '▶'}
                     </button>
                     <span style={{ color: '#EDE9F0', flex: 1, margin: '0 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</span>
