@@ -26,16 +26,41 @@ export const DRUM_INSTRUMENTS = [
 // Mixer channels — the 7 drum voices share one channel (they're one
 // instrument, the drum machine), the melodic voices get one each. Effects
 // chains and the channel rack are keyed by these.
+// Channels are grouped into instrument families (cat) so the rack stays tidy
+// as the roster grows — the channel rack renders one collapsible section per
+// category in CHANNEL_CATEGORIES order.
+export const CHANNEL_CATEGORIES = [
+  { key: 'drums', label: '드럼·타악' },
+  { key: 'keys', label: '건반' },
+  { key: 'guitars', label: '기타·베이스' },
+  { key: 'strings', label: '현악' },
+  { key: 'winds', label: '관악' },
+  { key: 'synth', label: '신스' },
+];
+
 export const CHANNELS = [
-  { key: 'drums', label: 'DrumMachine', icon: '🥁', color: '#E8A33D', plugin: 'drums' },
-  { key: 'bass', label: 'Bass Synth', icon: '🎸', color: '#8B7FD1', plugin: null },
-  { key: 'piano', label: 'FM Piano', icon: '🎹', color: '#4FD1C5', plugin: null },
-  { key: 'guitar', label: 'Pluck Guitar', icon: '🎻', color: '#5FBF8F', plugin: null },
-  { key: 'elecGuitar', label: 'Elec Guitar', icon: '⚡', color: '#E86A4D', plugin: null },
-  { key: 'brass', label: 'Brass', icon: '🎺', color: '#E8A33D', plugin: null },
-  { key: 'synthLead', label: 'Synth Lead', icon: '🎛️', color: '#E893A6', plugin: null },
-  { key: 'pad', label: 'Synth Pad', icon: '🌊', color: '#8B7FD1', plugin: null },
-  { key: 'strings', label: 'Strings', icon: '🎼', color: '#7FA8D1', plugin: null },
+  { key: 'drums', label: 'DrumMachine', icon: '🥁', color: '#E8A33D', plugin: 'drums', cat: 'drums' },
+
+  { key: 'piano', label: '그랜드 피아노', icon: '🎹', color: '#4FD1C5', plugin: null, cat: 'keys' },
+  { key: 'ePiano', label: '일렉 피아노', icon: '🎹', color: '#4FD1C5', plugin: null, cat: 'keys' },
+  { key: 'harpsichord', label: '하프시코드', icon: '🎹', color: '#7FD1C5', plugin: null, cat: 'keys' },
+  { key: 'organ', label: '오르간', icon: '⛪', color: '#6FC5B5', plugin: null, cat: 'keys' },
+
+  { key: 'bass', label: 'Bass Synth', icon: '🎸', color: '#8B7FD1', plugin: null, cat: 'guitars' },
+  { key: 'guitar', label: '어쿠스틱 기타', icon: '🎸', color: '#5FBF8F', plugin: null, cat: 'guitars' },
+  { key: 'elecGuitar', label: 'Elec Guitar', icon: '⚡', color: '#E86A4D', plugin: null, cat: 'guitars' },
+
+  { key: 'strings', label: '스트링 앙상블', icon: '🎻', color: '#7FA8D1', plugin: null, cat: 'strings' },
+  { key: 'violin', label: '바이올린', icon: '🎻', color: '#8FB8E1', plugin: null, cat: 'strings' },
+  { key: 'cello', label: '첼로', icon: '🎻', color: '#6F98C1', plugin: null, cat: 'strings' },
+  { key: 'harp', label: '하프', icon: '🪕', color: '#9FC8E1', plugin: null, cat: 'strings' },
+
+  { key: 'brass', label: 'Brass', icon: '🎺', color: '#E8A33D', plugin: null, cat: 'winds' },
+  { key: 'flute', label: '플루트', icon: '🪈', color: '#E8C34D', plugin: null, cat: 'winds' },
+  { key: 'clarinet', label: '클라리넷', icon: '🎷', color: '#D8B33D', plugin: null, cat: 'winds' },
+
+  { key: 'synthLead', label: 'Synth Lead', icon: '🎛️', color: '#E893A6', plugin: null, cat: 'synth' },
+  { key: 'pad', label: 'Synth Pad', icon: '🌊', color: '#8B7FD1', plugin: null, cat: 'synth' },
 ];
 export const CHANNEL_KEYS = CHANNELS.map((c) => c.key);
 // The fader the player actually rides, applied to the channel bus. DEFAULT_MIXER
@@ -158,6 +183,14 @@ export const BRASS_PITCHES = buildPitchRange(3, 2);
 export const SYNTH_LEAD_PITCHES = buildPitchRange(4, 2);
 export const PAD_PITCHES = buildPitchRange(3, 2);
 export const STRINGS_PITCHES = buildPitchRange(3, 2);
+export const EPIANO_PITCHES = buildPitchRange(3, 2);
+export const HARPSICHORD_PITCHES = buildPitchRange(3, 2);
+export const ORGAN_PITCHES = buildPitchRange(3, 2);
+export const VIOLIN_PITCHES = buildPitchRange(4, 2);
+export const CELLO_PITCHES = buildPitchRange(2, 2);
+export const HARP_PITCHES = buildPitchRange(3, 2);
+export const FLUTE_PITCHES = buildPitchRange(4, 2);
+export const CLARINET_PITCHES = buildPitchRange(3, 2);
 
 // Every pitched (non-drum) instrument, as one source of truth: the beatmaker
 // editor, the piano-roll config, the pattern helpers (empty/build/analyze) and
@@ -166,13 +199,21 @@ export const STRINGS_PITCHES = buildPitchRange(3, 2);
 // playback so a single melody line sounds full without a chord data model.
 export const MELODIC_TRACKS = [
   { key: 'bass', label: '베이스', pitches: BASS_PITCHES, color: '#5FBF8F', chordal: false },
-  { key: 'piano', label: '피아노', pitches: PIANO_PITCHES, color: '#B794F4', chordal: false },
+  { key: 'piano', label: '그랜드 피아노', pitches: PIANO_PITCHES, color: '#B794F4', chordal: false },
+  { key: 'ePiano', label: '일렉 피아노', pitches: EPIANO_PITCHES, color: '#4FD1C5', chordal: false },
+  { key: 'harpsichord', label: '하프시코드', pitches: HARPSICHORD_PITCHES, color: '#7FD1C5', chordal: false },
+  { key: 'organ', label: '오르간', pitches: ORGAN_PITCHES, color: '#6FC5B5', chordal: true },
   { key: 'guitar', label: '어쿠스틱 기타', pitches: GUITAR_PITCHES, color: '#E8C34D', chordal: false },
   { key: 'elecGuitar', label: '일렉 기타', pitches: ELEC_GUITAR_PITCHES, color: '#E86A4D', chordal: false },
+  { key: 'strings', label: '스트링 앙상블', pitches: STRINGS_PITCHES, color: '#7FA8D1', chordal: true },
+  { key: 'violin', label: '바이올린', pitches: VIOLIN_PITCHES, color: '#8FB8E1', chordal: false },
+  { key: 'cello', label: '첼로', pitches: CELLO_PITCHES, color: '#6F98C1', chordal: false },
+  { key: 'harp', label: '하프', pitches: HARP_PITCHES, color: '#9FC8E1', chordal: false },
   { key: 'brass', label: '브라스(관악)', pitches: BRASS_PITCHES, color: '#E8A33D', chordal: false },
+  { key: 'flute', label: '플루트', pitches: FLUTE_PITCHES, color: '#E8C34D', chordal: false },
+  { key: 'clarinet', label: '클라리넷', pitches: CLARINET_PITCHES, color: '#D8B33D', chordal: false },
   { key: 'synthLead', label: '신스 리드', pitches: SYNTH_LEAD_PITCHES, color: '#E893A6', chordal: false },
   { key: 'pad', label: '신스 패드', pitches: PAD_PITCHES, color: '#8B7FD1', chordal: true },
-  { key: 'strings', label: '스트링', pitches: STRINGS_PITCHES, color: '#7FA8D1', chordal: true },
 ];
 export const MELODIC_KEYS = MELODIC_TRACKS.map((t) => t.key);
 export const MELODIC_BY_KEY = Object.fromEntries(MELODIC_TRACKS.map((t) => [t.key, t]));
@@ -189,6 +230,9 @@ export const DEFAULT_MIXER = {
   bass: { vol: -3, mute: false }, piano: { vol: -4, mute: false }, guitar: { vol: -6, mute: false },
   elecGuitar: { vol: -7, mute: false }, brass: { vol: -6, mute: false }, synthLead: { vol: -7, mute: false },
   pad: { vol: -10, mute: false }, strings: { vol: -8, mute: false },
+  ePiano: { vol: -5, mute: false }, harpsichord: { vol: -6, mute: false }, organ: { vol: -7, mute: false },
+  violin: { vol: -6, mute: false }, cello: { vol: -5, mute: false }, harp: { vol: -6, mute: false },
+  flute: { vol: -7, mute: false }, clarinet: { vol: -7, mute: false },
 };
 
 export const CHORD_PRESETS = [

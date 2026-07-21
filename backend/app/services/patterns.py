@@ -7,7 +7,10 @@ DRUM_KEYS = ["kick", "snare", "hihatClosed", "hihatOpen", "clap", "tom", "crash"
 # Mirror of MELODIC_KEYS in frontend/src/lib/gameData/constants.js — the pitched
 # lanes. The first three are the historical set; the rest were added with the
 # expanded instrument roster. A song missing a lane is treated as all-rests.
-MELODIC_KEYS = ["bass", "piano", "guitar", "elecGuitar", "brass", "synthLead", "pad", "strings"]
+MELODIC_KEYS = [
+    "bass", "piano", "guitar", "elecGuitar", "brass", "synthLead", "pad", "strings",
+    "ePiano", "harpsichord", "organ", "violin", "cello", "harp", "flute", "clarinet",
+]
 
 
 def build_combined_pattern(sections: dict, arrangement: list[str]) -> dict:

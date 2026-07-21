@@ -341,6 +341,69 @@ function buildSynths() {
   });
   const stringsChorus = new Tone.Chorus({ frequency: 1.6, delayTime: 3.5, depth: 0.6 }).start();
 
+  // ---- keys family ----
+
+  // Electric piano (Rhodes-ish): FM bell tone with a soft chorus wobble.
+  voices.ePiano = new Tone.PolySynth(Tone.FMSynth, {
+    harmonicity: 3, modulationIndex: 8,
+    envelope: { attack: 0.005, decay: 1.2, sustain: 0.12, release: 1 },
+    modulation: { type: 'sine' },
+    modulationEnvelope: { attack: 0.01, decay: 0.4, sustain: 0.05, release: 0.4 },
+  });
+  const ePianoChorus = new Tone.Chorus({ frequency: 2.2, delayTime: 3, depth: 0.5 }).start();
+
+  // Harpsichord: bright plucked keys — fast, no sustain, a touch of highpass.
+  voices.harpsichord = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'sawtooth' },
+    envelope: { attack: 0.002, decay: 0.35, sustain: 0, release: 0.2 },
+  });
+  const harpsichordHP = new Tone.Filter({ type: 'highpass', frequency: 300 });
+
+  // Organ: sustained, hollow triangle drawbar bed — full while a key is held.
+  voices.organ = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'triangle' },
+    envelope: { attack: 0.02, decay: 0.05, sustain: 1, release: 0.15 },
+  });
+
+  // ---- orchestral strings family ----
+
+  // Solo violin: bowed sawtooth, slow-ish attack + a little portamento.
+  voices.violin = new Tone.MonoSynth({
+    oscillator: { type: 'sawtooth' }, portamento: 0.02,
+    envelope: { attack: 0.14, decay: 0.2, sustain: 0.9, release: 0.3 },
+    filter: { type: 'lowpass', rolloff: -12, Q: 0.8 },
+    filterEnvelope: { attack: 0.12, decay: 0.2, sustain: 0.8, release: 0.3, baseFrequency: 900, octaves: 2 },
+  });
+  // Solo cello: same bowing, darker and lower.
+  voices.cello = new Tone.MonoSynth({
+    oscillator: { type: 'sawtooth' }, portamento: 0.03,
+    envelope: { attack: 0.12, decay: 0.2, sustain: 0.9, release: 0.4 },
+    filter: { type: 'lowpass', rolloff: -12, Q: 0.8 },
+    filterEnvelope: { attack: 0.1, decay: 0.2, sustain: 0.7, release: 0.4, baseFrequency: 320, octaves: 2 },
+  });
+  // Harp: plucked, bright, long ringing decay.
+  voices.harp = new Tone.PolySynth(Tone.FMSynth, {
+    harmonicity: 2, modulationIndex: 2,
+    envelope: { attack: 0.004, decay: 1.6, sustain: 0, release: 1.2 },
+  });
+
+  // ---- woodwind family ----
+
+  // Flute: soft, breathy sine with a gentle attack.
+  voices.flute = new Tone.MonoSynth({
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.08, decay: 0.1, sustain: 0.9, release: 0.25 },
+    filter: { type: 'lowpass', Q: 0.5 },
+    filterEnvelope: { attack: 0.05, decay: 0.1, sustain: 0.8, release: 0.2, baseFrequency: 1200, octaves: 1.5 },
+  });
+  // Clarinet: hollow, woody square (odd harmonics) rolled off up top.
+  voices.clarinet = new Tone.MonoSynth({
+    oscillator: { type: 'square' },
+    envelope: { attack: 0.05, decay: 0.1, sustain: 0.9, release: 0.2 },
+    filter: { type: 'lowpass', rolloff: -12, Q: 0.7 },
+    filterEnvelope: { attack: 0.04, decay: 0.1, sustain: 0.7, release: 0.2, baseFrequency: 700, octaves: 1.8 },
+  });
+
   // Master bus: everything feeds compressor -> limiter -> speakers, instead
   // of each voice going straight toDestination(). Glue/loudness only.
   const compressor = new Tone.Compressor({ threshold: -20, ratio: 3, attack: 0.01, release: 0.2 });
@@ -364,10 +427,21 @@ function buildSynths() {
   voices.synthLead.connect(chanBusses.synthLead);
   voices.pad.chain(padFilter, chanBusses.pad);
   voices.strings.chain(stringsChorus, chanBusses.strings);
+  voices.ePiano.chain(ePianoChorus, chanBusses.ePiano);
+  voices.harpsichord.chain(harpsichordHP, chanBusses.harpsichord);
+  voices.organ.connect(chanBusses.organ);
+  voices.violin.connect(chanBusses.violin);
+  voices.cello.connect(chanBusses.cello);
+  voices.harp.connect(chanBusses.harp);
+  voices.flute.connect(chanBusses.flute);
+  voices.clarinet.connect(chanBusses.clarinet);
 
   return {
     voices, controls, chanBusses,
-    fx: { compressor, limiter, pianoChorus, elecDrive, brassFilter, padFilter, stringsChorus },
+    fx: {
+      compressor, limiter, pianoChorus, elecDrive, brassFilter, padFilter, stringsChorus,
+      ePianoChorus, harpsichordHP,
+    },
   };
 }
 
