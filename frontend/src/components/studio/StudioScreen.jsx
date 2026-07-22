@@ -26,11 +26,11 @@ export function StudioScreen() {
   return (
     <div>
       <TopBar character={character} />
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '20px 24px 0' }}>
+      <div className="max-w-[1080px] mx-auto px-4 md:px-6 pt-5">
         <TimePassedToast />
         <TrendBanner />
       </div>
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '8px 24px 20px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20 }}>
+      <div className="max-w-[1080px] mx-auto px-4 md:px-6 pt-2 pb-5 grid grid-cols-1 gap-5 md:[grid-template-columns:1fr_300px]">
         <div className="me-panel">
           <div className="me-display" style={{ fontSize: 20, fontWeight: 800, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Music2 size={20} style={{ color: '#E8A33D' }} /> 곡 기본 정보

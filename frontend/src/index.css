@@ -59,6 +59,22 @@ body { margin: 0; }
 .me-display{ font-family:'Bricolage Grotesque', sans-serif; }
 .me-mono{ font-family:'JetBrains Mono', monospace; }
 .me-topbar{ display:flex; align-items:center; justify-content:space-between; padding:12px 24px; background:rgba(20,18,28,0.9); border-bottom:1px solid rgba(255,255,255,0.08); position:sticky; top:0; z-index:10; flex-wrap:wrap; gap:10px; }
+
+/* Phone header: stack identity over the stats strip so the bar stays ~2 rows
+   tall instead of ballooning as the (now bottom-bar) nav tabs wrap. */
+@media (max-width: 767px){
+  .me-topbar{ flex-direction:column; align-items:stretch; padding:10px 14px; gap:8px; }
+}
+
+/* Phone bottom tab bar — the primary navigation on small screens; the desktop
+   inline tabs are hidden below md and this is hidden at md+. */
+.me-bottomnav{ position:fixed; bottom:0; left:0; right:0; z-index:20; display:flex; background:rgba(18,16,24,0.97); border-top:1px solid rgba(255,255,255,0.08); backdrop-filter:blur(8px); padding-bottom:env(safe-area-inset-bottom); }
+.me-bottomnav button{ flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 2px 7px; background:none; border:none; color:#8B8496; font-size:10px; cursor:pointer; min-width:0; }
+.me-bottomnav button.active{ color:#E8A33D; }
+.me-bottomnav button span{ line-height:1; }
+@media (min-width: 768px){ .me-bottomnav{ display:none; } }
+/* keep page content clear of the fixed bottom bar on phones */
+@media (max-width: 767px){ #root{ padding-bottom:62px; } }
 .me-panel{ background:#1C1926; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:20px; }
 .me-card{ background:#1C1926; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px; cursor:pointer; transition:border-color .2s, transform .15s; }
 .me-card:hover{ border-color:#E8A33D; transform:translateY(-2px); }

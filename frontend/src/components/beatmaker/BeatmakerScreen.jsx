@@ -105,7 +105,7 @@ export function BeatmakerScreen() {
       <div className="max-w-[1400px] w-full mx-auto px-5 pt-5 flex-1">
         <DraftBar />
 
-        <div className="grid gap-4 items-start" style={{ gridTemplateColumns: 'minmax(210px, 240px) minmax(0, 1fr) minmax(190px, 220px)' }}>
+        <div className="grid grid-cols-1 gap-4 items-start md:[grid-template-columns:minmax(210px,240px)_minmax(0,1fr)_minmax(190px,220px)]">
           <ChannelRack />
 
           <div className="min-w-0">
