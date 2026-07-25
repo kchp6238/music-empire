@@ -165,6 +165,7 @@ def serialize(db: Session, company: Company) -> dict:
         ],
         "groups": [
             {"id": g.id, "name": g.name, "fame": float(g.fame), "fans_count": g.fans_count,
+             "total_earnings": float(g.total_earnings or 0), "activity_log": (g.activity_log or [])[:8],
              "member_ids": [t.id for t in g.members]}
             for g in company.groups
         ],

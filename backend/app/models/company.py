@@ -54,6 +54,11 @@ class Group(Base):
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     fame: Mapped[float] = mapped_column(Numeric, nullable=False, default=0)
     fans_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Cumulative revenue this group has generated for the company, and a rolling
+    # log of what it's been up to (releases, TV, fan meets…) — so the owner can
+    # see how much a group earned and what it did.
+    total_earnings: Mapped[float] = mapped_column(Numeric, nullable=False, default=0, server_default="0")
+    activity_log: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     debuted_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     company: Mapped["Company"] = relationship(back_populates="groups")

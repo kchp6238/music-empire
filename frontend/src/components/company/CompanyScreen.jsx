@@ -156,11 +156,30 @@ export function CompanyScreen() {
 
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6, color: '#8B8496' }}><Sparkles size={14} /> 데뷔 그룹</div>
             {company.groups.length === 0 && <div style={{ fontSize: 12, color: '#6B6577' }}>아직 데뷔한 그룹이 없습니다.</div>}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {company.groups.map((g) => (
-                <div key={g.id} className="me-panel" style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>{g.name}</span>
-                  <span className="me-mono" style={{ fontSize: 12, color: '#8B8496' }}>명성 {Math.round(g.fame)} · 팬 {g.fans_count.toLocaleString('ko-KR')} · 멤버 {g.member_ids.length}</span>
+                <div key={g.id} className="me-panel" style={{ padding: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>{g.name}</span>
+                    <span className="me-mono" style={{ fontSize: 11, color: '#8B8496' }}>명성 {Math.round(g.fame)} · 팬 {g.fans_count.toLocaleString('ko-KR')} · 멤버 {g.member_ids.length}명</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: g.activity_log?.length ? 10 : 0 }}>
+                    <span style={{ fontSize: 11, color: '#8B8496' }}>누적 수익</span>
+                    <span className="me-mono" style={{ fontSize: 15, color: '#E8A33D', fontWeight: 700 }}>{won(g.total_earnings || 0)}</span>
+                  </div>
+                  {g.activity_log?.length > 0 && (
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 8 }}>
+                      <div style={{ fontSize: 10, color: '#6B6577', marginBottom: 5 }}>활동 내역</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        {g.activity_log.map((a, i) => (
+                          <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11 }}>
+                            <span className="me-mono" style={{ color: '#6B6577', flexShrink: 0 }}>{a.date}</span>
+                            <span style={{ color: '#B8B2C4' }}>{a.text}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

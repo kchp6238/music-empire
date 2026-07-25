@@ -6,13 +6,25 @@ period up to the current one, so a 30-day tour settles four weeks rather than
 one — and never settles the same period twice.
 """
 
+import random
+
 from sqlalchemy.orm import Session
 
 from app.models.character import Character
 from app.models.song import Song
-from app.models.company import Company, Trainee
+from app.models.company import Company, Trainee, Group
 from app.models.season import SeasonRecord
 from app.services.js_math import js_round
+
+# Occasional special weeks a debuted group can have, each with an income
+# multiplier bonus and fame/fans bumps — what makes a group "do things".
+GROUP_ACTIVITIES = [
+    {"text": "신곡 발매", "bonus": 0.8, "fame": 1.5, "fans": 300},
+    {"text": "음악방송 1위", "bonus": 0.5, "fame": 2.0, "fans": 500},
+    {"text": "팬미팅 개최", "bonus": 0.3, "fame": 0.5, "fans": 150},
+    {"text": "광고 촬영", "bonus": 1.2, "fame": 0.5, "fans": 50},
+    {"text": "예능 출연", "bonus": 0.2, "fame": 1.0, "fans": 200},
+]
 
 # Fame fades without new work — the weekly nudge that makes an idle career
 # actually cost something.
@@ -57,8 +69,41 @@ def settle_weeks(db: Session, character: Character) -> dict:
 
         # trainees keep improving on their own while time passes
         _grow_trainees(db, character)
+        # debuted groups earn and get up to things each week
+        _settle_groups(db, character)
 
     return {"weeks_settled": settled, "catalogue_income": js_round(income)}
+
+
+def _settle_groups(db: Session, character: Character) -> None:
+    """A week in the life of each debuted group: base activity income (into the
+    company's capital), slow organic growth, and a chance at a headline week
+    (release, TV win, ...). Everything is logged so the owner can see it."""
+    company = db.query(Company).filter(Company.owner_character_id == character.id).first()
+    if company is None:
+        return
+    for g in db.query(Group).filter(Group.company_id == company.id).all():
+        income = js_round(float(g.fame) * 8000 + g.fans_count * 40)
+        # organic growth so a group's earnings climb as it gets bigger
+        g.fame = min(100.0, float(g.fame) + 0.3)
+        g.fans_count = g.fans_count + js_round(g.fans_count * 0.02 + 20)
+
+        rng = random.Random(f"{g.id}:{character.last_settled_week}")
+        if rng.random() < 0.35:
+            act = rng.choice(GROUP_ACTIVITIES)
+            bonus = js_round(income * act["bonus"])
+            income += bonus
+            g.fame = min(100.0, float(g.fame) + act["fame"])
+            g.fans_count = g.fans_count + act["fans"]
+            text = f"{act['text']} — +{income:,}원"
+        else:
+            text = f"활동 수익 +{income:,}원"
+
+        company.capital = float(company.capital) + income
+        g.total_earnings = float(g.total_earnings) + income
+        log = list(g.activity_log or [])
+        log.insert(0, {"date": character.game_date.isoformat(), "text": text})
+        g.activity_log = log[:30]
 
 
 def _catalogue_income_for_week(db: Session, character: Character) -> float:
