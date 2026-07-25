@@ -10,6 +10,7 @@ import { compactNum } from '../../lib/utils';
 import { useGameStore } from '../../state/useGameStore';
 
 const KIND = {
+  award: { color: '#E8C34D', label: '시상식' },
   choice: { color: '#E8A33D', label: '결정' },
   fun: { color: '#4FD1C5', label: '이런 일이' },
   serious: { color: '#C4576B', label: '주의' },
@@ -101,8 +102,11 @@ export function NewsScreen() {
     if (filter === 'personal') return n.kind === 'personal' || n.kind === 'fun' || n.kind === 'serious';
     return true;
   });
-  // Unresolved decisions bubble up as the headline; otherwise the newest item.
-  const headline = filtered.find((n) => n.kind === 'choice' && !n.resolved) || filtered[0];
+  // Unresolved decisions bubble up as the headline, then a recent award (a
+  // year-end ceremony is big news), otherwise the newest item.
+  const headline = filtered.find((n) => n.kind === 'choice' && !n.resolved)
+    || filtered.find((n) => n.kind === 'award')
+    || filtered[0];
   const rest = filtered.filter((n) => n !== headline);
 
   return (

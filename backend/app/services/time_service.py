@@ -85,6 +85,10 @@ def advance_days(db: Session, character: Character, days: int, reason: str = "")
     weekly = settlement.settle_weeks(db, character)
     seasonal = settlement.settle_seasons(db, character)
 
+    # Year-end award ceremonies for any completed calendar year.
+    from app.services import awards_service
+    awards = awards_service.check_year_awards(db, character)
+
     db.commit()
 
     return {
@@ -99,6 +103,7 @@ def advance_days(db: Session, character: Character, days: int, reason: str = "")
         "new_streams": drift["new_streams"],
         "weeks_settled": weekly["weeks_settled"],
         "seasons_settled": seasonal,
+        "awards": awards,
     }
 
 

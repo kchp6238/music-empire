@@ -42,6 +42,9 @@ class Character(Base):
     # action jumps the calendar.
     last_settled_week: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_settled_season: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Last calendar year whose year-end awards have been granted. Starts one year
+    # before the epoch so the first completed year triggers a ceremony.
+    last_awarded_year: Mapped[int] = mapped_column(Integer, nullable=False, default=GAME_EPOCH.year - 1, server_default=str(GAME_EPOCH.year - 1))
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
