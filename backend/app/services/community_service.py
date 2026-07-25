@@ -8,6 +8,9 @@ from app.models.community import Follow
 from app.models.fan import FanPersona, SongReaction
 from app.services.patterns import build_combined_pattern
 from app.services import covers_service, reactions as reactions_service, recordings_service
+from app.services.game_data import NPC_ARTISTS
+
+_NPC_BY_NAME = {a["name"]: a for a in NPC_ARTISTS}
 
 # How many fan comments a feed card quotes. The card has room for a couple of
 # lines; the rest of a song's reactions live on its results screen.
@@ -110,6 +113,61 @@ def get_feed(db: Session, viewer: Character) -> list[dict]:
             "pattern": npc_song.pattern,
         })
     return items
+
+
+def artist_profile(db: Session, viewer: Character, artist_type: str, artist_id: str) -> dict:
+    """A rival's or another player's page — their stats and what they've put out,
+    scoped to the viewer's world. Answers 'who is this artist and what have they
+    done', for NPCs (generated) and characters alike."""
+    if artist_type == "npc":
+        artist = db.get(NpcArtist, artist_id)
+        if artist is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="아티스트를 찾을 수 없습니다")
+        meta = _NPC_BY_NAME.get(artist.name, {})
+        songs = (
+            db.query(NpcSong)
+            .filter(NpcSong.npc_artist_id == artist_id, NpcSong.world_id == viewer.world_id,
+                    NpcSong.released_on <= viewer.game_date)
+            .order_by(NpcSong.released_on.desc())
+            .all()
+        )
+        song_list = [
+            {"id": s.id, "title": s.title, "tier": s.tier, "overall_score": float(s.score),
+             "views": int(float(s.score) ** 2 * 2), "released_on": s.released_on.isoformat() if s.released_on else None}
+            for s in songs
+        ]
+        scores = [float(s.score) for s in songs]
+        return {
+            "type": "npc", "id": artist.id, "name": artist.name, "color": artist.color,
+            "genre": artist.genre or meta.get("genre"), "bio": artist.bio or meta.get("bio"),
+            "skill": meta.get("skill"), "consistency": meta.get("consistency"), "moods": meta.get("moods", []),
+            "releases": len(songs), "avg_score": round(sum(scores) / len(scores), 1) if scores else None,
+            "songs": song_list,
+        }
+
+    char = db.get(Character, artist_id)
+    if char is None or char.world_id != viewer.world_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="아티스트를 찾을 수 없습니다")
+    songs = (
+        db.query(Song)
+        .filter(Song.character_id == char.id, Song.released_at.isnot(None))
+        .order_by(Song.released_at.desc())
+        .all()
+    )
+    song_list = [
+        {"id": s.id, "title": s.title, "tier": s.tier, "overall_score": float(s.overall_score or 0),
+         "views": s.views, "released_on": s.released_on.isoformat() if s.released_on else None}
+        for s in songs
+    ]
+    scores = [float(s.overall_score) for s in songs if s.overall_score is not None]
+    return {
+        "type": "character", "id": char.id, "name": char.artist_name, "color": None,
+        "background_name": char.background_name, "age": char.age,
+        "fame": round(float(char.fame)), "fans_count": char.fans_count,
+        "stats": char.stats, "talent": char.talent, "is_me": char.id == viewer.id,
+        "releases": len(songs), "avg_score": round(sum(scores) / len(scores), 1) if scores else None,
+        "songs": song_list,
+    }
 
 
 def list_follows(db: Session, follower_character_id: str) -> list[dict]:

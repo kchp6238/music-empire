@@ -11,6 +11,7 @@ export function Chart() {
   const playingId = useGameStore((s) => s.playingId);
   const play = useGameStore((s) => s.play);
   const stop = useGameStore((s) => s.stop);
+  const openArtist = useGameStore((s) => s.openArtist);
 
   const [entries, setEntries] = useState(null);
   const [error, setError] = useState('');
@@ -36,7 +37,7 @@ export function Chart() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
               <div style={{ fontSize: 11, color: '#8B8496', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span>{s.artist_name}</span>
+                <span className="me-artist-link" onClick={() => openArtist(s.artist_type, s.artist_id)}>{s.artist_name}</span>
                 <span className="me-mono" title="조회수">▷ {compactNum(s.views)}</span>
               </div>
             </div>

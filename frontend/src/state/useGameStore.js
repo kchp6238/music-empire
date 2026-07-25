@@ -585,6 +585,12 @@ export const useGameStore = create((set, get) => ({
   },
   setCommunityTab: (tab) => set({ communityTab: tab }),
 
+  // Which artist's profile card is open (null = closed). Set from anywhere an
+  // artist name is clickable; the global ArtistProfile modal reads it.
+  profileArtist: null,
+  openArtist: (type, id) => set({ profileArtist: { type, id } }),
+  closeArtist: () => set({ profileArtist: null }),
+
   // When a song has attached vocal takes, `vocals` (an array of {recordingId,
   // offsetSec}, or the API's snake_case twin, or a bare id) is passed here and
   // each voice is layered over the Tone.js beat. A take with offset 0 starts

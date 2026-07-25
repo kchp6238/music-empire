@@ -27,6 +27,7 @@ function SongReactions({ reactions }) {
 
 export function Feed() {
   const character = useGameStore((s) => s.character);
+  const openArtist = useGameStore((s) => s.openArtist);
   const isPlaying = useGameStore((s) => s.isPlaying);
   const playingId = useGameStore((s) => s.playingId);
   const play = useGameStore((s) => s.play);
@@ -62,7 +63,7 @@ export function Feed() {
               <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocals, `${s.artist_name} — ${s.title}`)}>
                 {(isPlaying && playingId === s.id) ? '■' : '▶'}
               </button>
-              <div style={{ fontWeight: 700, fontSize: 13 }}>{s.artist_name}</div>
+              <div className="me-artist-link" style={{ fontWeight: 700, fontSize: 13 }} onClick={() => openArtist(s.artist_type, s.artist_id)}>{s.artist_name}</div>
               <div style={{ fontSize: 11, color: '#8B8496' }}>· {s.title}</div>
               <span className="me-mono" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#8B8496' }} title="조회수"><PlayIcon size={11} /> {compactNum(s.views)}</span>
               <div className="me-mono" style={{ fontSize: 12, color: TIER_COLOR[s.tier] }}>{s.tier} · {Math.round(s.overall_score)}</div>
@@ -81,7 +82,7 @@ export function Feed() {
               <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocals, `${s.artist_name} — ${s.title}`)}>
                 {(isPlaying && playingId === s.id) ? '■' : '▶'}
               </button>
-              <div style={{ fontWeight: 700, fontSize: 13 }}>{s.artist_name}</div>
+              <div className="me-artist-link" style={{ fontWeight: 700, fontSize: 13 }} onClick={() => openArtist(s.artist_type, s.artist_id)}>{s.artist_name}</div>
               <div style={{ fontSize: 11, color: '#8B8496' }}>· {s.title}</div>
               <span className="me-mono" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#8B8496' }} title="조회수"><PlayIcon size={11} /> {compactNum(s.views)}</span>
               <div className="me-mono" style={{ fontSize: 12, color: TIER_COLOR[s.tier] }}>{s.tier} · {Math.round(s.overall_score)}</div>

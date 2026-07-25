@@ -15,6 +15,7 @@ import { OnlineScreen } from './components/online/OnlineScreen';
 import { NewsScreen } from './components/news/NewsScreen';
 import { PageTransition } from './components/ui/PageTransition';
 import { NowPlayingBar } from './components/shared/NowPlayingBar';
+import { ArtistProfile } from './components/community/ArtistProfile';
 import { useGameStore } from './state/useGameStore';
 import { useAuthStore } from './state/useAuthStore';
 import { setUnauthorizedHandler } from './lib/api/client';
@@ -100,6 +101,7 @@ function App() {
       <BrowserRouter>
         <AnimatedRoutes />
         <NowPlayingBar />
+        <ArtistProfile />
       </BrowserRouter>
     </div>
   );

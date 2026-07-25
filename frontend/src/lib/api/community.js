@@ -10,6 +10,10 @@ export function getChart() {
   return apiFetch('/community/chart');
 }
 
+export function getArtistProfile(artistType, artistId) {
+  return apiFetch(`/community/artists/${artistType}/${artistId}`);
+}
+
 export function getFollows() {
   return apiFetch('/community/follows');
 }

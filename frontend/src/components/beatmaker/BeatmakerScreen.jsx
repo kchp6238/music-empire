@@ -117,9 +117,10 @@ export function BeatmakerScreen() {
                   <span className="me-display text-lg font-extrabold">섹션 편집</span>
                   <span className="text-[11px] text-muted">— {channelLabel}</span>
                 </div>
-                <div className="flex gap-1.5">
-                  <div className={`me-pill small ${editingSec.length === 16 ? 'active' : ''}`} onClick={() => setSectionLength(16)}>1마디 (16)</div>
-                  <div className={`me-pill small ${editingSec.length === 32 ? 'active' : ''}`} onClick={() => setSectionLength(32)}>2마디 (32)</div>
+                <div className="flex gap-1.5 flex-wrap">
+                  {[[16, '1마디'], [32, '2마디'], [64, '4마디'], [128, '8마디']].map(([len, label]) => (
+                    <div key={len} className={`me-pill small ${editingSec.length === len ? 'active' : ''}`} onClick={() => setSectionLength(len)}>{label} ({len})</div>
+                  ))}
                 </div>
               </div>
 
