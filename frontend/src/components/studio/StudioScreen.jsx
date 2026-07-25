@@ -7,7 +7,7 @@ import { TimePassedToast } from '../shared/TimePassedToast';
 import { AchievementsPanel } from '../shared/AchievementsPanel';
 import { TrainingPanel } from './TrainingPanel';
 import { CoverThumb } from '../cover/CoverThumb';
-import { GENRES, MOODS, CHORD_PRESETS, TIER_COLOR } from '../../lib/gameData/constants';
+import { GENRES, MOODS, CHORD_PRESETS, TIER_COLOR, GENRE_PROFILES } from '../../lib/gameData/constants';
 import { compactNum } from '../../lib/utils';
 import { useGameStore } from '../../state/useGameStore';
 
@@ -17,6 +17,7 @@ export function StudioScreen() {
   const draft = useGameStore((s) => s.draft);
   const setDraftField = useGameStore((s) => s.setDraftField);
   const toggleTag = useGameStore((s) => s.toggleTag);
+  const applyGenrePreset = useGameStore((s) => s.applyGenrePreset);
   const isPlaying = useGameStore((s) => s.isPlaying);
   const playingId = useGameStore((s) => s.playingId);
   const play = useGameStore((s) => s.play);
@@ -53,7 +54,16 @@ export function StudioScreen() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 }}>
             <div>
-              <div style={{ fontSize: 12, color: '#8B8496', marginBottom: 8 }}>장르 (최대 2개)</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 12, color: '#8B8496' }}>장르 (최대 2개)</span>
+                {draft.genres[0] && GENRE_PROFILES[draft.genres[0]] && (
+                  <button
+                    className="me-btn-ghost" style={{ padding: '3px 9px', fontSize: 10 }}
+                    onClick={applyGenrePreset}
+                    title={`${draft.genres[0]}에 맞는 BPM·분위기·코드 기본값을 적용합니다`}
+                  >🎚 {draft.genres[0]} 기본 세팅</button>
+                )}
+              </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {GENRES.map((g) => (
                   <div key={g} className={`me-pill small ${draft.genres.includes(g) ? 'active' : ''}`} onClick={() => toggleTag('genres', g, 2)}>{g}</div>

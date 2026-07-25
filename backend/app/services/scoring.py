@@ -18,6 +18,49 @@ def rand(lo: float, hi: float) -> float:
     return random.uniform(lo, hi)
 
 
+# Genre conventions — must stay identical to GENRE_PROFILES in
+# frontend/src/lib/gameData/constants.js (bpmRange + moods) for JS/PY parity.
+GENRE_PROFILES = {
+    "발라드": {"bpm_range": (60, 85), "moods": ["감성적", "로맨틱"]},
+    "팝": {"bpm_range": (95, 125), "moods": ["신남", "로맨틱"]},
+    "힙합": {"bpm_range": (85, 105), "moods": ["강렬", "신남"]},
+    "R&B": {"bpm_range": (65, 95), "moods": ["로맨틱", "감성적"]},
+    "EDM": {"bpm_range": (120, 135), "moods": ["신남", "강렬"]},
+    "록": {"bpm_range": (110, 160), "moods": ["강렬", "신남"]},
+    "인디": {"bpm_range": (85, 115), "moods": ["몽환적", "편안함"]},
+    "재즈": {"bpm_range": (90, 140), "moods": ["편안함", "실험적"]},
+    "트로트": {"bpm_range": (100, 130), "moods": ["신남", "편안함"]},
+}
+
+
+def genre_fit(genres: list[str], moods: list[str], bpm: float) -> float:
+    """How well the song honours its genre's conventions (deterministic, so it
+    doesn't perturb the JS/PY parity check). A 발라드 at ballad tempo with
+    matching moods scores up to +7; one at 160 BPM with clashing moods dips
+    negative. Averaged over the tagged genres, clamped to ±8."""
+    fits = []
+    for g in genres:
+        prof = GENRE_PROFILES.get(g)
+        if not prof:
+            continue
+        lo, hi = prof["bpm_range"]
+        if lo <= bpm <= hi:
+            f = 3
+        elif bpm < lo - 25 or bpm > hi + 25:
+            f = -4
+        else:
+            f = -1
+        overlap = sum(1 for m in moods if m in prof["moods"])
+        if overlap > 0:
+            f += 2 * overlap
+        elif moods:
+            f -= 2
+        fits.append(f)
+    if not fits:
+        return 0.0
+    return clamp(sum(fits) / len(fits), -8, 8)
+
+
 def compute_release(character, song_input: dict, combined_pattern: dict, fan_personas: list[dict], persona_loyalty: dict, trend_multiplier: float = 1.0) -> dict:
     stats = character.stats
     talent = character.talent
@@ -45,12 +88,16 @@ def compute_release(character, song_input: dict, combined_pattern: dict, fan_per
     if bpm <= 80 and ("감성적" in moods or "우울" in moods or "편안함" in moods):
         tempo_synergy = 4
 
+    # Reward songs that honour their genre's conventions, penalise mismatches
+    # (a fast, aggressive ballad, etc.).
+    genre_fit_val = genre_fit(genres, moods, bpm)
+
     craft_base = stats["composing"] * 0.3 + stats["arrangement"] * 0.25 + stats["production"] * 0.25 + stats["mixing"] * 0.2
     expert_skill_avg = (stats["production"] + stats["mixing"]) / 2
     mode_multiplier = (1.15 if expert_skill_avg >= 55 else 0.8) if is_expert else 1.0
     density_bonus = clamp((pattern_info["density"] - 40) * 0.12, -6, 10)
     craft = clamp(
-        craft_base * mode_multiplier * 0.75 + vocal_quality * 0.15 + density_bonus + lyrics_bonus + tempo_synergy + rand(-5, 5),
+        craft_base * mode_multiplier * 0.75 + vocal_quality * 0.15 + density_bonus + lyrics_bonus + tempo_synergy + genre_fit_val + rand(-5, 5),
         0, 100,
     )
 

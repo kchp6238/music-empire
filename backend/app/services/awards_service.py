@@ -43,7 +43,7 @@ def _entries_for_world(db: Session, world_id: str):
             entries.append({
                 "key": key, "type": "character", "id": s.character_id, "name": name_by_char.get(s.character_id, "?"), "color": None,
                 "title": s.title, "score": float(s.overall_score or 0), "views": int(s.views or 0),
-                "year": s.released_on.year,
+                "year": s.released_on.year, "genre": (s.genre_tags or [None])[0],
             })
             debut_year[key] = min(debut_year.get(key, 9999), s.released_on.year)
 
@@ -52,7 +52,7 @@ def _entries_for_world(db: Session, world_id: str):
         entries.append({
             "key": key, "type": "npc", "id": ns.npc_artist_id, "name": artist.name, "color": artist.color,
             "title": ns.title, "score": float(ns.score), "views": int(float(ns.score) ** 2 * 2),
-            "year": ns.released_on.year,
+            "year": ns.released_on.year, "genre": artist.genre,
         })
         debut_year[key] = min(debut_year.get(key, 9999), ns.released_on.year)
 
@@ -67,9 +67,12 @@ def _compute_winners(db: Session, world_id: str, year: int) -> list[dict]:
 
     winners = []
 
+    def _g(e):
+        return f"{e['genre']} " if e.get("genre") else ""
+
     # 올해의 곡: single highest-scoring song (tiebreak views).
     song = max(year_songs, key=lambda e: (e["score"], e["views"]))
-    winners.append({"category": "song", "winner": song, "detail": f"'{song['title']}' ({round(song['score'])}점)"})
+    winners.append({"category": "song", "winner": song, "detail": f"{_g(song)}'{song['title']}' ({round(song['score'])}점)"})
 
     # 대상: artist with the most total views this year.
     by_artist_views = {}
@@ -94,7 +97,7 @@ def _compute_winners(db: Session, world_id: str, year: int) -> list[dict]:
     rookie_songs = [e for e in year_songs if debut_year.get(e["key"]) == year]
     if rookie_songs:
         r = max(rookie_songs, key=lambda e: (e["score"], e["views"]))
-        winners.append({"category": "rookie", "winner": r, "detail": f"'{r['title']}'로 데뷔"})
+        winners.append({"category": "rookie", "winner": r, "detail": f"{_g(r)}'{r['title']}'로 데뷔"})
 
     return winners
 

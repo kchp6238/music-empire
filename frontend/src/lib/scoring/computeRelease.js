@@ -1,6 +1,27 @@
 import { clamp, rand } from '../utils';
-import { CHORD_PRESETS, FAN_PERSONAS } from '../gameData/constants';
+import { CHORD_PRESETS, FAN_PERSONAS, GENRE_PROFILES } from '../gameData/constants';
 import { analyzeCombinedPattern, lyricsWordCount } from '../patterns';
+
+// Genre-convention fit — mirror of scoring.py::genre_fit (keep identical for
+// the JS/PY parity check). Deterministic so it doesn't perturb parity.
+function genreFit(genres, moods, bpm) {
+  const fits = [];
+  genres.forEach((g) => {
+    const prof = GENRE_PROFILES[g];
+    if (!prof) return;
+    const [lo, hi] = prof.bpmRange;
+    let f;
+    if (bpm >= lo && bpm <= hi) f = 3;
+    else if (bpm < lo - 25 || bpm > hi + 25) f = -4;
+    else f = -1;
+    const overlap = moods.filter((m) => prof.moods.includes(m)).length;
+    if (overlap > 0) f += 2 * overlap;
+    else if (moods.length) f -= 2;
+    fits.push(f);
+  });
+  if (!fits.length) return 0;
+  return clamp(fits.reduce((a, b) => a + b, 0) / fits.length, -8, 8);
+}
 
 /**
  * Client-side preview only — the server re-runs the equivalent logic in
@@ -28,7 +49,8 @@ export function computeRelease(character, draft, combined, trendMultiplier = 1.0
   const expertSkillAvg = (stats.production + stats.mixing) / 2;
   const modeMultiplier = isExpert ? (expertSkillAvg >= 55 ? 1.15 : 0.8) : 1.0;
   const densityBonus = clamp((patternInfo.density - 40) * 0.12, -6, 10);
-  const craft = clamp(craftBase * modeMultiplier * 0.75 + vocalQuality * 0.15 + densityBonus + lyricsBonus + temposynergy + rand(-5, 5), 0, 100);
+  const genreFitVal = genreFit(draft.genres, draft.moods, draft.bpm);
+  const craft = clamp(craftBase * modeMultiplier * 0.75 + vocalQuality * 0.15 + densityBonus + lyricsBonus + temposynergy + genreFitVal + rand(-5, 5), 0, 100);
 
   let originality = clamp(
     talent.creativity * 0.4 + talent.genius * 0.35 + talent.ear * 0.15 + chord.originalityMod * 1.2 +

@@ -2,6 +2,22 @@ import { clamp } from '../utils';
 
 export const GENRES = ['발라드', '팝', '힙합', 'R&B', 'EDM', '록', '인디', '재즈', '트로트'];
 export const MOODS = ['감성적', '신남', '우울', '강렬', '로맨틱', '몽환적', '편안함', '실험적'];
+
+// Each genre's conventions — a starter BPM, the tempo band it "should" sit in,
+// its signature moods, and a fitting chord progression. Drives both the
+// "장르 기본 세팅" button (below) and the genre-fit scoring (bpmRange/moods must
+// stay identical to the backend's game_data.GENRE_PROFILES for parity).
+export const GENRE_PROFILES = {
+  '발라드': { bpm: 72, bpmRange: [60, 85], moods: ['감성적', '로맨틱'], chordPresetId: 'p2' },
+  '팝': { bpm: 110, bpmRange: [95, 125], moods: ['신남', '로맨틱'], chordPresetId: 'p1' },
+  '힙합': { bpm: 92, bpmRange: [85, 105], moods: ['강렬', '신남'], chordPresetId: 'p3' },
+  'R&B': { bpm: 78, bpmRange: [65, 95], moods: ['로맨틱', '감성적'], chordPresetId: 'p2' },
+  'EDM': { bpm: 128, bpmRange: [120, 135], moods: ['신남', '강렬'], chordPresetId: 'p1' },
+  '록': { bpm: 135, bpmRange: [110, 160], moods: ['강렬', '신남'], chordPresetId: 'p3' },
+  '인디': { bpm: 100, bpmRange: [85, 115], moods: ['몽환적', '편안함'], chordPresetId: 'p5' },
+  '재즈': { bpm: 115, bpmRange: [90, 140], moods: ['편안함', '실험적'], chordPresetId: 'p4' },
+  '트로트': { bpm: 115, bpmRange: [100, 130], moods: ['신남', '편안함'], chordPresetId: 'p1' },
+};
 export const SECTION_TYPES = ['인트로', '벌스', '코러스', '브릿지', '아웃트로'];
 export const SECTION_COLORS = {
   인트로: '#8B7FD1',

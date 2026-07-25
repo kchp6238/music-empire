@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import {
   SECTION_TYPES, DEFAULT_MIXER, FAN_PERSONAS, EFFECT_TYPES, DEFAULT_DRUM_PARAMS,
   DEFAULT_CHANNEL_MIX, DRUM_INSTRUMENTS, PRESET_STEP_LENGTH, CHANNEL_KEYS, MELODIC_KEYS,
+  GENRE_PROFILES,
 } from '../lib/gameData/constants';
 import { emptySections, emptySection, basicPatternForLength, buildCombinedPattern } from '../lib/patterns';
 import * as engine from '../lib/audio/engine';
@@ -288,6 +289,16 @@ export const useGameStore = create((set, get) => ({
     if (list.includes(tag)) return { draft: { ...s.draft, [field]: list.filter((t) => t !== tag) } };
     if (list.length >= max) return {};
     return { draft: { ...s.draft, [field]: [...list, tag] } };
+  }),
+
+  // Apply the first selected genre's conventions — BPM, signature moods and a
+  // fitting chord progression — as a starting point so a 발라드 comes out slow
+  // and soft, a 힙합 beat-forward, etc.
+  applyGenrePreset: () => set((s) => {
+    const g = s.draft.genres[0];
+    const p = GENRE_PROFILES[g];
+    if (!p) return {};
+    return { draft: { ...s.draft, bpm: p.bpm, moods: p.moods.slice(0, 2), chordPresetId: p.chordPresetId } };
   }),
 
   setEditingSection: (key) => set((s) => ({ draft: { ...s.draft, editingSection: key } })),
