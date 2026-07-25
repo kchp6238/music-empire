@@ -12,6 +12,7 @@ import { CollabScreen } from './components/collab/CollabScreen';
 import { CollabSongScreen } from './components/collab/CollabSongScreen';
 import { CompanyScreen } from './components/company/CompanyScreen';
 import { OnlineScreen } from './components/online/OnlineScreen';
+import { NewsScreen } from './components/news/NewsScreen';
 import { PageTransition } from './components/ui/PageTransition';
 import { NowPlayingBar } from './components/shared/NowPlayingBar';
 import { useGameStore } from './state/useGameStore';
@@ -69,6 +70,7 @@ function AnimatedRoutes() {
       <Route path="/collab/songs/:songId" element={<PageTransition><RequireCharacter><CollabSongScreen /></RequireCharacter></PageTransition>} />
       <Route path="/company" element={<PageTransition><RequireCharacter><CompanyScreen /></RequireCharacter></PageTransition>} />
       <Route path="/online" element={<PageTransition><RequireCharacter><OnlineScreen /></RequireCharacter></PageTransition>} />
+      <Route path="/news" element={<PageTransition><RequireCharacter><NewsScreen /></RequireCharacter></PageTransition>} />
       <Route path="/results" element={<PageTransition><RequireCharacter><ResultsScreen /></RequireCharacter></PageTransition>} />
     </Routes>
   );
