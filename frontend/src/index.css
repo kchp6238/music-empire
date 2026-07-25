@@ -75,6 +75,17 @@ body { margin: 0; }
 @media (min-width: 768px){ .me-bottomnav{ display:none; } }
 /* keep page content clear of the fixed bottom bar on phones */
 @media (max-width: 767px){ #root{ padding-bottom:62px; } }
+
+/* Now-playing strip — a video-style progress bar pinned to the bottom during
+   playback. Sits above the phone tab bar (bottom:54px) / at the very bottom on
+   desktop. */
+.me-nowplaying{ position:fixed; left:0; right:0; bottom:0; z-index:15; background:rgba(20,18,28,0.97); border-top:1px solid rgba(255,255,255,0.08); backdrop-filter:blur(8px); padding:8px 14px; }
+@media (max-width: 767px){ .me-nowplaying{ bottom:54px; } }
+.me-nowplaying-inner{ max-width:1080px; margin:0 auto; display:flex; align-items:center; gap:10px; }
+.me-np-track{ height:4px; background:rgba(255,255,255,0.12); border-radius:2px; overflow:hidden; }
+.me-np-fill{ height:100%; background:linear-gradient(90deg,#E8A33D,#E893A6); border-radius:2px; transition:width .12s linear; }
+.me-spin{ animation:me-spin 3s linear infinite; }
+@keyframes me-spin{ to{ transform:rotate(360deg); } }
 .me-panel{ background:#1C1926; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:20px; }
 .me-card{ background:#1C1926; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px; cursor:pointer; transition:border-color .2s, transform .15s; }
 .me-card:hover{ border-color:#E8A33D; transform:translateY(-2px); }

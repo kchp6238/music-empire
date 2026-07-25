@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Trophy } from 'lucide-react';
 import { getChart } from '../../lib/api/community';
 import { TIER_COLOR } from '../../lib/gameData/constants';
+import { compactNum } from '../../lib/utils';
 import { CoverThumb } from '../cover/CoverThumb';
 import { useGameStore } from '../../state/useGameStore';
 
@@ -29,12 +30,15 @@ export function Chart() {
           <div key={s.id} className="me-panel" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div className="me-mono" style={{ width: 22, fontSize: 14, fontWeight: 700, color: idx === 0 ? '#E8A33D' : idx === 1 ? '#4FD1C5' : idx === 2 ? '#E893A6' : '#8B8496' }}>{idx + 1}</div>
             <CoverThumb songId={s.id} hasCover={s.has_cover} title={s.title} size={40} />
-            <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocals)}>
+            <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocals, `${s.artist_name} — ${s.title}`)}>
               {(isPlaying && playingId === s.id) ? '■' : '▶'}
             </button>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
-              <div style={{ fontSize: 11, color: '#8B8496' }}>{s.artist_name}</div>
+              <div style={{ fontSize: 11, color: '#8B8496', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>{s.artist_name}</span>
+                <span className="me-mono" title="조회수">▷ {compactNum(s.views)}</span>
+              </div>
             </div>
             <div className="me-mono" style={{ fontSize: 13, color: TIER_COLOR[s.tier] }}>{s.tier} · {Math.round(s.overall_score)}</div>
           </div>

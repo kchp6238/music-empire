@@ -63,6 +63,7 @@ class SongOut(BaseModel):
     money_delta: float | None
     fame_delta: float | None
     revenue_breakdown: dict | None = None
+    views: int = 0
     released_at: datetime | None
     released_on: date | None = None
     created_at: datetime

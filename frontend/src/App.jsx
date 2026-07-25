@@ -13,6 +13,7 @@ import { CollabSongScreen } from './components/collab/CollabSongScreen';
 import { CompanyScreen } from './components/company/CompanyScreen';
 import { OnlineScreen } from './components/online/OnlineScreen';
 import { PageTransition } from './components/ui/PageTransition';
+import { NowPlayingBar } from './components/shared/NowPlayingBar';
 import { useGameStore } from './state/useGameStore';
 import { useAuthStore } from './state/useAuthStore';
 import { setUnauthorizedHandler } from './lib/api/client';
@@ -96,6 +97,7 @@ function App() {
     <div className="me-root">
       <BrowserRouter>
         <AnimatedRoutes />
+        <NowPlayingBar />
       </BrowserRouter>
     </div>
   );

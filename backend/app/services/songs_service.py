@@ -137,6 +137,11 @@ def release_song(db: Session, song: Song, character: Character) -> dict:
     song.revenue_breakdown = breakdown_money
     song.released_at = datetime.now(timezone.utc)
     song.released_on = character.game_date
+    # 조회수 seeded from how many people the song reached (same reach concept as
+    # revenue), using the release-time audience before fans update below.
+    _q = result["overall_score"] / 100
+    _reach = character.fans_count + float(character.fame) * 20 + max(0.0, result["overall_score"] - 50) ** 2 * 6
+    song.views = int(max(0, round(_reach * _q * 3)))
 
     # Comments are written once, here — not invented at render time — so the
     # results screen and the feed quote the same fan saying the same thing.

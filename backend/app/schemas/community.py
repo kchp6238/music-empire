@@ -25,6 +25,7 @@ class FeedSongItem(BaseModel):
     # service sets has to be listed here — has_cover silently vanished for a
     # while precisely because it wasn't.
     has_cover: bool = False
+    views: int = 0
     vocal_recording_id: str | None = None
     vocals: list[VocalRef] = []
     reactions: list[FeedReaction] = []
@@ -42,6 +43,7 @@ class ChartEntry(BaseModel):
     source: str
     bpm: int
     has_cover: bool = False
+    views: int = 0
     vocal_recording_id: str | None = None
     vocals: list[VocalRef] = []
     reactions: list[FeedReaction] = []

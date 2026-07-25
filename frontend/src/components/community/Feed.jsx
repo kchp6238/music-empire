@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Users } from 'lucide-react';
+import { Users, Play as PlayIcon } from 'lucide-react';
 import { getFeed } from '../../lib/api/community';
 import { TIER_COLOR } from '../../lib/gameData/constants';
+import { compactNum } from '../../lib/utils';
 import { CoverThumb } from '../cover/CoverThumb';
 import { useGameStore } from '../../state/useGameStore';
 
@@ -58,12 +59,13 @@ export function Feed() {
           <div key={s.id} className="me-panel" style={{ padding: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
               <CoverThumb songId={s.id} hasCover={s.has_cover} title={s.title} size={38} />
-              <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocals)}>
+              <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocals, `${s.artist_name} — ${s.title}`)}>
                 {(isPlaying && playingId === s.id) ? '■' : '▶'}
               </button>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{s.artist_name}</div>
               <div style={{ fontSize: 11, color: '#8B8496' }}>· {s.title}</div>
-              <div className="me-mono" style={{ marginLeft: 'auto', fontSize: 12, color: TIER_COLOR[s.tier] }}>{s.tier} · {Math.round(s.overall_score)}</div>
+              <span className="me-mono" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#8B8496' }} title="조회수"><PlayIcon size={11} /> {compactNum(s.views)}</span>
+              <div className="me-mono" style={{ fontSize: 12, color: TIER_COLOR[s.tier] }}>{s.tier} · {Math.round(s.overall_score)}</div>
             </div>
             <SongReactions reactions={s.reactions} />
           </div>
@@ -76,13 +78,14 @@ export function Feed() {
           <div key={s.id} className="me-panel" style={{ padding: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
               <CoverThumb songId={s.id} hasCover={s.has_cover} title={s.title} size={38} />
-              <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocals)}>
+              <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 12, borderRadius: 6 }} aria-label={(isPlaying && playingId === s.id) ? `${s.title} 정지` : `${s.title} 재생`} onClick={() => (isPlaying && playingId === s.id) ? stop() : play(s.pattern, s.bpm, s.id, s.vocals, `${s.artist_name} — ${s.title}`)}>
                 {(isPlaying && playingId === s.id) ? '■' : '▶'}
               </button>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{s.artist_name}</div>
               <div style={{ fontSize: 11, color: '#8B8496' }}>· {s.title}</div>
+              <span className="me-mono" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#8B8496' }} title="조회수"><PlayIcon size={11} /> {compactNum(s.views)}</span>
               <div className="me-mono" style={{ fontSize: 12, color: TIER_COLOR[s.tier] }}>{s.tier} · {Math.round(s.overall_score)}</div>
-              <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 11, marginLeft: 'auto' }} onClick={() => toggleFollow(s.artist_type, s.artist_id)}>
+              <button className="me-btn-ghost" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => toggleFollow(s.artist_type, s.artist_id)}>
                 {isFollowing(s) ? '팔로잉' : '+ 팔로우'}
               </button>
             </div>

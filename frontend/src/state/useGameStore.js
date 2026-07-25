@@ -74,6 +74,7 @@ function mapSong(apiSong) {
     bpm: apiSong.bpm,
     vocalRecordingId: apiSong.vocal_recording_id || null,
     vocals: apiSong.vocals || [],
+    views: apiSong.views || 0,
     pattern: buildCombinedPattern(apiSong.pattern, apiSong.structure),
   };
 }
@@ -175,6 +176,8 @@ export const useGameStore = create((set, get) => ({
   isPlaying: false,
   currentStep: -1,
   playingId: null,
+  playingTotal: 0,     // total steps of the currently playing pattern (for the progress bar)
+  playingLabel: '',    // "artist — title" of what's playing, shown in the now-playing bar
   communityTab: 'feed',
   followedArtists: [],   // list of {followed_type, followed_id}
   persistedDraftId: null, // server id of the open draft (set on first save/load)
@@ -587,9 +590,9 @@ export const useGameStore = create((set, get) => ({
   // each voice is layered over the Tone.js beat. A take with offset 0 starts
   // with the beat; a section take is delayed to its section's start; multiple
   // takes sharing an offset stack as harmony.
-  play: async (pattern, bpm, id, vocals = null) => {
+  play: async (pattern, bpm, id, vocals = null, label = '') => {
     const audio = get().audioState();
-    set({ isPlaying: true, playingId: id, currentStep: -1 });
+    set({ isPlaying: true, playingId: id, currentStep: -1, playingTotal: pattern?.bass?.length || 0, playingLabel: label });
     stopVocals();
 
     const list = normalizeVocals(vocals);
@@ -622,7 +625,7 @@ export const useGameStore = create((set, get) => ({
   stop: () => {
     engine.stopPattern();
     stopVocals();
-    set({ isPlaying: false, currentStep: -1, playingId: null });
+    set({ isPlaying: false, currentStep: -1, playingId: null, playingTotal: 0, playingLabel: '' });
   },
 
   // Save the work-in-progress to the server. Creates the draft row the first
