@@ -1,5 +1,13 @@
 import { apiFetch } from './client';
 
+export function getVenues() {
+  return apiFetch('/concerts/venues');
+}
+
+export function holdConcert(venueId, ticketPrice) {
+  return apiFetch('/concerts/hold', { method: 'POST', body: { venue_id: venueId, ticket_price: ticketPrice } });
+}
+
 export function getConcerts() {
   return apiFetch('/concerts');
 }

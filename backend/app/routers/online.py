@@ -7,12 +7,29 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.character import Character
 from app.routers.songs import get_current_character
-from app.services import online_service
+from app.services import online_service, concert_service
 
 router = APIRouter(tags=["online"])
 
 
-# ---- Concerts ----
+# ---- Solo live performances ----
+
+class HoldConcert(BaseModel):
+    venue_id: str
+    ticket_price: float = 0
+
+
+@router.get("/concerts/venues")
+def venues(db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    return concert_service.list_venues(db, character)
+
+
+@router.post("/concerts/hold")
+def hold_concert(payload: HoldConcert, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    return concert_service.hold_concert(db, character, payload.venue_id, payload.ticket_price)
+
+
+# ---- Concerts (multiplayer, ticketed) ----
 
 class ConcertCreate(BaseModel):
     title: str = ""
