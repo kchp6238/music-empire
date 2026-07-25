@@ -41,7 +41,7 @@ def _entries_for_world(db: Session, world_id: str):
         for s in db.query(Song).filter(Song.character_id.in_(char_ids), Song.released_on.isnot(None)).all():
             key = ("character", s.character_id)
             entries.append({
-                "key": key, "type": "character", "id": s.character_id, "name": name_by_char.get(s.character_id, "?"),
+                "key": key, "type": "character", "id": s.character_id, "name": name_by_char.get(s.character_id, "?"), "color": None,
                 "title": s.title, "score": float(s.overall_score or 0), "views": int(s.views or 0),
                 "year": s.released_on.year,
             })
@@ -50,7 +50,7 @@ def _entries_for_world(db: Session, world_id: str):
     for ns, artist in db.query(NpcSong, NpcArtist).join(NpcArtist, NpcSong.npc_artist_id == NpcArtist.id).filter(NpcSong.world_id == world_id).all():
         key = ("npc", ns.npc_artist_id)
         entries.append({
-            "key": key, "type": "npc", "id": ns.npc_artist_id, "name": artist.name,
+            "key": key, "type": "npc", "id": ns.npc_artist_id, "name": artist.name, "color": artist.color,
             "title": ns.title, "score": float(ns.score), "views": int(float(ns.score) ** 2 * 2),
             "year": ns.released_on.year,
         })
@@ -78,18 +78,16 @@ def _compute_winners(db: Session, world_id: str, year: int) -> list[dict]:
     for e in year_songs:
         by_artist_views[e["key"]] = by_artist_views.get(e["key"], 0) + e["views"]
         by_artist_scores.setdefault(e["key"], []).append(e["score"])
-        by_artist_name[e["key"]] = (e["type"], e["id"], e["name"])
+        by_artist_name[e["key"]] = {"type": e["type"], "id": e["id"], "name": e["name"], "color": e.get("color")}
     top_key = max(by_artist_views, key=lambda k: by_artist_views[k])
-    t, i, n = by_artist_name[top_key]
-    winners.append({"category": "daesang", "winner": {"type": t, "id": i, "name": n},
+    winners.append({"category": "daesang", "winner": by_artist_name[top_key],
                     "detail": f"올해 총 {by_artist_views[top_key]:,} 조회수"})
 
     # 올해의 음반: best average score among artists with >=2 releases this year.
     eligible = {k: sum(v) / len(v) for k, v in by_artist_scores.items() if len(v) >= 2}
     if eligible:
         best_key = max(eligible, key=lambda k: eligible[k])
-        t, i, n = by_artist_name[best_key]
-        winners.append({"category": "album", "winner": {"type": t, "id": i, "name": n},
+        winners.append({"category": "album", "winner": by_artist_name[best_key],
                         "detail": f"평균 {round(eligible[best_key], 1)}점 · {len(by_artist_scores[best_key])}곡"})
 
     # 신인상: among artists who debuted this year, the best top-song.
@@ -121,6 +119,8 @@ def check_year_awards(db: Session, character: Character) -> list[dict]:
             db.add(NewsItem(
                 character_id=character.id, game_date=date(year, 12, 31), kind="award", icon="🏆",
                 title=f"{year} 시상식 · {LABELS[cat]}", body=body,
+                subject_type=win["type"], subject_id=win["id"], subject_name=win["name"],
+                subject_color=win.get("color") or "#E8C34D",
             ))
             granted.append({"year": year, "category": cat, "winner": win["name"], "i_won": i_won})
     return granted

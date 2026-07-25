@@ -29,4 +29,10 @@ class NewsItem(Base):
     resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     chosen_id: Mapped[str | None] = mapped_column(String(30), nullable=True)
     outcome: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Who the story is about (a rival/other artist), so the card can show an
+    # avatar thumbnail and link to their profile. Null for purely personal news.
+    subject_type: Mapped[str | None] = mapped_column(String(12), nullable=True)   # character|npc
+    subject_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    subject_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    subject_color: Mapped[str | None] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))

@@ -34,6 +34,25 @@ function effectText(effect) {
   return parts.join(' · ');
 }
 
+// FM-style card thumbnail: a colored avatar disc for the subject artist (shows
+// their initial, clickable to their profile) or the news icon otherwise.
+function NewsThumb({ item, size, onOpen }) {
+  const color = item.subject_color || KIND[item.kind]?.color || '#8B8496';
+  const clickable = !!item.subject_id;
+  return (
+    <div
+      className={`shrink-0 rounded-xl flex items-center justify-center overflow-hidden ${clickable ? 'me-artist-link' : ''}`}
+      style={{ width: size, height: size, background: `${color}22`, border: `1px solid ${color}66` }}
+      onClick={clickable ? () => onOpen(item.subject_type, item.subject_id) : undefined}
+      title={item.subject_name || ''}
+    >
+      {item.subject_name
+        ? <span className="font-display font-extrabold" style={{ color, fontSize: Math.round(size * 0.42) }}>{item.subject_name.slice(0, 1)}</span>
+        : <span style={{ fontSize: Math.round(size * 0.5) }} aria-hidden>{item.icon}</span>}
+    </div>
+  );
+}
+
 function Choices({ item, onChoose, busy }) {
   if (item.kind !== 'choice') return null;
   if (item.resolved) {
@@ -137,19 +156,23 @@ export function NewsScreen() {
 
               {/* featured headline */}
               {headline && (
-                <div className="me-panel mb-4 overflow-hidden" style={{ padding: 0, borderColor: headline.kind === 'choice' && !headline.resolved ? 'rgba(232,163,61,0.5)' : undefined }}>
-                  <div className="h-1.5" style={{ background: KIND[headline.kind]?.color || '#8B8496' }} />
-                  <div className="p-5">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-2xl" aria-hidden>{headline.icon}</span>
-                      <span className="text-[11px] font-mono px-1.5 py-0.5 rounded" style={{ color: KIND[headline.kind]?.color, border: `1px solid ${KIND[headline.kind]?.color}55` }}>
-                        {KIND[headline.kind]?.label || '소식'}
-                      </span>
-                      <span className="text-[10px] text-faint me-mono ml-auto">{headline.game_date}</span>
+                <div className="me-panel mb-4" style={{ borderColor: headline.kind === 'choice' && !headline.resolved ? 'rgba(232,163,61,0.5)' : headline.kind === 'award' ? 'rgba(232,195,77,0.5)' : undefined }}>
+                  <div className="flex gap-3.5 items-start">
+                    <NewsThumb item={headline} size={76} onOpen={openArtist} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className="text-[11px] font-mono px-1.5 py-0.5 rounded" style={{ color: KIND[headline.kind]?.color, border: `1px solid ${KIND[headline.kind]?.color}55` }}>
+                          {KIND[headline.kind]?.label || '소식'}
+                        </span>
+                        {headline.subject_name && (
+                          <span className="me-artist-link text-[11px] text-muted" onClick={() => openArtist(headline.subject_type, headline.subject_id)}>{headline.subject_name}</span>
+                        )}
+                        <span className="text-[10px] text-faint me-mono ml-auto">{headline.game_date}</span>
+                      </div>
+                      <div className="me-display text-lg font-extrabold mb-1">{headline.title}</div>
+                      <div className="text-[13px] text-text leading-relaxed">{headline.body}</div>
+                      <Choices item={headline} onChoose={onChoose} busy={busy} />
                     </div>
-                    <div className="me-display text-lg font-extrabold mb-1.5">{headline.title}</div>
-                    <div className="text-[13px] text-text leading-relaxed">{headline.body}</div>
-                    <Choices item={headline} onChoose={onChoose} busy={busy} />
                   </div>
                 </div>
               )}
@@ -158,13 +181,20 @@ export function NewsScreen() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {rest.map((n) => (
                   <div key={n.id} className="me-panel" style={{ padding: 12, borderColor: n.kind === 'choice' && !n.resolved ? 'rgba(232,163,61,0.5)' : undefined }}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-base" aria-hidden>{n.icon}</span>
-                      <span className="text-[10px] font-mono" style={{ color: KIND[n.kind]?.color }}>{KIND[n.kind]?.label || '소식'}</span>
-                      <span className="text-[9px] text-faint me-mono ml-auto">{n.game_date}</span>
+                    <div className="flex gap-2.5 items-start">
+                      <NewsThumb item={n} size={40} onOpen={openArtist} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <span className="text-[10px] font-mono" style={{ color: KIND[n.kind]?.color }}>{KIND[n.kind]?.label || '소식'}</span>
+                          {n.subject_name && (
+                            <span className="me-artist-link text-[10px] text-muted" onClick={() => openArtist(n.subject_type, n.subject_id)}>{n.subject_name}</span>
+                          )}
+                          <span className="text-[9px] text-faint me-mono ml-auto">{n.game_date}</span>
+                        </div>
+                        <div className="text-[12px] text-text leading-snug">{n.body}</div>
+                        <Choices item={n} onChoose={onChoose} busy={busy} />
+                      </div>
                     </div>
-                    <div className="text-[12px] text-text leading-snug">{n.body}</div>
-                    <Choices item={n} onChoose={onChoose} busy={busy} />
                   </div>
                 ))}
               </div>

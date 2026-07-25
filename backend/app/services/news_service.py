@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.models.character import Character
 from app.models.news import NewsItem
+from app.models.npc import NpcSong, NpcArtist
 from app.services import time_service
 
 # Read-only flavor news, grouped by tone. One is picked on a "flavor" day.
@@ -103,9 +104,57 @@ CHOICE_EVENTS = [
 ]
 
 
+def _rival_news_for_day(db: Session, character: Character, day, rng) -> list[NewsItem]:
+    """News about the OTHER artists in the world — grounds the feed in real
+    events (a rival's new single, a chart mover) so it isn't all about you and
+    features a variety of artists and genres. Each carries the artist as its
+    `subject` so the card can show an avatar and link to their profile."""
+    items: list[NewsItem] = []
+
+    # NPC releases that landed on this exact day → "X, 신곡 'Y' 발매".
+    releases = (
+        db.query(NpcSong, NpcArtist)
+        .join(NpcArtist, NpcSong.npc_artist_id == NpcArtist.id)
+        .filter(NpcSong.world_id == character.world_id, NpcSong.released_on == day)
+        .all()
+    )
+    for ns, artist in releases[:2]:
+        genre = f"{artist.genre} " if artist.genre else ""
+        hot = "화제를 모으고 있어요" if float(ns.score) >= 80 else "공개됐어요"
+        items.append(NewsItem(
+            character_id=character.id, game_date=day, kind="rival", icon="🎵",
+            title="라이벌 신곡", body=f"{artist.name}, {genre}신곡 '{ns.title}'을(를) 발매했어요. {hot}.",
+            subject_type="npc", subject_id=artist.id, subject_name=artist.name, subject_color=artist.color,
+        ))
+
+    # Occasional "chart mover" flavor about a random rival (genre-diverse).
+    if not items and rng.random() < 0.30:
+        artist = (
+            db.query(NpcArtist)
+            .join(NpcSong, NpcSong.npc_artist_id == NpcArtist.id)
+            .filter(NpcSong.world_id == character.world_id, NpcSong.released_on <= day)
+            .order_by(func_random()).first()
+        )
+        if artist:
+            genre = f"{artist.genre} " if artist.genre else ""
+            line = rng.choice([
+                f"{genre}아티스트 {artist.name}이(가) 차트 상위권을 지키고 있어요.",
+                f"{artist.name}의 {genre}무대가 음악방송에서 호평받았어요.",
+                f"{artist.name}, 팬미팅 매진 소식이에요.",
+            ])
+            items.append(NewsItem(
+                character_id=character.id, game_date=day, kind="rival", icon="🎤",
+                title="라이벌 소식", body=line,
+                subject_type="npc", subject_id=artist.id, subject_name=artist.name, subject_color=artist.color,
+            ))
+
+    return items
+
+
 def _generate_for_day(db: Session, character: Character, day) -> list[NewsItem]:
-    """0–1 news items for one day, seeded so it's stable. Skips days that already
-    have news (idempotent if re-advanced onto the same date)."""
+    """News for one day, seeded so it's stable. Personal flavor/choice PLUS
+    rival/world news so the feed isn't all about the player. Skips days that
+    already have news (idempotent if re-advanced onto the same date)."""
     existing = (
         db.query(NewsItem)
         .filter(NewsItem.character_id == character.id, NewsItem.game_date == day)
@@ -114,28 +163,42 @@ def _generate_for_day(db: Session, character: Character, day) -> list[NewsItem]:
     if existing:
         return []
 
+    # make sure the rivals' catalogue is caught up to this day so their releases
+    # can surface as news.
+    from app.services import npc_service
+    npc_service.ensure_catalogue(db, character.world_id, day)
+
     rng = random.Random(f"{character.id}:{day.isoformat()}")
-    roll = rng.random()
     items: list[NewsItem] = []
 
+    # personal thread
+    roll = rng.random()
     if roll < 0.20:
         ev = rng.choice(CHOICE_EVENTS)
         items.append(NewsItem(
             character_id=character.id, game_date=day, kind="choice",
             icon=ev["icon"], title=ev["title"], body=ev["body"], choices=ev["choices"],
         ))
-    elif roll < 0.75:
+    elif roll < 0.70:
         kind = rng.choice(list(FLAVOR.keys()))
         icon, pool = FLAVOR[kind]
         items.append(NewsItem(
             character_id=character.id, game_date=day, kind=kind,
             icon=icon, title=_TITLES.get(kind, "소식"), body=rng.choice(pool),
         ))
-    # else: an uneventful day
+
+    # rival/world thread (independent of the personal one)
+    items.extend(_rival_news_for_day(db, character, day, rng))
 
     for it in items:
         db.add(it)
     return items
+
+
+def func_random():
+    """DB-agnostic random ordering (SQLite `random()` / Postgres `random()`)."""
+    from sqlalchemy import func
+    return func.random()
 
 
 _TITLES = {"fun": "이런 일이", "serious": "주의", "industry": "업계 소식", "rival": "라이벌 소식", "personal": "따뜻한 소식"}
@@ -190,4 +253,6 @@ def serialize(n: NewsItem) -> dict:
         "kind": n.kind, "icon": n.icon, "title": n.title, "body": n.body,
         "choices": [{"id": c["id"], "label": c["label"]} for c in (n.choices or [])],
         "resolved": n.resolved, "chosen_id": n.chosen_id, "outcome": n.outcome,
+        "subject_type": n.subject_type, "subject_id": n.subject_id,
+        "subject_name": n.subject_name, "subject_color": n.subject_color,
     }
