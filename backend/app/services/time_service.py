@@ -100,3 +100,29 @@ def advance_days(db: Session, character: Character, days: int, reason: str = "")
         "weeks_settled": weekly["weeks_settled"],
         "seasons_settled": seasonal,
     }
+
+
+def world_sync(db: Session, character: Character) -> None:
+    """Keep everyone in a shared (multi) world on one clock.
+
+    A multi world's "current date" is its furthest-ahead member — one player
+    can't be living in a different month than the friends they share charts
+    with. A member who's behind is fast-forwarded to that shared date, settling
+    the gap (fans/income) on the way, so time only ever moves forward and stays
+    consistent. Solo saves are private and skip this entirely.
+    """
+    from sqlalchemy import func
+    from app.models.world import World
+
+    world = db.get(World, character.world_id)
+    if world is None or world.is_solo:
+        return
+    max_date = (
+        db.query(func.max(Character.game_date))
+        .filter(Character.world_id == character.world_id)
+        .scalar()
+    )
+    if max_date and character.game_date and character.game_date < max_date:
+        gap = (max_date - character.game_date).days
+        if gap > 0:
+            advance_days(db, character, gap, reason="world_sync")

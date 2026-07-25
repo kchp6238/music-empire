@@ -6,7 +6,7 @@ from app.deps import get_current_user
 from app.models.user import User
 from app.models.character import Character
 from app.schemas.song import SongDraftCreate, SongDraftUpdate, SongOut, ReleaseResult
-from app.services import characters_service, songs_service
+from app.services import characters_service, songs_service, time_service
 
 router = APIRouter(prefix="/songs", tags=["songs"])
 
@@ -30,11 +30,14 @@ def get_current_character(
         character = characters_service.get_owned(db, x_character_id, user.id)
         if character is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="세이브를 찾을 수 없습니다")
-        return character
+    else:
+        character = characters_service.get_by_user(db, user.id)
+        if character is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No character for this user")
 
-    character = characters_service.get_by_user(db, user.id)
-    if character is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No character for this user")
+    # In a shared world, catch this save up to the world's clock so everyone is
+    # on the same date. No-op for solo saves and for the furthest-ahead member.
+    time_service.world_sync(db, character)
     return character
 
 
