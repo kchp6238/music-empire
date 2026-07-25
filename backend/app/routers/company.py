@@ -31,6 +31,13 @@ def my_company(db: Session = Depends(get_db), character: Character = Depends(get
     return company_service.serialize(db, company)
 
 
+@router.get("/requirements")
+def requirements(db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    """Founding gate + the player's current standing, so the UI can show
+    progress toward the milestone rather than only failing on submit."""
+    return company_service.found_requirements(db, character)
+
+
 @router.post("", status_code=status.HTTP_201_CREATED)
 def found(payload: FoundCompany, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
     company = company_service.found(db, character, payload.name)

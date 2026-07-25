@@ -4,6 +4,10 @@ export function getMyCompany() {
   return apiFetch('/company/me');
 }
 
+export function getFoundRequirements() {
+  return apiFetch('/company/requirements');
+}
+
 export function foundCompany(name) {
   return apiFetch('/company', { method: 'POST', body: { name } });
 }

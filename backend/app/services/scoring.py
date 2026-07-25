@@ -129,10 +129,18 @@ def compute_release(character, song_input: dict, combined_pattern: dict, fan_per
     else:
         tier = "참패"
 
-    fans_delta = js_round((overall_score - 45) * 1.4 + reached_count * 0.8)
-    money_delta = js_round(
-        overall_score * 45000 + float(character.fame) * 8000 - (280000 if vocal_source == "npc" else 0) - (140000 if is_expert else 0)
-    )
+    # Fans grow (or shrink) with quality — hits snowball, flops bleed fans.
+    fans_delta = js_round((overall_score - 40) * 2.2 + reached_count * 1.5)
+
+    # Revenue scales with AUDIENCE REACH, not a flat per-song fee, so an unknown
+    # earns little while an established artist earns a lot. Reach = your existing
+    # audience (fans + fame) plus a superlinear "breakout" term, so a genuinely
+    # great song reaches far beyond your current fanbase and can lift a nobody.
+    quality = overall_score / 100
+    fans_count = float(getattr(character, "fans_count", 0) or 0)
+    reach = fans_count + float(character.fame) * 20 + max(0.0, overall_score - 50) ** 2 * 6
+    expenses = (280000 if vocal_source == "npc" else 0) + (140000 if is_expert else 0)
+    money_delta = js_round(reach * quality * 350 - expenses)
     fame_delta = js_round((overall_score - 50) * 0.35)
 
     new_loyalty = dict(persona_loyalty)

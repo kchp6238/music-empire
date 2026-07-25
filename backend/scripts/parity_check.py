@@ -24,6 +24,7 @@ character = SimpleNamespace(
     stats=fixture["character"]["stats"],
     talent=fixture["character"]["talent"],
     fame=fixture["character"]["fame"],
+    fans_count=fixture["character"].get("fans_count", 0),
 )
 
 fan_personas = [

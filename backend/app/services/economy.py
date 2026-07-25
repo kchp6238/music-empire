@@ -22,7 +22,11 @@ BASE_WEIGHTS = {
 
 def compute_revenue_breakdown(overall_score, fame, fans_count, vocal_source, is_expert, money_delta):
     fame = float(fame)
-    gross = overall_score * 45000 + fame * 8000
+    # Mirror scoring.py's reach-based gross so the named sources sum to the same
+    # money_delta (see that module for the reach/breakout rationale).
+    quality = overall_score / 100
+    reach = float(fans_count or 0) + fame * 20 + max(0.0, overall_score - 50) ** 2 * 6
+    gross = reach * quality * 350
     expenses = (280000 if vocal_source == "npc" else 0) + (140000 if is_expert else 0)
 
     weights = dict(BASE_WEIGHTS)

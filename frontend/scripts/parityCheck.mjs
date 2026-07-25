@@ -40,6 +40,7 @@ const character = {
   stats: fixture.character.stats,
   talent: fixture.character.talent,
   fame: fixture.character.fame,
+  fansCount: fixture.character.fans_count,
   personaLoyalty: fixture.character.personaLoyalty,
 };
 

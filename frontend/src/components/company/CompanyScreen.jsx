@@ -6,15 +6,29 @@ import { useGameStore } from '../../state/useGameStore';
 import { won } from '../../lib/utils';
 
 const DEBUT_MIN_STAGE = 3;
-const FOUND_COST = 5000000;
-const RECRUIT_COST = 800000;
-const TRAINEE_TRAIN_COST = 300000;
+const RECRUIT_COST = 1500000;
+const TRAINEE_TRAIN_COST = 500000;
+
+/** One founding-condition row: current value vs. the target, with a met/unmet
+ *  marker so the player can see how far off they are. */
+function ReqRow({ label, have, need, fmt = (v) => v }) {
+  const met = have >= need;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+      <span style={{ width: 16, textAlign: 'center', color: met ? '#5FBF8F' : '#6B6577' }}>{met ? '✓' : '·'}</span>
+      <span style={{ color: '#8B8496', minWidth: 92 }}>{label}</span>
+      <span className="me-mono" style={{ color: met ? '#5FBF8F' : '#EDE9F0' }}>{fmt(have)}</span>
+      <span style={{ color: '#6B6577' }}>/ {fmt(need)}</span>
+    </div>
+  );
+}
 
 export function CompanyScreen() {
   const character = useGameStore((s) => s.character);
   const refreshCharacter = useGameStore((s) => s.refreshCharacter);
 
   const [company, setCompany] = useState(undefined); // undefined = loading, null = none
+  const [req, setReq] = useState(null); // founding requirements + progress
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [companyName, setCompanyName] = useState('');
@@ -23,7 +37,9 @@ export function CompanyScreen() {
 
   async function load() {
     try {
-      setCompany(await companyApi.getMyCompany());
+      const c = await companyApi.getMyCompany();
+      setCompany(c);
+      if (c === null) setReq(await companyApi.getFoundRequirements());
     } catch (e) {
       setError(e.message || '회사 정보를 불러오지 못했습니다');
     }
@@ -59,14 +75,30 @@ export function CompanyScreen() {
 
         {company === null && (
           <div className="me-panel">
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>회사 설립</div>
-            <div style={{ fontSize: 12, color: '#8B8496', marginBottom: 12 }}>설립 자본 {won(FOUND_COST)}이 필요합니다.</div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>회사 설립</div>
+            <div style={{ fontSize: 12, color: '#8B8496', marginBottom: 14 }}>
+              무명이 바로 회사를 차릴 순 없어요. 아래 조건을 모두 채워야 설립할 수 있습니다.
+            </div>
+
+            {req && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                <ReqRow label="설립 자본" have={req.money} need={req.cost} fmt={won} />
+                <ReqRow label="명성" have={req.fame} need={req.min_fame} />
+                <ReqRow label="팬" have={req.fans} need={req.min_fans} fmt={(v) => v.toLocaleString('ko-KR')} />
+                <ReqRow label={`히트곡 (${req.hit_score}점+)`} have={req.hits} need={req.min_hits} fmt={(v) => `${v}곡`} />
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="회사명"
                 style={{ flex: 1, padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: '#12101A', color: '#EDE9F0', outline: 'none' }}
               />
-              <button className="me-btn-primary" disabled={busy} onClick={() => run(() => companyApi.foundCompany(companyName))}>설립하기</button>
+              <button
+                className="me-btn-primary" disabled={busy || (req && !req.eligible)}
+                title={req && !req.eligible ? '설립 조건을 아직 충족하지 못했어요' : ''}
+                onClick={() => run(async () => { const c = await companyApi.foundCompany(companyName); setReq(null); return c; })}
+              >설립하기</button>
             </div>
           </div>
         )}

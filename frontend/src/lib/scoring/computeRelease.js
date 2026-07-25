@@ -96,10 +96,17 @@ export function computeRelease(character, draft, combined, trendMultiplier = 1.0
   else if (overallScore >= 25) tier = '부진';
   else tier = '참패';
 
-  const fansDelta = Math.round((overallScore - 45) * 1.4 + reachedCount * 0.8);
-  const moneyDelta = Math.round(
-    overallScore * 45000 + character.fame * 8000 - (draft.vocalSource === 'npc' ? 280000 : 0) - (isExpert ? 140000 : 0)
-  );
+  // Fans grow (or shrink) with quality — hits snowball, flops bleed fans.
+  const fansDelta = Math.round((overallScore - 40) * 2.2 + reachedCount * 1.5);
+
+  // Revenue scales with AUDIENCE REACH, not a flat per-song fee (see scoring.py
+  // for the rationale): reach = existing audience (fans + fame) + a superlinear
+  // breakout term so a great song reaches beyond your fanbase and can lift a nobody.
+  const quality = overallScore / 100;
+  const fansCount = character.fansCount || 0;
+  const reach = fansCount + character.fame * 20 + Math.max(0, overallScore - 50) ** 2 * 6;
+  const expenses = (draft.vocalSource === 'npc' ? 280000 : 0) + (isExpert ? 140000 : 0);
+  const moneyDelta = Math.round(reach * quality * 350 - expenses);
   const fameDelta = Math.round((overallScore - 50) * 0.35);
 
   const newLoyalty = { ...character.personaLoyalty };
