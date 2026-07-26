@@ -9,6 +9,7 @@ import { AutotunePanel } from './AutotunePanel';
 import { LyricsBoard } from './LyricsBoard';
 import { startRecording, isRecordingSupported } from '../../lib/audio/recorder';
 import { autotuneBlob } from '../../lib/audio/autotune';
+import { renderAiVocal, speakLyrics, stopSpeaking, hasMelody } from '../../lib/audio/aiVocal';
 import * as recordingsApi from '../../lib/api/recordings';
 import { buildCombinedPattern, sectionOffsets } from '../../lib/patterns';
 import { SECTION_TYPES } from '../../lib/gameData/constants';
@@ -52,6 +53,8 @@ export function RecordingStudio() {
   // arrangement, in song order, plus a whole-song option.
   const arrangementSections = SECTION_TYPES.filter((t) => draft.arrangement.includes(t));
   const [targetSection, setTargetSection] = useState(() => arrangementSections[0] || WHOLE_SONG);
+  const [aiVowel, setAiVowel] = useState('ah');
+  const [aiBusy, setAiBusy] = useState(false);
 
   const handleRef = useRef(null);
   const timerRef = useRef(null);
@@ -71,6 +74,7 @@ export function RecordingStudio() {
     if (audioRef.current) audioRef.current.pause();
     if (handleRef.current) handleRef.current.cancel();
     if (timerRef.current) clearInterval(timerRef.current);
+    stopSpeaking();
   }, []);
 
   async function onStart() {
@@ -238,6 +242,44 @@ export function RecordingStudio() {
     { semitones: -12, label: '옥타브 아래' },
   ];
 
+  const VOWELS = [{ id: 'ah', label: '아' }, { id: 'oo', label: '우' }, { id: 'ee', label: '이' }];
+
+  // AI SINGS: render a synth voice singing the section's melody (the piano/lead
+  // line you drew) on a vowel, then upload it as a take like a recorded one.
+  async function makeAiVocal() {
+    setAiBusy(true); setError('');
+    try {
+      const secArr = targetSection === WHOLE_SONG ? draft.arrangement : [targetSection];
+      if (!secArr.length) { setError('먼저 비트메이커에서 곡 구조를 만들어주세요'); return; }
+      const combined = buildCombinedPattern(draft.sections, secArr);
+      const melody = ['piano', 'synthLead', 'guitar', 'elecGuitar', 'brass', 'violin', 'flute', 'bass']
+        .map((k) => combined[k]).find(hasMelody);
+      if (!melody) { setError('부를 멜로디가 없어요. 비트메이커에서 피아노/리드 멜로디를 먼저 찍어주세요.'); return; }
+
+      const { blob, durationSec } = await renderAiVocal(melody, draft.bpm, { vowel: aiVowel });
+      const songId = persistedDraftId || (draft.arrangement.length ? await saveDraft() : null);
+      const vowelLabel = VOWELS.find((v) => v.id === aiVowel)?.label || '아';
+      await recordingsApi.uploadRecording({
+        blob, mimeType: 'audio/wav', durationSec,
+        songId, section: targetSection === WHOLE_SONG ? null : targetSection,
+        title: `AI 보컬 (${vowelLabel})`,
+      });
+      await loadTakes();
+    } catch (e) {
+      setError(e.message || 'AI 보컬 생성에 실패했습니다');
+    } finally { setAiBusy(false); }
+  }
+
+  // AI READS: speak the section's lyrics aloud (spoken, not sung).
+  function readLyrics() {
+    setError('');
+    const text = targetSection === WHOLE_SONG
+      ? draft.arrangement.map((k) => draft.sections[k]?.lyrics).filter(Boolean).join(' ')
+      : draft.sections[targetSection]?.lyrics;
+    if (!text || !text.trim()) { setError('읽을 가사가 없어요. 아래 가사장에 먼저 써주세요.'); return; }
+    if (!speakLyrics(text)) setError('이 브라우저는 음성 읽기를 지원하지 않아요');
+  }
+
   const attachedCount = (takes || []).filter((t) => t.song_id && t.song_id === persistedDraftId).length;
 
   if (!character) return null;
@@ -351,6 +393,24 @@ export function RecordingStudio() {
                 )}
               </div>
             )}
+          </Panel>
+
+          {/* AI vocals — sing the melody for you, or read the lyrics aloud. */}
+          <Panel className="mb-6">
+            <div className="text-sm font-bold mb-1 flex items-center gap-1.5"><Wand2 size={15} className="text-purple" /> AI 보컬</div>
+            <div className="text-[11px] text-muted mb-3">
+              직접 못 불러도 AI가 대신 불러요. <b className="text-text">{targetSection === WHOLE_SONG ? '곡 전체' : targetSection}</b>의 멜로디(비트메이커 피아노/리드)를 신스 목소리로 노래해 테이크로 저장합니다.
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] text-muted">목소리</span>
+              {VOWELS.map((v) => (
+                <div key={v.id} className={`me-pill small ${aiVowel === v.id ? 'active' : ''}`} onClick={() => setAiVowel(v.id)}>{v.label}~</div>
+              ))}
+              <button className="me-btn-primary ml-auto" style={{ padding: '8px 14px', fontSize: 12 }} disabled={aiBusy} onClick={makeAiVocal}>
+                {aiBusy ? '생성 중…' : '🎤 AI 노래 생성'}
+              </button>
+              <button className="me-btn-ghost" style={{ padding: '8px 12px', fontSize: 12 }} onClick={readLyrics} title="가사를 음성으로 읽어줍니다">가사 읽어주기</button>
+            </div>
           </Panel>
 
           {/* Right under the transport, so it's where your eyes already are
