@@ -33,7 +33,6 @@ export function BeatmakerScreen() {
   const setNoteStep = useGameStore((s) => s.setNoteStep);
   const paintNoteRange = useGameStore((s) => s.paintNoteRange);
   const setVelocity = useGameStore((s) => s.setVelocity);
-  const loadBasicPattern = useGameStore((s) => s.loadBasicPattern);
   const clearSection = useGameStore((s) => s.clearSection);
   const clearChannel = useGameStore((s) => s.clearChannel);
   const clearDrumLane = useGameStore((s) => s.clearDrumLane);
@@ -161,7 +160,6 @@ export function BeatmakerScreen() {
                 >
                   {(isPlaying && playingId === 'section-preview') ? '■ 정지' : `▶ ${draft.editingSection} 미리듣기`}
                 </button>
-                <button className="me-btn-ghost" onClick={loadBasicPattern}>기본 패턴 불러오기</button>
                 <button
                   className="me-btn-ghost"
                   onClick={() => clearChannel(selectedChannel)}
