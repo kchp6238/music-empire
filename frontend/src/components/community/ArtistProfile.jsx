@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { X, Disc3 } from 'lucide-react';
+import { X } from 'lucide-react';
 import { getArtistProfile } from '../../lib/api/community';
 import { TIER_COLOR } from '../../lib/gameData/constants';
 import { compactNum } from '../../lib/utils';
+import { ArtistAvatar } from '../shared/ArtistAvatar';
 import { useGameStore } from '../../state/useGameStore';
 
 function Bars({ obj, color }) {
@@ -45,9 +46,7 @@ export function ArtistProfile() {
     <div className="me-modal-backdrop" onClick={closeArtist}>
       <div className="me-modal" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start gap-3 mb-3">
-          <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: `${accent}22`, border: `1px solid ${accent}` }}>
-            <Disc3 size={20} style={{ color: accent }} />
-          </div>
+          <ArtistAvatar name={data?.name || ''} color={accent} size={48} />
           <div className="min-w-0 flex-1">
             <div className="me-display text-lg font-extrabold truncate">{data?.name || '...'}</div>
             <div className="text-[11px] text-muted">

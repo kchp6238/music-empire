@@ -1,6 +1,7 @@
 import { TopBar } from '../shared/TopBar';
 import { Feed } from './Feed';
 import { Chart } from './Chart';
+import { CommunitySearch } from './CommunitySearch';
 import { useGameStore } from '../../state/useGameStore';
 
 export function CommunityScreen() {
@@ -13,7 +14,8 @@ export function CommunityScreen() {
   return (
     <div>
       <TopBar character={character} />
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px 60px' }}>
+      <div className="max-w-[900px] mx-auto px-4 md:px-6 pt-7 pb-16">
+        <CommunitySearch />
         <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
           <div className={`me-pill ${communityTab === 'feed' ? 'active' : ''}`} onClick={() => setCommunityTab('feed')}>피드</div>
           <div className={`me-pill ${communityTab === 'chart' ? 'active' : ''}`} onClick={() => setCommunityTab('chart')}>차트</div>

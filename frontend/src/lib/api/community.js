@@ -14,6 +14,10 @@ export function getArtistProfile(artistType, artistId) {
   return apiFetch(`/community/artists/${artistType}/${artistId}`);
 }
 
+export function searchCommunity(q) {
+  return apiFetch(`/community/search?q=${encodeURIComponent(q)}`);
+}
+
 export function getFollows() {
   return apiFetch('/community/follows');
 }

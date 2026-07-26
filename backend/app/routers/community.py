@@ -21,6 +21,11 @@ def chart(db: Session = Depends(get_db), character=Depends(get_current_character
     return community_service.get_chart(db, character)
 
 
+@router.get("/search")
+def search(q: str = "", db: Session = Depends(get_db), character=Depends(get_current_character)):
+    return community_service.search(db, character, q)
+
+
 @router.get("/artists/{artist_type}/{artist_id}")
 def artist_profile(artist_type: str, artist_id: str, db: Session = Depends(get_db), character=Depends(get_current_character)):
     return community_service.artist_profile(db, character, artist_type, artist_id)

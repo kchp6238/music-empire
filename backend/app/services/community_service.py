@@ -170,6 +170,50 @@ def artist_profile(db: Session, viewer: Character, artist_type: str, artist_id: 
     }
 
 
+def search(db: Session, viewer: Character, q: str) -> dict:
+    """Find artists and songs by name within the viewer's world."""
+    q = (q or "").strip()
+    if not q:
+        return {"artists": [], "songs": []}
+    like = f"%{q}%"
+
+    chars = (
+        db.query(Character)
+        .filter(Character.world_id == viewer.world_id, Character.artist_name.ilike(like))
+        .limit(8).all()
+    )
+    npcs = (
+        db.query(NpcArtist)
+        .join(NpcSong, NpcSong.npc_artist_id == NpcArtist.id)
+        .filter(NpcSong.world_id == viewer.world_id, NpcArtist.name.ilike(like))
+        .distinct().limit(8).all()
+    )
+    artists = (
+        [{"type": "character", "id": c.id, "name": c.artist_name, "color": None} for c in chars]
+        + [{"type": "npc", "id": n.id, "name": n.name, "color": n.color} for n in npcs]
+    )
+
+    user_songs = (
+        db.query(Song, Character)
+        .join(Character, Song.character_id == Character.id)
+        .filter(Character.world_id == viewer.world_id, Song.released_at.isnot(None), Song.title.ilike(like))
+        .limit(8).all()
+    )
+    npc_songs = (
+        db.query(NpcSong, NpcArtist)
+        .join(NpcArtist, NpcSong.npc_artist_id == NpcArtist.id)
+        .filter(NpcSong.world_id == viewer.world_id, NpcSong.released_on <= viewer.game_date, NpcSong.title.ilike(like))
+        .limit(8).all()
+    )
+    songs = (
+        [{"id": s.id, "title": s.title, "artist_name": c.artist_name, "artist_type": "character",
+          "artist_id": c.id, "tier": s.tier, "score": float(s.overall_score or 0)} for s, c in user_songs]
+        + [{"id": ns.id, "title": ns.title, "artist_name": a.name, "artist_type": "npc",
+            "artist_id": a.id, "tier": ns.tier, "score": float(ns.score)} for ns, a in npc_songs]
+    )
+    return {"artists": artists, "songs": songs}
+
+
 def list_follows(db: Session, follower_character_id: str) -> list[dict]:
     rows = db.query(Follow).filter(Follow.follower_character_id == follower_character_id).all()
     return [{"followed_type": r.followed_type, "followed_id": r.followed_id} for r in rows]

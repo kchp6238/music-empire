@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Newspaper, CalendarPlus, Trophy } from 'lucide-react';
 import { TopBar } from '../shared/TopBar';
+import { ArtistAvatar } from '../shared/ArtistAvatar';
 import { PageTransition } from '../ui/PageTransition';
 import { Button } from '../ui/Button';
 import * as newsApi from '../../lib/api/news';
@@ -34,21 +35,29 @@ function effectText(effect) {
   return parts.join(' · ');
 }
 
-// FM-style card thumbnail: a colored avatar disc for the subject artist (shows
-// their initial, clickable to their profile) or the news icon otherwise.
+// Card thumbnail: a gold trophy for awards, an artist face-avatar for rival
+// news (clickable to their profile), or a kind-colored icon tile otherwise.
 function NewsThumb({ item, size, onOpen }) {
-  const color = item.subject_color || KIND[item.kind]?.color || '#8B8496';
-  const clickable = !!item.subject_id;
+  const r = Math.round(size * 0.28);
+  if (item.kind === 'award') {
+    return (
+      <div className="shrink-0 flex items-center justify-center" aria-hidden
+        style={{ width: size, height: size, borderRadius: r, background: 'linear-gradient(135deg,#F0D060,#B8860B)', boxShadow: '0 0 14px rgba(232,195,77,0.45)' }}>
+        <span style={{ fontSize: Math.round(size * 0.5) }}>🏆</span>
+      </div>
+    );
+  }
+  if (item.subject_id) {
+    return (
+      <div className="me-artist-link" onClick={() => onOpen(item.subject_type, item.subject_id)} title={item.subject_name || ''}>
+        <ArtistAvatar name={item.subject_name || ''} color={item.subject_color} size={size} />
+      </div>
+    );
+  }
+  const color = KIND[item.kind]?.color || '#8B8496';
   return (
-    <div
-      className={`shrink-0 rounded-xl flex items-center justify-center overflow-hidden ${clickable ? 'me-artist-link' : ''}`}
-      style={{ width: size, height: size, background: `${color}22`, border: `1px solid ${color}66` }}
-      onClick={clickable ? () => onOpen(item.subject_type, item.subject_id) : undefined}
-      title={item.subject_name || ''}
-    >
-      {item.subject_name
-        ? <span className="font-display font-extrabold" style={{ color, fontSize: Math.round(size * 0.42) }}>{item.subject_name.slice(0, 1)}</span>
-        : <span style={{ fontSize: Math.round(size * 0.5) }} aria-hidden>{item.icon}</span>}
+    <div className="shrink-0 flex items-center justify-center" style={{ width: size, height: size, borderRadius: r, background: `${color}18`, border: `1px solid ${color}44` }}>
+      <span style={{ fontSize: Math.round(size * 0.5) }} aria-hidden>{item.icon}</span>
     </div>
   );
 }
@@ -155,8 +164,32 @@ export function NewsScreen() {
               )}
 
               {/* featured headline */}
-              {headline && (
-                <div className="me-panel mb-4" style={{ borderColor: headline.kind === 'choice' && !headline.resolved ? 'rgba(232,163,61,0.5)' : headline.kind === 'award' ? 'rgba(232,195,77,0.5)' : undefined }}>
+              {headline && headline.kind === 'award' && (
+                <div className="me-panel mb-4 overflow-hidden" style={{ padding: 0, borderColor: 'rgba(232,195,77,0.55)' }}>
+                  {/* ceremony banner */}
+                  <div style={{ position: 'relative', padding: '18px 20px', overflow: 'hidden', background: 'linear-gradient(120deg, rgba(232,195,77,0.22), rgba(184,134,11,0.1) 55%, transparent)', borderBottom: '1px solid rgba(232,195,77,0.25)' }}>
+                    <div style={{ position: 'absolute', top: -34, right: -6, fontSize: 130, opacity: 0.12, pointerEvents: 'none' }} aria-hidden>🏆</div>
+                    <div className="flex items-center gap-3" style={{ position: 'relative' }}>
+                      <NewsThumb item={headline} size={64} onOpen={openArtist} />
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-mono" style={{ color: '#E8C34D' }}>{headline.title}</div>
+                        <div className="me-display text-xl font-extrabold truncate" style={{ color: '#F0D060' }}>{headline.subject_name || '수상'}</div>
+                      </div>
+                      <span className="text-[10px] text-faint me-mono ml-auto self-start" style={{ position: 'relative' }}>{headline.game_date}</span>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <div className="text-[13px] text-text leading-relaxed">{headline.body}</div>
+                    {headline.subject_id && (
+                      <button className="me-btn-ghost mt-2.5" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => openArtist(headline.subject_type, headline.subject_id)}>
+                        {headline.subject_name} 프로필 보기
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+              {headline && headline.kind !== 'award' && (
+                <div className="me-panel mb-4" style={{ borderColor: headline.kind === 'choice' && !headline.resolved ? 'rgba(232,163,61,0.5)' : undefined }}>
                   <div className="flex gap-3.5 items-start">
                     <NewsThumb item={headline} size={76} onOpen={openArtist} />
                     <div className="min-w-0 flex-1">
