@@ -89,6 +89,8 @@ export function NewsScreen() {
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState('');
   const [filter, setFilter] = useState('all');
+  const [visible, setVisible] = useState(16); // cap the pile; "더 보기" reveals more
+  useEffect(() => { setVisible(16); }, [filter]);
 
   async function load() {
     try {
@@ -210,9 +212,9 @@ export function NewsScreen() {
                 </div>
               )}
 
-              {/* card grid */}
+              {/* card grid (capped — older news folds behind 더 보기) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {rest.map((n) => (
+                {rest.slice(0, visible).map((n) => (
                   <div key={n.id} className="me-panel" style={{ padding: 12, borderColor: n.kind === 'choice' && !n.resolved ? 'rgba(232,163,61,0.5)' : undefined }}>
                     <div className="flex gap-2.5 items-start">
                       <NewsThumb item={n} size={40} onOpen={openArtist} />
@@ -231,6 +233,14 @@ export function NewsScreen() {
                   </div>
                 ))}
               </div>
+
+              {rest.length > visible && (
+                <div className="flex justify-center mt-4">
+                  <button className="me-btn-ghost" onClick={() => setVisible((v) => v + 16)}>
+                    더 보기 ({rest.length - visible})
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* sidebar */}
