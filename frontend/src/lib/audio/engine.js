@@ -106,6 +106,7 @@ const SAMPLE_NOTES = {
   cello: ['C2', 'G2', 'C3', 'G3', 'C4', 'E4', 'G4', 'C5'],
   flute: ['C4', 'E4', 'A4', 'C5', 'E5', 'A5', 'C6'],
   clarinet: ['D3', 'F3', 'As3', 'D4', 'F4', 'As4', 'D5'],
+  elecGuitar: ['C3', 'A3', 'C4', 'A4', 'C5'],
 };
 
 /* ---------- drum voices ---------------------------------------------------
@@ -349,14 +350,15 @@ function buildSynths() {
 
   // ---- expanded instrument roster (all pitched, one per new channel) ----
 
-  // Electric guitar: a driven sawtooth MonoSynth pushed through overdrive.
-  const elecDrive = new Tone.Distortion({ distortion: 0.36, wet: 0.85 });
-  voices.elecGuitar = new Tone.MonoSynth({
+  // Electric guitar: real electric-guitar recordings, pushed through a light
+  // overdrive for edge. Fallback while samples load is the sawtooth synth.
+  const elecDrive = new Tone.Distortion({ distortion: 0.22, wet: 0.55 });
+  voices.elecGuitar = makeSampledVoice('guitar-electric', SAMPLE_NOTES.elecGuitar, () => new Tone.MonoSynth({
     oscillator: { type: 'sawtooth' },
     envelope: { attack: 0.006, decay: 0.2, sustain: 0.6, release: 0.35 },
     filter: { type: 'lowpass', rolloff: -12, Q: 1 },
     filterEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.5, release: 0.4, baseFrequency: 500, octaves: 3 },
-  });
+  }));
 
   // Brass/wind: bright sawtooth ensemble with the slightly-slow attack that
   // reads as a horn section rather than a synth stab.
