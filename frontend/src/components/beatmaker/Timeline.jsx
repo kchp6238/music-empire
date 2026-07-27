@@ -104,7 +104,7 @@ export function Timeline() {
         </div>
         <Button
           variant="primary" size="sm" disabled={arrangement.length === 0}
-          onClick={() => (isPlaying && playingId === 'draft-full') ? stop() : play(buildCombinedPattern(sections, arrangement), draft.bpm, 'draft-full')}
+          onClick={() => (isPlaying && playingId === 'draft-full') ? stop() : play(buildCombinedPattern(sections, arrangement, draft.bpm), draft.bpm, 'draft-full')}
         >
           {(isPlaying && playingId === 'draft-full') ? '■ 정지' : '▶ 전체 곡 재생'}
         </Button>

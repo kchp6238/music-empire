@@ -85,7 +85,7 @@ export function RecordingStudio() {
       // the verse, from its own top), otherwise the whole song.
       if (withBeat && draft.arrangement.length > 0) {
         const backingArr = targetSection === WHOLE_SONG ? draft.arrangement : [targetSection];
-        await play(buildCombinedPattern(draft.sections, backingArr), draft.bpm, 'recording-backing');
+        await play(buildCombinedPattern(draft.sections, backingArr, draft.bpm), draft.bpm, 'recording-backing');
       }
       handleRef.current = await startRecording({ onLevel: setLevel, monitor });
       setRecording(true);
@@ -154,7 +154,7 @@ export function RecordingStudio() {
         // the top), and a whole-song take with the whole song.
         const backingArr = take.section && draft.arrangement.includes(take.section)
           ? [take.section] : draft.arrangement;
-        await play(buildCombinedPattern(draft.sections, backingArr), draft.bpm, 'recording-backing');
+        await play(buildCombinedPattern(draft.sections, backingArr, draft.bpm), draft.bpm, 'recording-backing');
       }
       await audio.play();
       setPlayingId(take.id);
@@ -207,7 +207,7 @@ export function RecordingStudio() {
       recordingId: t.id,
       offsetSec: t.section ? (offsets[t.section] || 0) : 0,
     }));
-    await play(buildCombinedPattern(draft.sections, draft.arrangement), draft.bpm, 'comp-preview', vocals);
+    await play(buildCombinedPattern(draft.sections, draft.arrangement, draft.bpm), draft.bpm, 'comp-preview', vocals);
   }
 
   // One-click harmony: pitch-shift a take into an in-scale voice and upload it

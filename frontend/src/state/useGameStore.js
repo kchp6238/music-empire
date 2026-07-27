@@ -76,7 +76,7 @@ function mapSong(apiSong) {
     vocalRecordingId: apiSong.vocal_recording_id || null,
     vocals: apiSong.vocals || [],
     views: apiSong.views || 0,
-    pattern: buildCombinedPattern(apiSong.pattern, apiSong.structure),
+    pattern: buildCombinedPattern(apiSong.pattern, apiSong.structure, apiSong.bpm),
   };
 }
 
@@ -358,6 +358,17 @@ export const useGameStore = create((set, get) => ({
   setLyricsFor: (key, text) => set((s) => {
     if (!s.draft.sections[key]) return {};
     return { draft: { ...s.draft, sections: { ...s.draft.sections, [key]: { ...s.draft.sections[key], lyrics: text } } } };
+  }),
+
+  // Per-section tempo. null clears it so the section follows the song's default
+  // BPM again. A section that keeps its own bpm plays at that tempo, and the
+  // combined-pattern player switches tempo at section boundaries.
+  setSectionBpm: (bpm) => set((s) => {
+    const key = s.draft.editingSection;
+    const sec = { ...s.draft.sections[key] };
+    if (bpm == null) delete sec.bpm;
+    else sec.bpm = Math.max(40, Math.min(220, Math.round(bpm) || s.draft.bpm));
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [key]: sec } } };
   }),
 
   setSectionLength: (length) => set((s) => {
@@ -703,7 +714,7 @@ export const useGameStore = create((set, get) => ({
     const draftId = await get().saveDraft();
     const result = await songsApi.releaseSong(draftId);
     const song = result.song;
-    const combined = buildCombinedPattern(song.pattern, song.structure);
+    const combined = buildCombinedPattern(song.pattern, song.structure, song.bpm);
 
     const lastResult = {
       attributes: { craft: song.craft, originality: song.originality, accessibility: song.accessibility, experimental: song.experimental },

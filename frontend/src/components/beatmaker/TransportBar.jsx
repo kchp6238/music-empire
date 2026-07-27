@@ -33,7 +33,7 @@ export function TransportBar() {
         disabled={!canPlay}
         title={canPlay ? (playingFull ? '정지' : '전체 곡 재생') : '곡 구조에 섹션을 추가하세요'}
         aria-label={playingFull ? '정지' : '전체 곡 재생'}
-        onClick={() => (playingFull ? stop() : play(buildCombinedPattern(draft.sections, draft.arrangement), draft.bpm, 'draft-full'))}
+        onClick={() => (playingFull ? stop() : play(buildCombinedPattern(draft.sections, draft.arrangement, draft.bpm), draft.bpm, 'draft-full'))}
       >
         {playingFull ? <Square size={14} color="#12101A" /> : <Play size={15} color="#12101A" fill="#12101A" />}
       </button>

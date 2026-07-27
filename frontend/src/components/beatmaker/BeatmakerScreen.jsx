@@ -29,6 +29,7 @@ export function BeatmakerScreen() {
   const stop = useGameStore((s) => s.stop);
   const setEditingSection = useGameStore((s) => s.setEditingSection);
   const setSectionLength = useGameStore((s) => s.setSectionLength);
+  const setSectionBpm = useGameStore((s) => s.setSectionBpm);
   const toggleDrumStep = useGameStore((s) => s.toggleDrumStep);
   const setNoteStep = useGameStore((s) => s.setNoteStep);
   const paintNoteRange = useGameStore((s) => s.paintNoteRange);
@@ -116,10 +117,27 @@ export function BeatmakerScreen() {
                   <span className="me-display text-lg font-extrabold">섹션 편집</span>
                   <span className="text-[11px] text-muted">— {channelLabel}</span>
                 </div>
-                <div className="flex gap-1.5 flex-wrap">
-                  {[[16, '1마디'], [32, '2마디'], [64, '4마디'], [128, '8마디']].map(([len, label]) => (
-                    <div key={len} className={`me-pill small ${editingSec.length === len ? 'active' : ''}`} onClick={() => setSectionLength(len)}>{label} ({len})</div>
-                  ))}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* per-section BPM — falls back to the song default (transport) */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-mono text-faint">BPM</span>
+                    <input
+                      type="number" min={40} max={220} value={editingSec.bpm ?? draft.bpm}
+                      onChange={(e) => setSectionBpm(Number(e.target.value))}
+                      className="w-12 font-mono text-xs text-text px-1.5 py-1 rounded outline-none border border-border bg-transparent"
+                      title={`${draft.editingSection} 구간 BPM (비우면 곡 기본 ${draft.bpm})`}
+                      aria-label="구간 BPM"
+                    />
+                    {editingSec.bpm != null && editingSec.bpm !== draft.bpm && (
+                      <button className="text-[10px] text-faint hover:text-accent2 bg-transparent border-0 cursor-pointer px-0.5"
+                        onClick={() => setSectionBpm(null)} title={`곡 기본 BPM(${draft.bpm}) 따르기`}>↺</button>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {[[16, '1마디'], [32, '2마디'], [64, '4마디'], [128, '8마디']].map(([len, label]) => (
+                      <div key={len} className={`me-pill small ${editingSec.length === len ? 'active' : ''}`} onClick={() => setSectionLength(len)}>{label} ({len})</div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -156,7 +174,7 @@ export function BeatmakerScreen() {
               <div className="flex gap-2 flex-wrap items-center">
                 <button
                   className="me-btn-ghost"
-                  onClick={() => (isPlaying && playingId === 'section-preview') ? stop() : play(buildCombinedPattern(draft.sections, [draft.editingSection]), draft.bpm, 'section-preview')}
+                  onClick={() => (isPlaying && playingId === 'section-preview') ? stop() : play(buildCombinedPattern(draft.sections, [draft.editingSection], draft.bpm), draft.bpm, 'section-preview')}
                 >
                   {(isPlaying && playingId === 'section-preview') ? '■ 정지' : `▶ ${draft.editingSection} 미리듣기`}
                 </button>

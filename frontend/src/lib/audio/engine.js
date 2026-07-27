@@ -630,22 +630,47 @@ export async function playPattern(pattern, bpm, audio, onStep) {
   const s = ensureBuilt();
   syncAudioState({ mixer, channelMix, channelFx, drumParams });
 
-  Tone.Transport.bpm.value = bpm;
   const totalSteps = pattern.bass.length;
-  const stepSeconds = Tone.Time('16n').toSeconds();
-  // One run map per pitched lane present in the pattern (older data may lack
-  // the newer lanes entirely — skip those rather than crash).
+  // Per-step BPM: pattern.stepBpms[i] overrides the song default for step i.
+  // A Tone.Sequence subdivides in Transport ticks, so changing Transport.bpm at
+  // a section boundary re-tempos every step after it — that's how per-section
+  // BPM works without leaving the proven Sequence engine.
+  const stepBpms = pattern.stepBpms && pattern.stepBpms.length === totalSteps ? pattern.stepBpms : null;
+  const bpmAt = (i) => (stepBpms ? stepBpms[i] : bpm) || bpm || 100;
+  const stepDur = (i) => 60 / bpmAt(i) / 4;
+  Tone.Transport.bpm.value = bpmAt(0);
+
+  // Swing delays the off-beat 16ths (pattern.swing 0..1 → up to half a step).
+  const swing = clamp(pattern.swing ?? 0, 0, 1) * 0.5;
+
   const runsByTrack = {};
   MELODIC_KEYS.forEach((k) => { runsByTrack[k] = computeRuns(pattern[k] || []); });
   const humanize = Boolean(fx?.humanize);
-
   const jTime = (time) => humanize ? time + (Math.random() - 0.5) * 0.012 : time;
   const jVel = (v) => humanize ? Math.max(0.05, Math.min(1, v * (1 + (Math.random() - 0.5) * 0.25))) : v;
   const velAt = (velArr, idx) => jVel((velArr?.[idx] ?? 100) / 127);
+  const runSeconds = (start, length) => {
+    let d = 0;
+    for (let j = start; j < start + length && j < totalSteps; j++) d += stepDur(j);
+    return d;
+  };
 
   const seq = new Tone.Sequence((time, idx) => {
+    // Re-tempo at each section boundary (and on loop-around at idx 0).
+    if (stepBpms) {
+      const prev = idx === 0 ? stepBpms[totalSteps - 1] : stepBpms[idx - 1];
+      if (idx === 0 || stepBpms[idx] !== prev) Tone.Transport.bpm.setValueAtTime(stepBpms[idx], time);
+    }
+    const sd = stepDur(idx);
+    const t0 = jTime(time + (idx % 2 === 1 ? sd * swing : 0));
     DRUM_INSTRUMENTS.forEach((di) => {
-      if (pattern.drums[di.key][idx]) s[di.key].triggerAttackRelease('8n', jTime(time));
+      if (!pattern.drums[di.key][idx]) return;
+      const dv = velAt(pattern.drumVel?.[di.key], idx);
+      // Ratchet: a cell can fire 1–4 fast hits within its step (drum roll).
+      const rat = Math.max(1, Math.min(4, pattern.drumRatchet?.[di.key]?.[idx] || 1));
+      for (let r = 0; r < rat; r++) {
+        s[di.key].triggerAttackRelease(sd / rat * 0.9, t0 + (r * sd) / rat, dv);
+      }
     });
     MELODIC_KEYS.forEach((k) => {
       const voice = s[k];
@@ -653,16 +678,11 @@ export async function playPattern(pattern, bpm, audio, onStep) {
       if (!voice || !run) return;
       const vel = velAt(pattern[`${k}Velocity`], idx);
       if (PLUCK_KEYS.has(k)) {
-        // PluckSynth (Karplus-Strong) self-decays — triggerAttack only, no
-        // release phase to schedule, and "duration" wouldn't do anything.
-        voice.triggerAttack(run.pitch, jTime(time), vel);
+        voice.triggerAttack(run.pitch, t0, vel);
       } else if (CHORDAL_SET.has(k)) {
-        // Pad/strings voice one melody line as an open fifth (root+5th+octave)
-        // so it fills without a chord data model, and stays key-neutral (no
-        // third) so it never clashes with a major or minor song.
-        voice.triggerAttackRelease(openFifth(run.pitch), stepSeconds * run.length, jTime(time), vel);
+        voice.triggerAttackRelease(openFifth(run.pitch), runSeconds(idx, run.length), t0, vel);
       } else {
-        voice.triggerAttackRelease(run.pitch, stepSeconds * run.length, jTime(time), vel);
+        voice.triggerAttackRelease(run.pitch, runSeconds(idx, run.length), t0, vel);
       }
     });
     Tone.Draw.schedule(() => onStep(idx), time);
