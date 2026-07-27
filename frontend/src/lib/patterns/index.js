@@ -55,8 +55,17 @@ function velocityFallback(sec, track) {
 // no per-section BPM of its own. Playback-only extras (stepBpms, drum
 // velocity/ratchet, swing) live at the TOP LEVEL, never inside `drums`, so the
 // scoring analyzer — which iterates combined.drums — stays untouched.
+// Pad/truncate an array to exactly `len`, filling gaps with `fill`. Used so the
+// sparse per-cell drum velocity/ratchet lanes stay aligned with the beat grid
+// no matter how the section was resized after they were set.
+function normLane(arr, len, fill) {
+  const out = (arr || []).slice(0, len);
+  while (out.length < len) out.push(fill);
+  return out;
+}
+
 export function buildCombinedPattern(sections, arrangement, defaultBpm) {
-  const combined = { drums: {}, drumVel: {}, drumRatchet: {}, stepBpms: [] };
+  const combined = { drums: {}, drumVel: {}, drumRatchet: {}, stepBpms: [], stepSwing: [] };
   DRUM_INSTRUMENTS.forEach((di) => { combined.drums[di.key] = []; combined.drumVel[di.key] = []; combined.drumRatchet[di.key] = []; });
   MELODIC_KEYS.forEach((k) => { combined[k] = []; combined[`${k}Velocity`] = []; });
   arrangement.forEach((key) => {
@@ -64,11 +73,12 @@ export function buildCombinedPattern(sections, arrangement, defaultBpm) {
     if (!sec) return;
     const len = (sec.bass || []).length;
     const secBpm = sec.bpm || defaultBpm || 100;
-    for (let i = 0; i < len; i++) combined.stepBpms.push(secBpm);
+    const secSwing = sec.swing || 0;
+    for (let i = 0; i < len; i++) { combined.stepBpms.push(secBpm); combined.stepSwing.push(secSwing); }
     DRUM_INSTRUMENTS.forEach((di) => {
       combined.drums[di.key] = combined.drums[di.key].concat(sec.drums[di.key]);
-      combined.drumVel[di.key] = combined.drumVel[di.key].concat(sec.drums[`${di.key}Velocity`] || Array(len).fill(100));
-      combined.drumRatchet[di.key] = combined.drumRatchet[di.key].concat(sec.drums[`${di.key}Ratchet`] || Array(len).fill(1));
+      combined.drumVel[di.key] = combined.drumVel[di.key].concat(normLane(sec.drumVel?.[di.key], len, 100));
+      combined.drumRatchet[di.key] = combined.drumRatchet[di.key].concat(normLane(sec.drumRatchet?.[di.key], len, 1));
     });
     MELODIC_KEYS.forEach((k) => {
       // Older/NPC song data predating this instrument has no lane — treat a
@@ -81,6 +91,7 @@ export function buildCombinedPattern(sections, arrangement, defaultBpm) {
     DRUM_INSTRUMENTS.forEach((di) => { combined.drums[di.key] = [false]; });
     MELODIC_KEYS.forEach((k) => { combined[k] = [null]; combined[`${k}Velocity`] = [100]; });
     combined.stepBpms = [defaultBpm || 100];
+    combined.stepSwing = [0];
   }
   return combined;
 }

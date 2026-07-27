@@ -38,6 +38,7 @@ export const DRUM_INSTRUMENTS = [
   { key: 'tom', label: '톰', icon: '🛢️', color: '#D18B4C' },
   { key: 'crash', label: '크래시', icon: '💥', color: '#C4576B' },
 ];
+export const DRUM_BY_KEY = Object.fromEntries(DRUM_INSTRUMENTS.map((d) => [d.key, d]));
 
 // Mixer channels — the 7 drum voices share one channel (they're one
 // instrument, the drum machine), the melodic voices get one each. Effects

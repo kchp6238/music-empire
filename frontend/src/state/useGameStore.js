@@ -353,6 +353,36 @@ export const useGameStore = create((set, get) => ({
     return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [`${track}Velocity`]: velArr } } } };
   }),
 
+  // --- per-cell drum expression: velocity (세기), ratchet/roll (롤), swing ---
+  // Stored as optional sparse objects on the section (drumVel/drumRatchet keyed
+  // by drum lane); buildCombinedPattern normalises length, so these never need
+  // resizing when the section length changes. swing is a single 0..1 groove
+  // amount per section (engine delays the off-beat 16ths by up to half a step).
+  setDrumVelocity: (drumKey, idx, velocity) => set((s) => {
+    const sec = s.draft.sections[s.draft.editingSection];
+    const len = sec.drums[drumKey].length;
+    const vel = { ...(sec.drumVel || {}) };
+    const arr = vel[drumKey] ? [...vel[drumKey]] : Array(len).fill(100);
+    arr[idx] = Math.round(Math.max(1, Math.min(127, velocity)));
+    vel[drumKey] = arr;
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, drumVel: vel } } } };
+  }),
+
+  setDrumRatchet: (drumKey, idx, ratchet) => set((s) => {
+    const sec = s.draft.sections[s.draft.editingSection];
+    const len = sec.drums[drumKey].length;
+    const rat = { ...(sec.drumRatchet || {}) };
+    const arr = rat[drumKey] ? [...rat[drumKey]] : Array(len).fill(1);
+    arr[idx] = Math.max(1, Math.min(4, Math.round(ratchet)));
+    rat[drumKey] = arr;
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, drumRatchet: rat } } } };
+  }),
+
+  setSectionSwing: (swing) => set((s) => {
+    const sec = s.draft.sections[s.draft.editingSection];
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, swing: Math.max(0, Math.min(1, swing)) } } } };
+  }),
+
   /** Lyrics live in the recording studio, which shows the whole song at once
    *  — so writes are addressed by section name rather than via
    *  `editingSection` (a beatmaker concept the studio has no notion of). */

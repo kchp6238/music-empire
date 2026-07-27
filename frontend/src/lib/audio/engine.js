@@ -692,8 +692,11 @@ export async function playPattern(pattern, bpm, audio, onStep) {
   const stepDur = (i) => 60 / bpmAt(i) / 4;
   Tone.Transport.bpm.value = bpmAt(0);
 
-  // Swing delays the off-beat 16ths (pattern.swing 0..1 → up to half a step).
-  const swing = clamp(pattern.swing ?? 0, 0, 1) * 0.5;
+  // Swing delays the off-beat 16ths by up to half a step. Per-section swing
+  // rides in stepSwing[] (like stepBpms); a scalar pattern.swing is the
+  // fallback for older callers that pass one groove for the whole pattern.
+  const stepSwing = pattern.stepSwing && pattern.stepSwing.length === totalSteps ? pattern.stepSwing : null;
+  const swingAt = (i) => clamp((stepSwing ? stepSwing[i] : (pattern.swing ?? 0)), 0, 1) * 0.5;
 
   const runsByTrack = {};
   MELODIC_KEYS.forEach((k) => { runsByTrack[k] = computeRuns(pattern[k] || []); });
@@ -714,7 +717,7 @@ export async function playPattern(pattern, bpm, audio, onStep) {
       if (idx === 0 || stepBpms[idx] !== prev) Tone.Transport.bpm.setValueAtTime(stepBpms[idx], time);
     }
     const sd = stepDur(idx);
-    const t0 = jTime(time + (idx % 2 === 1 ? sd * swing : 0));
+    const t0 = jTime(time + (idx % 2 === 1 ? sd * swingAt(idx) : 0));
     DRUM_INSTRUMENTS.forEach((di) => {
       if (!pattern.drums[di.key][idx]) return;
       const dv = velAt(pattern.drumVel?.[di.key], idx);

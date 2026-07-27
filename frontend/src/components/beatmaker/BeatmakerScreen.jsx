@@ -32,6 +32,9 @@ export function BeatmakerScreen() {
   const setSectionLength = useGameStore((s) => s.setSectionLength);
   const setSectionBpm = useGameStore((s) => s.setSectionBpm);
   const toggleDrumStep = useGameStore((s) => s.toggleDrumStep);
+  const setDrumVelocity = useGameStore((s) => s.setDrumVelocity);
+  const setDrumRatchet = useGameStore((s) => s.setDrumRatchet);
+  const setSectionSwing = useGameStore((s) => s.setSectionSwing);
   const setNoteStep = useGameStore((s) => s.setNoteStep);
   const paintNoteRange = useGameStore((s) => s.paintNoteRange);
   const setVelocity = useGameStore((s) => s.setVelocity);
@@ -135,6 +138,16 @@ export function BeatmakerScreen() {
                         onClick={() => setSectionBpm(null)} title={`곡 기본 BPM(${draft.bpm}) 따르기`}>↺</button>
                     )}
                   </div>
+                  {/* Swing — delays the off-beat 16ths for a shuffled groove */}
+                  <div className="flex items-center gap-1" title="짝수 칸을 살짝 밀어 스윙(셔플) 느낌을 줍니다">
+                    <span className="text-[10px] font-mono text-faint">스윙</span>
+                    <input
+                      type="range" min={0} max={100} value={Math.round((editingSec.swing || 0) * 100)}
+                      onChange={(e) => setSectionSwing(Number(e.target.value) / 100)}
+                      className="me-slider" style={{ width: 64 }} aria-label="스윙"
+                    />
+                    <span className="text-[10px] font-mono text-faint" style={{ width: 26 }}>{Math.round((editingSec.swing || 0) * 100)}%</span>
+                  </div>
                   <div className="flex gap-1.5 flex-wrap">
                     {[[16, '1마디'], [32, '2마디'], [64, '4마디'], [128, '8마디']].map(([len, label]) => (
                       <div key={len} className={`me-pill small ${editingSec.length === len ? 'active' : ''}`} onClick={() => setSectionLength(len)}>{label} ({len})</div>
@@ -156,7 +169,10 @@ export function BeatmakerScreen() {
               <div className="me-scroll overflow-x-auto mb-2">
                 <div style={{ minWidth: 520 }}>
                   {selectedChannel === 'drums' && (
-                    <DrumGrid section={editingSec} onToggle={toggleDrumStep} onClearLane={clearDrumLane} currentStep={sectionStep} />
+                    <DrumGrid
+                      section={editingSec} onToggle={toggleDrumStep} onClearLane={clearDrumLane}
+                      onSetVelocity={setDrumVelocity} onSetRatchet={setDrumRatchet} currentStep={sectionStep}
+                    />
                   )}
                   {selectedChannel !== 'drums' && selectedChannel !== 'piano' && (
                     <MelodicPanel
