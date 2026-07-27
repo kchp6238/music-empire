@@ -1,4 +1,4 @@
-import { Library, Mic } from 'lucide-react';
+import { Library, Mic, AudioLines } from 'lucide-react';
 import { PATTERN_PRESETS, PRESET_STEP_LENGTH, DRUM_INSTRUMENTS } from '../../lib/gameData/constants';
 import { useGameStore } from '../../state/useGameStore';
 
@@ -28,10 +28,11 @@ function PresetPreview({ steps }) {
 
 /** Right-hand library pane — click a groove to lay it into the section that's
  *  currently open in the editor. */
-export function PresetLibrary({ onOpenVoice }) {
+export function PresetLibrary({ onOpenVoice, onOpenVoiceInstrument }) {
   const applyDrumPreset = useGameStore((s) => s.applyDrumPreset);
   const editingSection = useGameStore((s) => s.draft.editingSection);
   const selectChannel = useGameStore((s) => s.selectChannel);
+  const vocalSampleInfo = useGameStore((s) => s.vocalSampleInfo);
 
   return (
     <div className="flex flex-col gap-2">
@@ -45,6 +46,20 @@ export function PresetLibrary({ onOpenVoice }) {
         </div>
         <div className="text-[9px] text-faint leading-tight mt-0.5">
           입으로 리듬을 내거나 멜로디를 흥얼거리면 그대로 찍힙니다
+        </div>
+      </button>
+
+      <button
+        className="me-rack-row p-2.5 text-left cursor-pointer w-full"
+        style={{ borderColor: 'rgba(240,138,176,0.45)' }}
+        onClick={onOpenVoiceInstrument}
+      >
+        <div className="text-[11px] font-semibold text-text flex items-center gap-1.5">
+          <AudioLines size={12} style={{ color: '#F08AB0' }} /> 내 목소리 악기
+          {vocalSampleInfo && <span className="text-[8px] px-1 rounded" style={{ background: 'rgba(240,138,176,0.2)', color: '#F08AB0' }}>녹음됨</span>}
+        </div>
+        <div className="text-[9px] text-faint leading-tight mt-0.5">
+          한 음을 "아~" 하고 녹음하면 그 목소리로 멜로디를 연주해요
         </div>
       </button>
 

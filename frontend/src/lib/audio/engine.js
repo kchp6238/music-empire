@@ -33,6 +33,13 @@ let mixerState = {};
 let drumParamsState = {};
 let channelMixState = {};
 
+// The player's recorded vocal-instrument sample. Held at module scope (not in
+// the serialized draft — it's never uploaded) so it survives an engine rebuild
+// within the session; it's gone on reload, and the lane then falls back to the
+// synthetic vocal voice until re-recorded.
+let vocalSampleBuffer = null; // Tone.ToneAudioBuffer
+let vocalBaseNote = 'C4';
+
 const DRUM_KEYS = DRUM_INSTRUMENTS.map((d) => d.key);
 // Self-decaying pluck voices take triggerAttack only; chordal voices get their
 // single melody note fanned into an open fifth. Kept as Sets for O(1) lookup
@@ -94,6 +101,31 @@ function makeSampledVoice(folder, notes, buildFallback) {
   channel.triggerAttack = (pitch, time, vel) => active().triggerAttack(pitch, time, vel);
   const disposeChannel = channel.dispose.bind(channel);
   channel.dispose = () => { sampler.dispose(); fallback.dispose(); disposeChannel(); };
+  return channel;
+}
+
+/* ---------- vocal instrument (record-your-own-voice sampler) --------------
+   The player records a single sustained note; we map it to its base pitch in a
+   Tone.Sampler, which pitch-shifts that one recording across the whole range so
+   you can play melodies in your own voice. Before anything is recorded, a
+   breathy "ah" synth stands in so the lane is never silent. */
+function makeVocalVoice() {
+  const channel = new Tone.Channel();
+  const fallback = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'sine', partials: [1, 0.4, 0.25, 0.12] }, // vowel-ish
+    envelope: { attack: 0.09, decay: 0.2, sustain: 0.85, release: 0.5 },
+  }).connect(channel);
+  let sampler = null; // built lazily once a take exists
+  const active = () => (sampler && sampler.loaded ? sampler : fallback);
+  channel.triggerAttackRelease = (pitch, dur, time, vel) => active().triggerAttackRelease(pitch, dur, time, vel);
+  channel.triggerAttack = (pitch, time, vel) => active().triggerAttack(pitch, time, vel);
+  // Swap in (or replace) the recorded sample. buffer is a Tone.ToneAudioBuffer.
+  channel.setSample = (buffer, baseNote) => {
+    if (sampler) sampler.dispose();
+    sampler = new Tone.Sampler({ urls: { [baseNote]: buffer }, release: 0.6 }).connect(channel);
+  };
+  const disposeChannel = channel.dispose.bind(channel);
+  channel.dispose = () => { if (sampler) sampler.dispose(); fallback.dispose(); disposeChannel(); };
   return channel;
 }
 
@@ -453,6 +485,10 @@ function buildSynths() {
     filterEnvelope: { attack: 0.04, decay: 0.1, sustain: 0.7, release: 0.2, baseFrequency: 700, octaves: 1.8 },
   }));
 
+  // ---- vocal instrument (the player's own recorded voice) ----
+  voices.vocalInst = makeVocalVoice();
+  if (vocalSampleBuffer) voices.vocalInst.setSample(vocalSampleBuffer, vocalBaseNote);
+
   // Master bus: everything feeds compressor -> limiter -> speakers, instead
   // of each voice going straight toDestination(). Glue/loudness only.
   const compressor = new Tone.Compressor({ threshold: -20, ratio: 3, attack: 0.01, release: 0.2 });
@@ -483,6 +519,7 @@ function buildSynths() {
   voices.harp.connect(chanBusses.harp);
   voices.flute.connect(chanBusses.flute);
   voices.clarinet.connect(chanBusses.clarinet);
+  voices.vocalInst.connect(chanBusses.vocalInst);
 
   return {
     voices, controls, chanBusses,
@@ -601,6 +638,21 @@ export function stopPattern() {
   Tone.Transport.stop();
   Tone.Transport.cancel();
 }
+
+/** Install a freshly recorded vocal take as the "내 목소리" instrument. The
+ *  decoded AudioBuffer is mapped to baseNote and pitch-shifted across the range
+ *  by the Sampler. Kept in module state so it survives an engine rebuild. */
+export async function loadVocalSample(audioBuffer, baseNote = 'C4') {
+  await Tone.start();
+  const buf = new Tone.ToneAudioBuffer(audioBuffer);
+  vocalSampleBuffer = buf;
+  vocalBaseNote = baseNote;
+  const s = ensureBuilt();
+  if (s.vocalInst?.setSample) s.vocalInst.setSample(buf, baseNote);
+}
+
+/** Whether a vocal take has been recorded this session (drives the UI badge). */
+export function hasVocalSample() { return Boolean(vocalSampleBuffer); }
 
 // Collapses consecutive equal-pitch steps into runs, keyed by their start
 // index — one held note (length = run length) instead of retriggering every

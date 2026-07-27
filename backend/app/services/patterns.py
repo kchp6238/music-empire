@@ -10,6 +10,7 @@ DRUM_KEYS = ["kick", "snare", "hihatClosed", "hihatOpen", "clap", "tom", "crash"
 MELODIC_KEYS = [
     "bass", "piano", "guitar", "elecGuitar", "brass", "synthLead", "pad", "strings",
     "ePiano", "harpsichord", "organ", "violin", "cello", "harp", "flute", "clarinet",
+    "vocalInst",
 ]
 
 

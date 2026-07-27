@@ -52,6 +52,7 @@ export const CHANNEL_CATEGORIES = [
   { key: 'strings', label: '현악' },
   { key: 'winds', label: '관악' },
   { key: 'synth', label: '신스' },
+  { key: 'vocal', label: '보컬' },
 ];
 
 export const CHANNELS = [
@@ -77,6 +78,10 @@ export const CHANNELS = [
 
   { key: 'synthLead', label: 'Synth Lead', icon: '🎛️', color: '#E893A6', plugin: null, cat: 'synth' },
   { key: 'pad', label: 'Synth Pad', icon: '🌊', color: '#8B7FD1', plugin: null, cat: 'synth' },
+
+  // 내 목소리를 녹음해 음정을 붙여 연주하는 샘플러. 녹음 전에는 합성 보컬 소리로
+  // 대체되고, VoiceInstrument 창에서 한 음을 녹음하면 그 음색으로 바뀐다.
+  { key: 'vocalInst', label: '내 목소리', icon: '🎤', color: '#F08AB0', plugin: null, cat: 'vocal' },
 ];
 export const CHANNEL_KEYS = CHANNELS.map((c) => c.key);
 // The fader the player actually rides, applied to the channel bus. DEFAULT_MIXER
@@ -207,6 +212,9 @@ export const CELLO_PITCHES = buildPitchRange(2, 2);
 export const HARP_PITCHES = buildPitchRange(3, 2);
 export const FLUTE_PITCHES = buildPitchRange(4, 2);
 export const CLARINET_PITCHES = buildPitchRange(3, 2);
+// Vocal instrument sits in a comfortable sung range (C3–B4) around the base
+// note the sampler is recorded at, so pitch-shifting stays natural-sounding.
+export const VOCAL_INST_PITCHES = buildPitchRange(3, 2);
 
 // Every pitched (non-drum) instrument, as one source of truth: the beatmaker
 // editor, the piano-roll config, the pattern helpers (empty/build/analyze) and
@@ -230,6 +238,7 @@ export const MELODIC_TRACKS = [
   { key: 'clarinet', label: '클라리넷', pitches: CLARINET_PITCHES, color: '#D8B33D', chordal: false },
   { key: 'synthLead', label: '신스 리드', pitches: SYNTH_LEAD_PITCHES, color: '#E893A6', chordal: false },
   { key: 'pad', label: '신스 패드', pitches: PAD_PITCHES, color: '#8B7FD1', chordal: true },
+  { key: 'vocalInst', label: '내 목소리', pitches: VOCAL_INST_PITCHES, color: '#F08AB0', chordal: false },
 ];
 export const MELODIC_KEYS = MELODIC_TRACKS.map((t) => t.key);
 export const MELODIC_BY_KEY = Object.fromEntries(MELODIC_TRACKS.map((t) => [t.key, t]));
@@ -249,6 +258,7 @@ export const DEFAULT_MIXER = {
   ePiano: { vol: -5, mute: false }, harpsichord: { vol: -6, mute: false }, organ: { vol: -7, mute: false },
   violin: { vol: -6, mute: false }, cello: { vol: -5, mute: false }, harp: { vol: -6, mute: false },
   flute: { vol: -7, mute: false }, clarinet: { vol: -7, mute: false },
+  vocalInst: { vol: -4, mute: false },
 };
 
 export const CHORD_PRESETS = [

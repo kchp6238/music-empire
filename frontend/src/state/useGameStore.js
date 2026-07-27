@@ -179,6 +179,7 @@ export const useGameStore = create((set, get) => ({
   playingId: null,
   playingTotal: 0,     // total steps of the currently playing pattern (for the progress bar)
   playingLabel: '',    // "artist — title" of what's playing, shown in the now-playing bar
+  vocalSampleInfo: null, // { baseNote, duration } of the recorded 내 목소리 instrument (session-only)
   communityTab: 'feed',
   followedArtists: [],   // list of {followed_type, followed_id}
   persistedDraftId: null, // server id of the open draft (set on first save/load)
@@ -447,22 +448,19 @@ export const useGameStore = create((set, get) => ({
   // (basicPatternForLength's tiling assumes bar-aligned lengths).
   setSectionLengthFor: (sectionKey, length) => set((s) => {
     const sec = s.draft.sections[sectionKey];
-    const resize = (arr, fill) => { const out = arr.slice(0, length); while (out.length < length) out.push(fill); return out; };
+    const resize = (arr, fill) => { const out = (arr || []).slice(0, length); while (out.length < length) out.push(fill); return out; };
     const newDrums = {};
     Object.keys(sec.drums).forEach((k) => { newDrums[k] = resize(sec.drums[k], false); });
+    const resized = { ...sec, length, drums: newDrums };
+    // Resize every melodic lane, not just the original three — otherwise the
+    // expanded instruments (and vocalInst) keep a stale length and misalign
+    // against bass when the combined pattern is stitched together.
+    MELODIC_KEYS.forEach((k) => {
+      resized[k] = resize(sec[k], null);
+      resized[`${k}Velocity`] = resize(sec[`${k}Velocity`], 100);
+    });
     return {
-      draft: {
-        ...s.draft,
-        sections: {
-          ...s.draft.sections,
-          [sectionKey]: {
-            ...sec, length, drums: newDrums,
-            bass: resize(sec.bass, null), bassVelocity: resize(sec.bassVelocity, 100),
-            piano: resize(sec.piano, null), pianoVelocity: resize(sec.pianoVelocity, 100),
-            guitar: resize(sec.guitar, null), guitarVelocity: resize(sec.guitarVelocity, 100),
-          },
-        },
-      },
+      draft: { ...s.draft, sections: { ...s.draft.sections, [sectionKey]: resized } },
     };
   }),
 
@@ -496,6 +494,15 @@ export const useGameStore = create((set, get) => ({
     return { channelMix };
   }),
   selectChannel: (channel) => set({ selectedChannel: channel }),
+
+  // Record-your-voice instrument: decode the take, hand the buffer to the
+  // engine's vocal sampler mapped to baseNote, and remember it so the channel
+  // rack can show it's loaded. The sample lives only in the engine (never
+  // uploaded), so this is session-local.
+  loadVocalInstrument: async (buffer, baseNote, duration) => {
+    await engine.loadVocalSample(buffer, baseNote);
+    set({ vocalSampleInfo: { baseNote, duration } });
+  },
   setOpenPlugin: (plugin) => set({ openPlugin: plugin }),
   toggleEffectWindow: (effectId) => set((s) => ({
     openEffectIds: s.openEffectIds.includes(effectId)

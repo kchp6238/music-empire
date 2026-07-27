@@ -13,6 +13,7 @@ import { EffectWindow } from './EffectWindow';
 import { TransportBar } from './TransportBar';
 import { PresetLibrary } from './PresetLibrary';
 import { VoiceToPattern } from './VoiceToPattern';
+import { VoiceInstrument } from './VoiceInstrument';
 import { CollabInvitePanel } from './CollabInvitePanel';
 import { SECTION_TYPES, CHANNELS } from '../../lib/gameData/constants';
 import { buildCombinedPattern, analyzeCombinedPattern, sectionHasContent } from '../../lib/patterns';
@@ -49,6 +50,7 @@ export function BeatmakerScreen() {
   const [coverSongId, setCoverSongId] = useState(null);
   const [coverSaved, setCoverSaved] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
+  const [voiceInstOpen, setVoiceInstOpen] = useState(false);
 
   // The cover attaches to the song row, so an unsaved draft has to be
   // persisted first — same thing the collab invite does.
@@ -221,7 +223,7 @@ export function BeatmakerScreen() {
             </div>
           </div>
 
-          <PresetLibrary onOpenVoice={() => setVoiceOpen(true)} />
+          <PresetLibrary onOpenVoice={() => setVoiceOpen(true)} onOpenVoiceInstrument={() => setVoiceInstOpen(true)} />
         </div>
       </div>
 
@@ -232,6 +234,7 @@ export function BeatmakerScreen() {
         <EffectWindow key={effect.id} channel={channel} effect={effect} index={i} />
       ))}
       {voiceOpen && <VoiceToPattern onClose={() => setVoiceOpen(false)} />}
+      {voiceInstOpen && <VoiceInstrument onClose={() => setVoiceInstOpen(false)} />}
       {coverSongId && (
         <CoverEditor
           songId={coverSongId}
