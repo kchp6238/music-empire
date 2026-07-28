@@ -1,8 +1,9 @@
-import { Disc3, LogOut, LibraryBig, Music2, SlidersHorizontal, Mic, Users, Handshake, Building2, Globe, Newspaper } from 'lucide-react';
+import { Disc3, LogOut, LibraryBig, Music2, SlidersHorizontal, Mic, Users, Handshake, Building2, Globe, Newspaper, HelpCircle, Settings } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { won } from '../../lib/utils';
 import { useAuthStore } from '../../state/useAuthStore';
 import { useGameStore } from '../../state/useGameStore';
+import { useSettingsStore } from '../../state/useSettingsStore';
 
 // Icons let the tabs collapse to a thumb-reachable bottom bar on phones while
 // staying text labels on desktop.
@@ -31,6 +32,8 @@ export function TopBar({ character }) {
   const location = useLocation();
   const logout = useAuthStore((s) => s.logout);
   const switchSave = useGameStore((s) => s.switchSave);
+  const openGuide = useSettingsStore((s) => s.openGuide);
+  const openSettings = useSettingsStore((s) => s.openSettings);
   if (!character) return null;
 
   return (
@@ -70,6 +73,12 @@ export function TopBar({ character }) {
           <Stat label="자금" value={won(character.money)} color="#E8A33D" />
           <Stat label="팬" value={character.fansCount.toLocaleString('ko-KR')} color="#E893A6" />
           <Stat label="발매곡" value={character.songs.length} color="#EDE9F0" />
+          <button className="me-btn-ghost !px-2.5 !py-1.5" onClick={openGuide} title="게임 가이드" aria-label="게임 가이드">
+            <HelpCircle size={14} />
+          </button>
+          <button className="me-btn-ghost !px-2.5 !py-1.5" onClick={openSettings} title="설정" aria-label="설정">
+            <Settings size={14} />
+          </button>
           <button className="me-btn-ghost !px-2.5 !py-1.5" onClick={() => { switchSave(); navigate('/'); }} title="세이브 전환" aria-label="세이브 전환">
             <LibraryBig size={14} />
           </button>

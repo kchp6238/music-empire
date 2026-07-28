@@ -8,6 +8,11 @@ import * as Tone from 'tone';
 let blip = null;
 let chime = null;
 
+// Muted by the settings screen. Kept as a module flag (not React state) so the
+// hot audio path stays synchronous and dependency-free.
+let uiEnabled = true;
+export function setUiSoundsEnabled(v) { uiEnabled = v; }
+
 function ensureNodes() {
   if (!blip) blip = new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 2, envelope: { attack: 0.001, decay: 0.03, sustain: 0 } }).toDestination();
   if (!chime) chime = new Tone.PolySynth(Tone.Synth, { envelope: { attack: 0.005, decay: 0.3, sustain: 0.1, release: 0.4 } }).toDestination();
@@ -16,12 +21,14 @@ function ensureNodes() {
 }
 
 export async function playStepTick() {
+  if (!uiEnabled) return;
   await Tone.start();
   ensureNodes();
   blip.triggerAttackRelease('C3', '32n');
 }
 
 export async function playSuccessChime() {
+  if (!uiEnabled) return;
   await Tone.start();
   ensureNodes();
   const now = Tone.now();

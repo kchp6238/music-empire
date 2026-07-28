@@ -16,8 +16,11 @@ import { NewsScreen } from './components/news/NewsScreen';
 import { PageTransition } from './components/ui/PageTransition';
 import { NowPlayingBar } from './components/shared/NowPlayingBar';
 import { ArtistProfile } from './components/community/ArtistProfile';
+import { GuideOverlay } from './components/shared/GuideOverlay';
+import { SettingsModal } from './components/shared/SettingsModal';
 import { useGameStore } from './state/useGameStore';
 import { useAuthStore } from './state/useAuthStore';
+import { useSettingsStore } from './state/useSettingsStore';
 import { setUnauthorizedHandler } from './lib/api/client';
 import { disposeEngine } from './lib/audio/engine';
 
@@ -81,8 +84,13 @@ function App() {
   const token = useAuthStore((s) => s.token);
   const loadCharacter = useGameStore((s) => s.loadCharacter);
   const resetCharacterLoaded = useGameStore((s) => s.resetCharacterLoaded);
+  const hasCharacter = useGameStore((s) => Boolean(s.character));
+  const maybeAutoOpenGuide = useSettingsStore((s) => s.maybeAutoOpenGuide);
 
   useEffect(() => () => disposeEngine(), []);
+
+  // First time a save is active, pop the intro guide (once per browser).
+  useEffect(() => { if (hasCharacter) maybeAutoOpenGuide(); }, [hasCharacter]);
 
   // Any 401 clears the session, which flips RootRoute back to the login screen
   // instead of leaving the player on a page where every action silently fails.
@@ -102,6 +110,8 @@ function App() {
         <AnimatedRoutes />
         <NowPlayingBar />
         <ArtistProfile />
+        <GuideOverlay />
+        <SettingsModal />
       </BrowserRouter>
     </div>
   );
