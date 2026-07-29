@@ -13,3 +13,4 @@ export const usePhoneStore = create((set) => ({
   goHome: () => set({ activeApp: null }),
   togglePhone: () => set((s) => ({ open: !s.open })),
 }));
+

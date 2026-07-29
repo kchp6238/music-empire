@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Smartphone, X, ChevronLeft, Wifi, BatteryFull, Signal } from 'lucide-react';
 import { useGameStore } from '../../state/useGameStore';
 import { usePhoneStore } from '../../state/usePhoneStore';
+import * as dmApi from '../../lib/api/dm';
 import { PhoneHome } from './PhoneHome';
 import { NewsApp } from './NewsApp';
 import { ChartApp } from './ChartApp';
@@ -26,6 +28,17 @@ export function Phone() {
   const openPhone = usePhoneStore((s) => s.openPhone);
   const closePhone = usePhoneStore((s) => s.closePhone);
   const goHome = usePhoneStore((s) => s.goHome);
+  const [unread, setUnread] = useState(0);
+
+  // Refresh the message badge when a save loads and whenever the phone closes
+  // (reading a thread on the backend clears its unread).
+  const characterId = character?.id;
+  useEffect(() => {
+    if (!characterId || open) return;
+    let cancelled = false;
+    dmApi.getUnread().then((r) => { if (!cancelled) setUnread(r?.unread || 0); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [characterId, open]);
 
   if (!character) return null;
 
@@ -47,6 +60,12 @@ export function Phone() {
           }}
         >
           <Smartphone size={22} />
+          {unread > 0 && (
+            <span
+              className="absolute rounded-full text-[10px] font-bold flex items-center justify-center"
+              style={{ top: -2, right: -2, minWidth: 18, height: 18, padding: '0 5px', background: '#E893A6', color: '#12101A' }}
+            >{unread}</span>
+          )}
         </button>
       )}
 
