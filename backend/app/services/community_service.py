@@ -114,7 +114,7 @@ def get_feed(db: Session, viewer: Character) -> list[dict]:
             "released_on": npc_song.released_on.isoformat() if npc_song.released_on else None,
             "has_cover": False, "vocal_recording_id": None, "vocals": [],
             "reactions": reactions_service.build_npc_comments(npc_song, personas, FEED_COMMENTS),
-            "pattern": npc_song.pattern,
+            "pattern": npc_service.enrich_npc_pattern(npc_song, artist.genre),
         })
     return items
 

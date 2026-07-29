@@ -129,6 +129,29 @@ function makeVocalVoice() {
   return channel;
 }
 
+/* A live "singing" voice: a glottal source through two formant bandpasses with
+   vibrato — the same vowel-formant chain renderAiVocal() bakes to a WAV, but as
+   a real-time monophonic instrument. Used to sing rival (NPC) song toplines so
+   they play as songs, not bare beats. */
+function makeFormantVocalVoice() {
+  const channel = new Tone.Channel();
+  const source = new Tone.MonoSynth({
+    oscillator: { type: 'sawtooth' },
+    envelope: { attack: 0.06, decay: 0.1, sustain: 0.9, release: 0.3 },
+    filterEnvelope: { attack: 0.02, decay: 0.1, sustain: 1, baseFrequency: 200, octaves: 2 },
+  });
+  const f1 = new Tone.Filter({ type: 'bandpass', frequency: 800, Q: 6 });   // "ah" formants
+  const f2 = new Tone.Filter({ type: 'bandpass', frequency: 1150, Q: 9 });
+  const vib = new Tone.Vibrato({ frequency: 5.2, depth: 0.12 }).connect(channel);
+  source.connect(f1); source.connect(f2);
+  f1.connect(vib); f2.connect(vib);
+  channel.triggerAttackRelease = (pitch, dur, time, vel) => source.triggerAttackRelease(pitch, dur, time, vel);
+  channel.triggerAttack = (pitch, time, vel) => source.triggerAttack(pitch, time, vel);
+  const disposeChannel = channel.dispose.bind(channel);
+  channel.dispose = () => { source.dispose(); f1.dispose(); f2.dispose(); vib.dispose(); disposeChannel(); };
+  return channel;
+}
+
 // Multisample note maps — a spread across each instrument's range so pitch
 // shifting between neighbours stays subtle. (All verified present in the set.)
 const SAMPLE_NOTES = {
@@ -489,6 +512,10 @@ function buildSynths() {
   voices.vocalInst = makeVocalVoice();
   if (vocalSampleBuffer) voices.vocalInst.setSample(vocalSampleBuffer, vocalBaseNote);
 
+  // Formant "singing" voice for rival song toplines (pattern.vocal). Not a
+  // channel instrument — it goes straight to the master glue.
+  voices.vocal = makeFormantVocalVoice();
+
   // Master bus: everything feeds compressor -> limiter -> speakers, instead
   // of each voice going straight toDestination(). Glue/loudness only.
   const compressor = new Tone.Compressor({ threshold: -20, ratio: 3, attack: 0.01, release: 0.2 });
@@ -520,6 +547,7 @@ function buildSynths() {
   voices.flute.connect(chanBusses.flute);
   voices.clarinet.connect(chanBusses.clarinet);
   voices.vocalInst.connect(chanBusses.vocalInst);
+  voices.vocal.connect(compressor);
 
   return {
     voices, controls, chanBusses,
@@ -700,6 +728,9 @@ export async function playPattern(pattern, bpm, audio, onStep) {
 
   const runsByTrack = {};
   MELODIC_KEYS.forEach((k) => { runsByTrack[k] = computeRuns(pattern[k] || []); });
+  // A sung topline lane, outside the channel roster (rival songs carry one so
+  // they play as songs rather than bare beats). Played by the formant voice.
+  const vocalRuns = computeRuns(pattern.vocal || []);
   const humanize = Boolean(fx?.humanize);
   const jTime = (time) => humanize ? time + (Math.random() - 0.5) * 0.012 : time;
   const jVel = (v) => humanize ? Math.max(0.05, Math.min(1, v * (1 + (Math.random() - 0.5) * 0.25))) : v;
@@ -740,6 +771,8 @@ export async function playPattern(pattern, bpm, audio, onStep) {
         voice.triggerAttackRelease(run.pitch, runSeconds(idx, run.length), t0, vel);
       }
     });
+    const vrun = vocalRuns[idx];
+    if (vrun && s.vocal) s.vocal.triggerAttackRelease(vrun.pitch, runSeconds(idx, vrun.length), t0, 0.85);
     Tone.Draw.schedule(() => onStep(idx), time);
   }, Array.from({ length: totalSteps }, (_, i) => i), '16n');
   seq.start(0);

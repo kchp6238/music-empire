@@ -82,6 +82,61 @@ def _pattern(rng: random.Random, spec: dict) -> dict:
     }
 
 
+# ---- rival vocals ---------------------------------------------------------
+# NPC beats used to be drums + bass only, which played back as a dull loop. We
+# give every rival song a sung topline melody (played by a formant "vocal"
+# voice on the client) plus a soft chord pad. Generated deterministically from
+# the song id and injected at read time, so the whole existing catalogue starts
+# singing too — no regeneration or migration needed.
+_NOTE_ORDER = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+_PENTA_MAJ = [0, 2, 4, 7, 9]
+_PENTA_MIN = [0, 3, 5, 7, 10]
+_MINOR_GENRES = {"발라드", "힙합", "R&B", "인디", "재즈"}
+
+
+def _note(root_pc: str, semis: int, octave: int) -> str:
+    base = _NOTE_ORDER.index(root_pc) if root_pc in _NOTE_ORDER else 0
+    idx = base + semis
+    return _NOTE_ORDER[idx % 12] + str(octave + idx // 12)
+
+
+def _vocal_topline(rng: random.Random, root_pc: str, genre: str, steps: int) -> list:
+    """A singable pentatonic melody: a gentle random walk over the scale with
+    rests and held notes so it phrases like a vocal, not a machine gun."""
+    scale = _PENTA_MIN if genre in _MINOR_GENRES else _PENTA_MAJ
+    span = len(scale) * 2  # two octaves of the pentatonic
+    line = [None] * steps
+    deg = rng.randrange(len(scale))
+    i = 0
+    while i < steps:
+        if rng.random() < 0.6:
+            deg = max(0, min(span - 1, deg + rng.choice([-2, -1, -1, 0, 1, 1, 2])))
+            pitch = _note(root_pc, scale[deg % len(scale)], 4 + deg // len(scale))
+            length = rng.choice([1, 1, 2, 2, 3])
+            for k in range(i, min(steps, i + length)):
+                line[k] = pitch
+            i += length
+        else:
+            i += rng.choice([1, 2])
+    return line
+
+
+def enrich_npc_pattern(npc_song: NpcSong, genre: str | None) -> dict:
+    """Return the rival's pattern with a sung `vocal` topline + `pad` bed added.
+    Deterministic (seeded on the song id) and idempotent."""
+    pattern = dict(npc_song.pattern or {})
+    if pattern.get("vocal"):
+        return pattern
+    bass = pattern.get("bass") or []
+    steps = len(bass) or 16
+    root_note = next((b for b in bass if b), "C2")
+    root_pc = root_note[:-1] if root_note and root_note[-1].isdigit() else root_note
+    rng = random.Random(f"vocal:{npc_song.id}")
+    pattern["vocal"] = _vocal_topline(rng, root_pc, genre or "", steps)
+    pattern["pad"] = [_note(root_pc, 0, 3)] * steps  # held root → chord pad on the client
+    return pattern
+
+
 def _release(world_id: str, spec: dict, artist_row: NpcArtist, index: int, released_on: date) -> NpcSong:
     """One deterministic release. `index` counts from the artist's first ever
     drop (negative for the pre-epoch back-catalogue)."""
