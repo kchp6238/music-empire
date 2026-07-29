@@ -18,6 +18,7 @@ import { NowPlayingBar } from './components/shared/NowPlayingBar';
 import { ArtistProfile } from './components/community/ArtistProfile';
 import { GuideOverlay } from './components/shared/GuideOverlay';
 import { SettingsModal } from './components/shared/SettingsModal';
+import { Phone } from './components/phone/Phone';
 import { useGameStore } from './state/useGameStore';
 import { useAuthStore } from './state/useAuthStore';
 import { useSettingsStore } from './state/useSettingsStore';
@@ -112,6 +113,7 @@ function App() {
         <ArtistProfile />
         <GuideOverlay />
         <SettingsModal />
+        <Phone />
       </BrowserRouter>
     </div>
   );
