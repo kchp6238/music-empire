@@ -13,6 +13,7 @@ from app.models.online import Concert, ConcertTicket, MarketplaceListing
 from app.models.recording import VocalRecording
 from app.models.cover import SongCover
 from app.models.season import SeasonRecord
+from app.models.sns import SnsPost, SnsLike, SnsComment
 
 __all__ = [
     "Base",
@@ -40,4 +41,7 @@ __all__ = [
     "VocalRecording",
     "SongCover",
     "SeasonRecord",
+    "SnsPost",
+    "SnsLike",
+    "SnsComment",
 ]
