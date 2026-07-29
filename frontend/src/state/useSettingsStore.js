@@ -70,3 +70,4 @@ export const useSettingsStore = create((set, get) => ({
   // Called once a save is active — shows the intro the first time only.
   maybeAutoOpenGuide: () => { if (!hasSeenGuide()) set({ guideOpen: true }); },
 }));
+
