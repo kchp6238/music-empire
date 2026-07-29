@@ -83,6 +83,8 @@ def get_feed(db: Session, viewer: Character) -> list[dict]:
             "artist_id": character.id, "artist_type": "character", "tier": song.tier,
             "overall_score": song.overall_score, "source": "user", "bpm": song.bpm,
             "views": song.views,
+            "genres": song.genre_tags or [],
+            "released_on": song.released_on.isoformat() if song.released_on else None,
             "has_cover": song.id in with_cover,
             "vocal_recording_id": rec_rows[-1][0] if rec_rows else None,
             "vocals": vocals,
@@ -108,6 +110,8 @@ def get_feed(db: Session, viewer: Character) -> list[dict]:
             "overall_score": float(npc_song.score), "source": "npc", "bpm": npc_song.bpm,
             # NPC 조회수 is deterministic from quality — rivals have their own audience.
             "views": int(float(npc_song.score) ** 2 * 2),
+            "genres": [artist.genre] if artist.genre else [],
+            "released_on": npc_song.released_on.isoformat() if npc_song.released_on else None,
             "has_cover": False, "vocal_recording_id": None, "vocals": [],
             "reactions": reactions_service.build_npc_comments(npc_song, personas, FEED_COMMENTS),
             "pattern": npc_song.pattern,
