@@ -9,6 +9,8 @@ import { useGameStore } from '../../state/useGameStore';
 
 // Fixed category chips, YouTube-Music style. Genre chips are appended from
 // whatever genres actually appear in the world's songs.
+const CHART_LIMIT = 50; // top-N shown per category, so the chart stays a chart
+
 const BASE_CATS = [
   { key: 'popular', label: '인기' },
   { key: 'new', label: '신곡' },
@@ -46,7 +48,8 @@ export function ChartApp() {
     if (cat === 'new') items.sort((a, b) => (b.released_on || '').localeCompare(a.released_on || ''));
     else if (cat === 'rising') items.sort((a, b) => (b.views || 0) - (a.views || 0));
     else items.sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0));
-    return items;
+    // A chart is a top-N, not a dump of every song ever released.
+    return items.slice(0, CHART_LIMIT);
   }, [rows, cat, character.id]);
 
   if (rows === null) return <div className="p-5 text-center text-muted text-xs">불러오는 중…</div>;

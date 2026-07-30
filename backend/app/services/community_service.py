@@ -16,6 +16,11 @@ _NPC_BY_NAME = {a["name"]: a for a in NPC_ARTISTS}
 # lines; the rest of a song's reactions live on its results screen.
 FEED_COMMENTS = 2
 
+# The chart/feed shows only the most recent rival releases, not the whole
+# multi-year catalogue — enough to rank a lively chart and drive the phone's
+# 신곡/급상승/장르 filters without shipping hundreds of stale rows.
+NPC_FEED_LIMIT = 150
+
 
 def _reactions_by_song(db: Session, song_ids: list[str]) -> dict[str, list[dict]]:
     """The loudest few reactions per song, in one query rather than per card.
@@ -94,10 +99,15 @@ def get_feed(db: Session, viewer: Character) -> list[dict]:
 
     # Rivals from this world only, and only what has come out by the viewer's
     # own date — players in a shared room can be at different points in time.
+    # Cap to the most recent releases: a chart shows the current scene, not the
+    # entire multi-year back-catalogue (which grew into the hundreds and made
+    # the feed unusable). Older rival songs simply age off the chart.
     npc_rows = (
         db.query(NpcSong, NpcArtist)
         .join(NpcArtist, NpcSong.npc_artist_id == NpcArtist.id)
         .filter(NpcSong.world_id == viewer.world_id, NpcSong.released_on <= viewer.game_date)
+        .order_by(NpcSong.released_on.desc())
+        .limit(NPC_FEED_LIMIT)
         .all()
     )
     # NPC songs have no stored reactions — theirs are generated on the fly from
