@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import {
   SECTION_TYPES, DEFAULT_MIXER, FAN_PERSONAS, EFFECT_TYPES, DEFAULT_DRUM_PARAMS,
   DEFAULT_CHANNEL_MIX, DRUM_INSTRUMENTS, PRESET_STEP_LENGTH, CHANNEL_KEYS, MELODIC_KEYS,
-  GENRE_PROFILES,
+  GENRE_PROFILES, CLIP_PALETTE,
 } from '../lib/gameData/constants';
 import { emptySections, emptySection, basicPatternForLength, buildCombinedPattern } from '../lib/patterns';
 import * as engine from '../lib/audio/engine';
@@ -136,12 +136,19 @@ function readMixFromPattern(pattern) {
 // saved before a section/field existed still loads with every lane present.
 function mapApiSongToDraft(apiSong) {
   const sections = emptySections();
+  // Custom clips: keep every clip in the saved pattern, not just the default
+  // five — a clip named "벌스 B" must survive a reload. Skip the reserved _mix
+  // blob, which rides in the same object but isn't a clip.
   Object.entries(apiSong.pattern || {}).forEach(([key, sec]) => {
-    if (sections[key]) sections[key] = { ...sections[key], ...sec };
+    if (key === MIX_KEY) return;
+    const base = sections[key] || emptySection((sec.bass || []).length || 16);
+    sections[key] = { ...base, ...sec };
   });
   Object.entries(apiSong.lyrics || {}).forEach(([key, text]) => {
     if (sections[key]) sections[key] = { ...sections[key], lyrics: text || '' };
   });
+  // Backfill a color for any clip that predates per-clip colors.
+  Object.keys(sections).forEach((k, i) => { if (!sections[k].color) sections[k].color = CLIP_PALETTE[i % CLIP_PALETTE.length]; });
   const arrangement = apiSong.structure || [];
   return {
     title: apiSong.title || '',
@@ -459,6 +466,50 @@ export const useGameStore = create((set, get) => ({
   // Replace the whole arrangement at once — the DAW timeline computes repeats,
   // duplicates and group moves as a new flat list and commits it here.
   setArrangement: (list) => set((s) => ({ draft: { ...s.draft, arrangement: list } })),
+
+  // ---- custom clips: create / duplicate / rename / delete ----
+  // Clips are the reusable building blocks a song is arranged from. They live
+  // in draft.sections keyed by their (unique) name; the arrangement and lyrics
+  // reference that name. Duplicating makes an INDEPENDENT copy, which is how you
+  // get 벌스 A ≠ 벌스 B.
+  addClip: () => set((s) => {
+    const keys = Object.keys(s.draft.sections);
+    let n = keys.length + 1;
+    let name = `구간 ${n}`;
+    while (s.draft.sections[name]) name = `구간 ${++n}`;
+    const clip = { ...emptySection(16), color: CLIP_PALETTE[keys.length % CLIP_PALETTE.length] };
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [name]: clip }, arrangement: [...s.draft.arrangement, name], editingSection: name } };
+  }),
+
+  duplicateClip: (key) => set((s) => {
+    const src = s.draft.sections[key];
+    if (!src) return {};
+    let name = `${key} 사본`;
+    let i = 2;
+    while (s.draft.sections[name]) name = `${key} 사본 ${i++}`;
+    const keys = Object.keys(s.draft.sections);
+    const clip = { ...structuredClone(src), color: CLIP_PALETTE[keys.length % CLIP_PALETTE.length] };
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [name]: clip }, editingSection: name } };
+  }),
+
+  renameClip: (oldKey, rawNew) => set((s) => {
+    const newKey = (rawNew || '').trim();
+    if (!newKey || newKey === oldKey || newKey === MIX_KEY || s.draft.sections[newKey] || !s.draft.sections[oldKey]) return {};
+    const sections = {};
+    Object.entries(s.draft.sections).forEach(([k, v]) => { sections[k === oldKey ? newKey : k] = v; });
+    const arrangement = s.draft.arrangement.map((k) => (k === oldKey ? newKey : k));
+    const editingSection = s.draft.editingSection === oldKey ? newKey : s.draft.editingSection;
+    return { draft: { ...s.draft, sections, arrangement, editingSection } };
+  }),
+
+  deleteClip: (key) => set((s) => {
+    const keys = Object.keys(s.draft.sections);
+    if (keys.length <= 1 || !s.draft.sections[key]) return {}; // always keep one clip
+    const { [key]: _removed, ...rest } = s.draft.sections;
+    const arrangement = s.draft.arrangement.filter((k) => k !== key);
+    const editingSection = s.draft.editingSection === key ? Object.keys(rest)[0] : s.draft.editingSection;
+    return { draft: { ...s.draft, sections: rest, arrangement, editingSection } };
+  }),
   removeFromArrangement: (idx) => set((s) => ({ draft: { ...s.draft, arrangement: s.draft.arrangement.filter((_, i) => i !== idx) } })),
   moveArrangement: (idx, dir) => set((s) => {
     const arr = [...s.draft.arrangement];

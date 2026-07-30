@@ -15,7 +15,7 @@ import { PresetLibrary } from './PresetLibrary';
 import { VoiceToPattern } from './VoiceToPattern';
 import { VoiceInstrument } from './VoiceInstrument';
 import { CollabInvitePanel } from './CollabInvitePanel';
-import { SECTION_TYPES, CHANNELS } from '../../lib/gameData/constants';
+import { CHANNELS } from '../../lib/gameData/constants';
 import { buildCombinedPattern, analyzeCombinedPattern, sectionHasContent } from '../../lib/patterns';
 import { useGameStore } from '../../state/useGameStore';
 
@@ -30,6 +30,10 @@ export function BeatmakerScreen() {
   const stop = useGameStore((s) => s.stop);
   const setEditingSection = useGameStore((s) => s.setEditingSection);
   const setSectionLength = useGameStore((s) => s.setSectionLength);
+  const addClip = useGameStore((s) => s.addClip);
+  const duplicateClip = useGameStore((s) => s.duplicateClip);
+  const renameClip = useGameStore((s) => s.renameClip);
+  const deleteClip = useGameStore((s) => s.deleteClip);
   const setSectionBpm = useGameStore((s) => s.setSectionBpm);
   const toggleDrumStep = useGameStore((s) => s.toggleDrumStep);
   const setDrumVelocity = useGameStore((s) => s.setDrumVelocity);
@@ -156,12 +160,36 @@ export function BeatmakerScreen() {
                 </div>
               </div>
 
-              <div className="flex gap-1.5 flex-wrap mb-4">
-                {SECTION_TYPES.map((t) => (
-                  <div key={t} className={`me-pill small ${draft.editingSection === t ? 'active' : ''}`} onClick={() => setEditingSection(t)}>
-                    {t}{sectionHasContent(draft.sections[t]) ? ' ●' : ''}
-                  </div>
-                ))}
+              {/* Clip list — every reusable building block of the song. Add,
+                  duplicate (independent copy), rename or delete them freely. */}
+              <div className="flex gap-1.5 flex-wrap items-center mb-4">
+                {Object.keys(draft.sections).map((key) => {
+                  const active = draft.editingSection === key;
+                  const color = draft.sections[key].color || '#8B8496';
+                  return (
+                    <div key={key} className={`me-pill small ${active ? 'active' : ''}`} onClick={() => setEditingSection(key)}
+                      style={active ? { borderColor: color, color } : {}}>
+                      <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 2, background: color, marginRight: 5, verticalAlign: 'middle' }} />
+                      {key}{sectionHasContent(draft.sections[key]) ? ' ●' : ''}
+                    </div>
+                  );
+                })}
+                <div className="me-pill small" onClick={addClip} title="빈 클립을 새로 만들어요">＋ 새 클립</div>
+              </div>
+
+              {/* actions on the clip being edited */}
+              <div className="flex gap-1.5 flex-wrap items-center mb-4 -mt-2">
+                <span className="text-[10px] text-faint">이 클립:</span>
+                <button className="me-btn-ghost !px-2 !py-1 !text-[10px]" onClick={() => duplicateClip(draft.editingSection)}
+                  title="지금 클립을 그대로 복제해 독립된 새 클립을 만들어요 (벌스 A / 벌스 B)">⧉ 복제</button>
+                <button className="me-btn-ghost !px-2 !py-1 !text-[10px]" onClick={() => {
+                  const next = window.prompt('클립 이름 바꾸기', draft.editingSection);
+                  if (next) renameClip(draft.editingSection, next);
+                }} title="클립 이름 바꾸기">✎ 이름</button>
+                <button className="me-btn-ghost !px-2 !py-1 !text-[10px]" disabled={Object.keys(draft.sections).length <= 1}
+                  style={{ color: 'var(--color-danger)' }}
+                  onClick={() => { if (window.confirm(`'${draft.editingSection}' 클립을 삭제할까요? 타임라인에서도 빠집니다.`)) deleteClip(draft.editingSection); }}
+                  title="이 클립을 삭제 (타임라인에서도 제거)">🗑 클립 삭제</button>
               </div>
 
               {/* One instrument at a time — which one follows the channel rack

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { X, Copy, Layers } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Pill } from '../ui/Pill';
-import { SECTION_TYPES, SECTION_COLORS, DRUM_INSTRUMENTS, MELODIC_KEYS } from '../../lib/gameData/constants';
+import { DRUM_INSTRUMENTS, MELODIC_KEYS } from '../../lib/gameData/constants';
 import { buildCombinedPattern } from '../../lib/patterns';
 import { useGameStore } from '../../state/useGameStore';
 
@@ -47,6 +47,7 @@ export function Timeline() {
   const setEditingSection = useGameStore((s) => s.setEditingSection);
   const addToArrangement = useGameStore((s) => s.addToArrangement);
   const setArrangement = useGameStore((s) => s.setArrangement);
+  const addClip = useGameStore((s) => s.addClip);
   const play = useGameStore((s) => s.play);
   const stop = useGameStore((s) => s.stop);
 
@@ -186,7 +187,7 @@ export function Timeline() {
                 const count = renderCount(gi, g);
                 const left = offsets[gi] * PX_PER_STEP;
                 const width = count * section.length * PX_PER_STEP;
-                const color = SECTION_COLORS[g.key] || '#8B8496';
+                const color = section.color || '#8B8496';
                 const selected = editingSection === g.key;
                 const marks = sectionMarks(section);
                 return (
@@ -250,15 +251,16 @@ export function Timeline() {
         </div>
       )}
 
-      {/* add-section palette */}
+      {/* clip palette — drop any existing clip onto the timeline, or make a new one */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: 10, color: '#6B6577', marginRight: 2 }}>구간 추가</span>
-        {SECTION_TYPES.map((t) => (
-          <Pill key={t} size="sm" onClick={() => addToArrangement(t)}>
-            <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: SECTION_COLORS[t], marginRight: 5, verticalAlign: 'middle' }} />
-            {t}
+        <span style={{ fontSize: 10, color: '#6B6577', marginRight: 2 }}>클립 놓기</span>
+        {Object.keys(sections).map((key) => (
+          <Pill key={key} size="sm" onClick={() => addToArrangement(key)}>
+            <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: sections[key].color || '#8B8496', marginRight: 5, verticalAlign: 'middle' }} />
+            {key}
           </Pill>
         ))}
+        <Pill size="sm" onClick={addClip}>＋ 새 클립</Pill>
       </div>
     </div>
   );

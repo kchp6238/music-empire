@@ -1,5 +1,5 @@
 import { clamp } from '../utils';
-import { DRUM_INSTRUMENTS, SECTION_TYPES, MELODIC_KEYS } from '../gameData/constants';
+import { DRUM_INSTRUMENTS, SECTION_TYPES, SECTION_COLORS, MELODIC_KEYS } from '../gameData/constants';
 
 const DEFAULT_VELOCITY = 100; // 0-127, MIDI-style
 
@@ -13,7 +13,9 @@ export function emptySection(length) {
   });
   return sec;
 }
-export function emptySections() { return Object.fromEntries(SECTION_TYPES.map((t) => [t, emptySection(16)])); }
+export function emptySections() {
+  return Object.fromEntries(SECTION_TYPES.map((t) => [t, { ...emptySection(16), color: SECTION_COLORS[t] }]));
+}
 
 export function basicPatternForLength(length) {
   const base = {

@@ -12,7 +12,6 @@ import { autotuneBlob } from '../../lib/audio/autotune';
 import { renderAiVocal, speakLyrics, stopSpeaking, hasMelody } from '../../lib/audio/aiVocal';
 import * as recordingsApi from '../../lib/api/recordings';
 import { buildCombinedPattern, sectionOffsets } from '../../lib/patterns';
-import { SECTION_TYPES } from '../../lib/gameData/constants';
 import { useGameStore } from '../../state/useGameStore';
 
 // The take's target: a real section (인트로/벌스/…) or the whole song.
@@ -51,7 +50,7 @@ export function RecordingStudio() {
   const [harmonyFor, setHarmonyFor] = useState(null); // take id with the quick-harmony menu open
   // Which part of the song the next take sings. Sections actually used in the
   // arrangement, in song order, plus a whole-song option.
-  const arrangementSections = SECTION_TYPES.filter((t) => draft.arrangement.includes(t));
+  const arrangementSections = [...new Set(draft.arrangement)];
   const [targetSection, setTargetSection] = useState(() => arrangementSections[0] || WHOLE_SONG);
   const [aiVowel, setAiVowel] = useState('ah');
   const [aiBusy, setAiBusy] = useState(false);

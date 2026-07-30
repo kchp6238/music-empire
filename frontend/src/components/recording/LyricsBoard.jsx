@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { FileText } from 'lucide-react';
 import { Panel } from '../ui/Panel';
-import { SECTION_COLORS } from '../../lib/gameData/constants';
 import { useGameStore } from '../../state/useGameStore';
 
 /**
@@ -88,7 +87,7 @@ export function LyricsBoard({ locked }) {
       <div className="flex flex-col gap-2 max-h-[420px] overflow-y-auto me-scroll pr-1">
         {arrangement.map((key, idx) => {
           const active = idx === activeIndex;
-          const color = SECTION_COLORS[key];
+          const color = sections[key]?.color || '#8B8496';
           return (
             <div
               key={`${key}-${idx}`}

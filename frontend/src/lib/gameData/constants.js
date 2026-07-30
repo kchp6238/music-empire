@@ -18,6 +18,10 @@ export const GENRE_PROFILES = {
   '재즈': { bpm: 115, bpmRange: [90, 140], moods: ['편안함', '실험적'], chordPresetId: 'p4' },
   '트로트': { bpm: 115, bpmRange: [100, 130], moods: ['신남', '편안함'], chordPresetId: 'p1' },
 };
+// The starter clips a fresh song opens with. Users can now add, duplicate and
+// rename clips freely (custom clips), so this is just the default set — not a
+// fixed roster. SECTION_COLORS gives the defaults their color; new clips draw
+// from CLIP_PALETTE.
 export const SECTION_TYPES = ['인트로', '벌스', '코러스', '브릿지', '아웃트로'];
 export const SECTION_COLORS = {
   인트로: '#8B7FD1',
@@ -26,6 +30,11 @@ export const SECTION_COLORS = {
   브릿지: '#E893A6',
   아웃트로: '#5FBF8F',
 };
+// Colors handed out to custom clips, in order of creation (wraps around).
+export const CLIP_PALETTE = [
+  '#8B7FD1', '#4FD1C5', '#E8A33D', '#E893A6', '#5FBF8F',
+  '#7FA8D1', '#D18B4C', '#B794F4', '#6FC5B5', '#E86A4D', '#E8C34D', '#9F7FD1',
+];
 
 // `icon` is shown next to every label so the instrument is recognisable at a
 // glance without reading — playtesters asked for it.
