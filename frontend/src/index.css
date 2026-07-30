@@ -55,10 +55,25 @@ body { margin: 0; }
    component needs more variant flexibility (Button/Panel/Pill in Timeline.jsx,
    Mixer.jsx) — both draw from one source of truth, so there is no divergence
    between screens either way. See docs/frontend-architecture.md. */
-.me-root{ min-height:100vh; background:#12101A; background-image: radial-gradient(circle at 15% 0%, rgba(232,163,61,0.10), transparent 45%), radial-gradient(circle at 85% 100%, rgba(79,209,197,0.08), transparent 45%); color:#EDE9F0; font-family:'Inter',sans-serif; }
+/* "Lit studio at night" — a deep near-black stage washed by warm-amber and
+   cool-purple neon from opposite corners, a faint teal spill, a barely-there
+   dot grid for equipment texture, and a soft vignette. Fixed so it reads as a
+   room the panels sit inside, not a flat fill. */
+.me-root{
+  min-height:100vh; color:#EDE9F0; font-family:'Inter',sans-serif;
+  background-color:#0B0912;
+  background-image:
+    radial-gradient(rgba(255,255,255,0.022) 1px, transparent 1.6px),
+    radial-gradient(120% 90% at 50% 0%, transparent 58%, rgba(0,0,0,0.45) 100%),
+    radial-gradient(1200px 640px at 10% -8%, rgba(232,163,61,0.16), transparent 55%),
+    radial-gradient(1100px 720px at 102% 106%, rgba(139,127,209,0.16), transparent 55%),
+    radial-gradient(820px 520px at 92% -4%, rgba(79,209,197,0.09), transparent 52%);
+  background-size:24px 24px, auto, auto, auto, auto;
+  background-attachment:fixed;
+}
 .me-display{ font-family:'Bricolage Grotesque', sans-serif; }
 .me-mono{ font-family:'JetBrains Mono', monospace; }
-.me-topbar{ display:flex; align-items:center; justify-content:space-between; padding:12px 24px; background:rgba(20,18,28,0.9); border-bottom:1px solid rgba(255,255,255,0.08); position:sticky; top:0; z-index:10; flex-wrap:wrap; gap:10px; }
+.me-topbar{ display:flex; align-items:center; justify-content:space-between; padding:12px 24px; background:linear-gradient(180deg, rgba(30,27,41,0.92), rgba(16,14,22,0.9)); border-bottom:1px solid rgba(232,163,61,0.18); box-shadow:0 1px 0 rgba(232,163,61,0.10), 0 10px 28px -14px rgba(0,0,0,0.7); backdrop-filter:blur(10px); position:sticky; top:0; z-index:10; flex-wrap:wrap; gap:10px; }
 
 /* Phone header: stack identity over the stats strip so the bar stays ~2 rows
    tall instead of ballooning as the (now bottom-bar) nav tabs wrap. */
@@ -92,18 +107,20 @@ body { margin: 0; }
 .me-modal{ background:#1C1926; border:1px solid rgba(255,255,255,0.12); border-radius:16px; padding:18px; width:100%; max-width:460px; max-height:88vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.6); }
 .me-artist-link{ cursor:pointer; }
 .me-artist-link:hover{ text-decoration:underline; }
-.me-panel{ background:#1C1926; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:20px; }
-.me-card{ background:#1C1926; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px; cursor:pointer; transition:border-color .2s, transform .15s; }
-.me-card:hover{ border-color:#E8A33D; transform:translateY(-2px); }
-.me-card.selected{ border-color:#4FD1C5; box-shadow:0 0 0 1px #4FD1C5; }
+/* Panels read as tactile hardware: a top-lit gradient face, a brighter top
+   edge, an inset highlight and a soft drop shadow so they sit above the stage. */
+.me-panel{ background:linear-gradient(180deg,#221E2E,#191622); border:1px solid rgba(255,255,255,0.08); border-top-color:rgba(255,255,255,0.14); border-radius:14px; padding:20px; box-shadow:0 14px 34px -16px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05); }
+.me-card{ background:linear-gradient(180deg,#211D2C,#191622); border:1px solid rgba(255,255,255,0.08); border-top-color:rgba(255,255,255,0.12); border-radius:14px; padding:16px; cursor:pointer; transition:border-color .2s, transform .15s, box-shadow .2s; box-shadow:0 8px 22px -14px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04); }
+.me-card:hover{ border-color:#E8A33D; transform:translateY(-2px); box-shadow:0 14px 30px -14px rgba(0,0,0,0.65), 0 0 20px -8px rgba(232,163,61,0.4); }
+.me-card.selected{ border-color:#4FD1C5; box-shadow:0 0 0 1px #4FD1C5, 0 0 20px -6px rgba(79,209,197,0.45); }
 .me-pill{ display:inline-flex; align-items:center; padding:7px 15px; border-radius:999px; border:1px solid rgba(255,255,255,0.15); font-size:13px; cursor:pointer; transition:all .15s; background:rgba(255,255,255,0.03); color:#EDE9F0; }
-.me-pill.active{ background:#E8A33D; border-color:#E8A33D; color:#12101A; font-weight:600; }
+.me-pill.active{ background:linear-gradient(180deg,#F0B24E,#E39A2E); border-color:#E8A33D; color:#12101A; font-weight:600; box-shadow:0 0 14px -2px rgba(232,163,61,0.55), inset 0 1px 0 rgba(255,255,255,0.25); }
 .me-pill.small{ padding:5px 12px; font-size:12px; }
-.me-btn-primary{ background:#E8A33D; color:#12101A; font-weight:700; border:none; border-radius:10px; padding:13px 22px; cursor:pointer; transition:filter .15s; font-size:14px; }
-.me-btn-primary:hover{ filter:brightness(1.08); }
-.me-btn-primary:disabled{ opacity:0.3; cursor:not-allowed; }
-.me-btn-ghost{ background:transparent; color:#EDE9F0; border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:9px 16px; cursor:pointer; font-size:12px; }
-.me-btn-ghost:hover{ border-color:#4FD1C5; }
+.me-btn-primary{ background:linear-gradient(180deg,#F0B24E,#E39A2E); color:#12101A; font-weight:700; border:none; border-radius:10px; padding:13px 22px; cursor:pointer; transition:filter .15s, box-shadow .15s; font-size:14px; box-shadow:0 4px 16px -4px rgba(232,163,61,0.5), inset 0 1px 0 rgba(255,255,255,0.28); }
+.me-btn-primary:hover{ filter:brightness(1.06); box-shadow:0 7px 22px -4px rgba(232,163,61,0.62), inset 0 1px 0 rgba(255,255,255,0.28); }
+.me-btn-primary:disabled{ opacity:0.3; cursor:not-allowed; box-shadow:none; }
+.me-btn-ghost{ background:rgba(255,255,255,0.02); color:#EDE9F0; border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:9px 16px; cursor:pointer; font-size:12px; transition:border-color .15s, box-shadow .15s, background .15s; }
+.me-btn-ghost:hover{ border-color:#4FD1C5; box-shadow:0 0 14px -6px rgba(79,209,197,0.6); background:rgba(79,209,197,0.05); }
 .me-btn-ghost:disabled{ opacity:0.3; cursor:not-allowed; }
 .me-chip{ display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:8px; background:#1C1926; border:1px solid rgba(255,255,255,0.1); font-size:12px; cursor:pointer; white-space:nowrap; }
 .me-chip:hover{ border-color:#4FD1C5; }
@@ -113,8 +130,8 @@ body { margin: 0; }
 .me-fader-track{ position:relative; width:14px; height:170px; background:#0E0C14; border-radius:7px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; }
 .me-fader-fill{ position:absolute; bottom:0; left:0; width:100%; border-radius:7px; transition:height 1s cubic-bezier(.2,.8,.2,1); }
 .me-fader-cap{ position:absolute; left:-4px; width:22px; height:6px; border-radius:3px; background:#EDE9F0; box-shadow:0 0 8px rgba(255,255,255,0.6); transition:bottom 1s cubic-bezier(.2,.8,.2,1); }
-input[type=range].me-slider{ -webkit-appearance:none; width:100%; height:4px; background:rgba(255,255,255,0.15); border-radius:2px; }
-input[type=range].me-slider::-webkit-slider-thumb{ -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:#E8A33D; cursor:pointer; }
+input[type=range].me-slider{ -webkit-appearance:none; width:100%; height:4px; background:rgba(255,255,255,0.14); border-radius:2px; box-shadow:inset 0 1px 2px rgba(0,0,0,0.5); }
+input[type=range].me-slider::-webkit-slider-thumb{ -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #F4BE63, #E39A2E); cursor:pointer; box-shadow:0 0 9px rgba(232,163,61,0.75), 0 1px 2px rgba(0,0,0,0.5); }
 .me-scroll::-webkit-scrollbar{ height:6px; width:6px; }
 .me-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.15); border-radius:3px; }
 .me-notebook{ background: repeating-linear-gradient(#1C1926 0px, #1C1926 27px, rgba(255,255,255,0.08) 28px), #1C1926; border:1px solid rgba(255,255,255,0.08); border-radius:10px; position:relative; padding:14px 14px 14px 40px; }
@@ -125,11 +142,13 @@ input[type=range].me-slider::-webkit-slider-thumb{ -webkit-appearance:none; widt
    Kept as classes rather than inline styles because the same recessed-panel
    treatment repeats across ChannelRack, DrumMachine, EffectWindow and the
    transport bar. */
-.me-daw{ background:var(--color-rack); }
-.me-daw-groove{ background:var(--color-groove); border:1px solid rgba(255,255,255,0.06); border-radius:6px; }
-.me-plugin{ background:var(--color-plugin); border:1px solid rgba(255,255,255,0.12); border-radius:10px; box-shadow:0 18px 44px rgba(0,0,0,0.55); }
-.me-plugin-bar{ background:var(--color-plugin-bar); border-bottom:1px solid rgba(255,255,255,0.08); border-radius:9px 9px 0 0; cursor:grab; user-select:none; }
+.me-daw{ background:linear-gradient(180deg,#191521,#131019); }
+/* recessed groove — an inset routed channel in the console face */
+.me-daw-groove{ background:linear-gradient(180deg,#0C0A12,#080610); border:1px solid rgba(0,0,0,0.5); border-top-color:rgba(0,0,0,0.6); border-radius:6px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.55), inset 0 -1px 0 rgba(255,255,255,0.03); }
+.me-plugin{ background:linear-gradient(180deg,#262032,#201B2C); border:1px solid rgba(255,255,255,0.12); border-top-color:rgba(255,255,255,0.18); border-radius:10px; box-shadow:0 24px 54px -12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06); }
+.me-plugin-bar{ background:linear-gradient(180deg,#322B44,#2B2639); border-bottom:1px solid rgba(0,0,0,0.4); border-radius:9px 9px 0 0; cursor:grab; user-select:none; box-shadow:inset 0 1px 0 rgba(255,255,255,0.08); }
 .me-plugin-bar:active{ cursor:grabbing; }
-.me-rack-row{ background:var(--color-rack-row); border:1px solid rgba(255,255,255,0.06); border-radius:8px; transition:border-color .15s, background .15s; }
-.me-rack-row:hover{ border-color:rgba(255,255,255,0.16); }
-.me-rack-row.active{ background:var(--color-rack-row-active); border-color:var(--color-accent2); }
+/* channel strips — raised faceplates that light up teal when selected */
+.me-rack-row{ background:linear-gradient(180deg,#221D2E,#1B1826); border:1px solid rgba(255,255,255,0.07); border-top-color:rgba(255,255,255,0.11); border-radius:8px; transition:border-color .15s, background .15s, box-shadow .15s; box-shadow:inset 0 1px 0 rgba(255,255,255,0.04); }
+.me-rack-row:hover{ border-color:rgba(255,255,255,0.18); }
+.me-rack-row.active{ background:linear-gradient(180deg,#2A2438,#221D30); border-color:var(--color-accent2); box-shadow:0 0 0 1px rgba(79,209,197,0.5), 0 0 18px -6px rgba(79,209,197,0.55), inset 0 1px 0 rgba(255,255,255,0.06); }
