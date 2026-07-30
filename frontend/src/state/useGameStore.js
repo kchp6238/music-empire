@@ -456,6 +456,9 @@ export const useGameStore = create((set, get) => ({
   }),
 
   addToArrangement: (type) => set((s) => ({ draft: { ...s.draft, arrangement: [...s.draft.arrangement, type], editingSection: type } })),
+  // Replace the whole arrangement at once — the DAW timeline computes repeats,
+  // duplicates and group moves as a new flat list and commits it here.
+  setArrangement: (list) => set((s) => ({ draft: { ...s.draft, arrangement: list } })),
   removeFromArrangement: (idx) => set((s) => ({ draft: { ...s.draft, arrangement: s.draft.arrangement.filter((_, i) => i !== idx) } })),
   moveArrangement: (idx, dir) => set((s) => {
     const arr = [...s.draft.arrangement];
