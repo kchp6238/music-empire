@@ -5,6 +5,7 @@ import { WorldSelect } from './components/world/WorldSelect';
 import { CharacterCreation } from './components/character/CharacterCreation';
 import { StudioScreen } from './components/studio/StudioScreen';
 import { BeatmakerScreen } from './components/beatmaker/BeatmakerScreen';
+import { ArrangeScreen } from './components/arrange/ArrangeScreen';
 import { CommunityScreen } from './components/community/CommunityScreen';
 import { ResultsScreen } from './components/results/ResultsScreen';
 import { RecordingStudio } from './components/recording/RecordingStudio';
@@ -69,6 +70,7 @@ function AnimatedRoutes() {
       <Route path="/create" element={<PageTransition><RequireAuth><CharacterCreation /></RequireAuth></PageTransition>} />
       <Route path="/studio" element={<PageTransition><RequireCharacter><StudioScreen /></RequireCharacter></PageTransition>} />
       <Route path="/beatmaker" element={<PageTransition><RequireCharacter><BeatmakerScreen /></RequireCharacter></PageTransition>} />
+      <Route path="/arrange" element={<PageTransition><RequireCharacter><ArrangeScreen /></RequireCharacter></PageTransition>} />
       <Route path="/recording" element={<PageTransition><RequireCharacter><RecordingStudio /></RequireCharacter></PageTransition>} />
       <Route path="/community" element={<PageTransition><RequireCharacter><CommunityScreen /></RequireCharacter></PageTransition>} />
       <Route path="/collab" element={<PageTransition><RequireCharacter><CollabScreen /></RequireCharacter></PageTransition>} />

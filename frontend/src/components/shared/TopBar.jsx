@@ -1,4 +1,4 @@
-import { Disc3, LogOut, LibraryBig, Music2, SlidersHorizontal, Mic, Users, Handshake, Building2, Globe, Newspaper, HelpCircle, Settings } from 'lucide-react';
+import { Disc3, LogOut, LibraryBig, Music2, SlidersHorizontal, ListMusic, Mic, Users, Handshake, Building2, Globe, Newspaper, HelpCircle, Settings } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { won } from '../../lib/utils';
 import { useAuthStore } from '../../state/useAuthStore';
@@ -10,6 +10,7 @@ import { useSettingsStore } from '../../state/useSettingsStore';
 const TABS = [
   { path: '/studio', label: '스튜디오', icon: Music2 },
   { path: '/beatmaker', label: '비트', icon: SlidersHorizontal },
+  { path: '/arrange', label: '편곡', icon: ListMusic },
   { path: '/recording', label: '녹음실', icon: Mic },
   { path: '/community', label: '커뮤니티', icon: Users },
   { path: '/news', label: '소식', icon: Newspaper },
