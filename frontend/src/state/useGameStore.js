@@ -4,7 +4,7 @@ import {
   DEFAULT_CHANNEL_MIX, DRUM_INSTRUMENTS, PRESET_STEP_LENGTH, CHANNEL_KEYS, MELODIC_KEYS,
   GENRE_PROFILES, CLIP_PALETTE,
 } from '../lib/gameData/constants';
-import { emptySections, emptySection, basicPatternForLength, buildCombinedPattern, assembleTimeline, songCombined, bakeTimeline } from '../lib/patterns';
+import { emptySections, emptySection, basicPatternForLength, buildCombinedPattern, assembleTimeline, songCombined, bakeTimeline, cellPitches } from '../lib/patterns';
 import * as engine from '../lib/audio/engine';
 import { playSuccessChime } from '../lib/audio/uiSounds';
 import * as charactersApi from '../lib/api/characters';
@@ -185,7 +185,7 @@ const pid = () => `p${Date.now().toString(36)}${(_pidSeq++).toString(36)}`;
 function clipTracks(sec) {
   const tracks = [];
   if (DRUM_INSTRUMENTS.some((di) => sec.drums[di.key].some(Boolean))) tracks.push('drums');
-  MELODIC_KEYS.forEach((k) => { if ((sec[k] || []).some(Boolean)) tracks.push(k); });
+  MELODIC_KEYS.forEach((k) => { if ((sec[k] || []).some((c) => cellPitches(c).length > 0)) tracks.push(k); });
   return tracks;
 }
 const clipBars = (sec) => Math.max(1, Math.ceil(((sec.bass || []).length || 16) / 16));
@@ -351,22 +351,26 @@ export const useGameStore = create((set, get) => ({
 
   // Single-cell click: toggle. Used by PianoRoll/PianoKeyRoll's plain click
   // (no drag) — see paintNoteRange for the multi-step drag gesture.
+  // Single click toggles ONE pitch in the step's chord — so clicking several
+  // rows in the same column stacks them into a chord (두 음 동시에).
   setNoteStep: (track, idx, pitch) => {
     set((s) => {
       const sec = s.draft.sections[s.draft.editingSection];
       const arr = [...sec[track]];
       const velArr = [...sec[`${track}Velocity`]];
-      const turningOn = arr[idx] !== pitch;
-      arr[idx] = turningOn ? pitch : null;
-      if (turningOn) velArr[idx] = 100;
+      const cur = cellPitches(arr[idx]);
+      const has = cur.includes(pitch);
+      const next = has ? cur.filter((p) => p !== pitch) : [...cur, pitch];
+      arr[idx] = next.length ? next : null;
+      if (!has && cur.length === 0) velArr[idx] = 100; // first note in an empty cell
       return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [track]: arr, [`${track}Velocity`]: velArr } } } };
     });
   },
 
-  // Drag-paint gesture (PianoRoll.jsx/PianoKeyRoll.jsx): force-sets a
-  // contiguous run of steps to one pitch, representing a single held note
-  // spanning multiple steps (engine.js merges these into one sustained
-  // trigger on playback instead of retriggering every step).
+  // Drag-paint (PianoRoll/PianoKeyRoll): lays one pitch across a run of steps —
+  // a single held note. It ADDS the pitch (keeping any others in the cell), so
+  // a held line can sit inside a chord; engine.js merges the run into one
+  // sustained trigger instead of retriggering every step.
   paintNoteRange: (track, fromIdx, toIdx, pitch) => {
     set((s) => {
       const sec = s.draft.sections[s.draft.editingSection];
@@ -374,10 +378,23 @@ export const useGameStore = create((set, get) => ({
       const velArr = [...sec[`${track}Velocity`]];
       const lo = Math.min(fromIdx, toIdx);
       const hi = Math.max(fromIdx, toIdx);
-      for (let i = lo; i <= hi; i++) { arr[i] = pitch; velArr[i] = 100; }
+      for (let i = lo; i <= hi; i++) {
+        const cur = cellPitches(arr[i]);
+        if (!cur.includes(pitch)) arr[i] = [...cur, pitch];
+        if (cur.length === 0) velArr[i] = 100;
+      }
       return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [track]: arr, [`${track}Velocity`]: velArr } } } };
     });
   },
+
+  // 또박또박(retrigger) vs 이어서(sustain) for a track in the current clip:
+  // when on, consecutive same-pitch cells fire separately (띵띵띵) instead of
+  // sustaining into one note (띵~~~).
+  toggleRetrig: (track) => set((s) => {
+    const sec = s.draft.sections[s.draft.editingSection];
+    const key = `${track}Retrig`;
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [key]: !sec[key] } } } };
+  }),
 
   setVelocity: (track, idx, velocity) => set((s) => {
     const sec = s.draft.sections[s.draft.editingSection];

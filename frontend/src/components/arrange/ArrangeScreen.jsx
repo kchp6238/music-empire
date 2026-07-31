@@ -5,7 +5,7 @@ import { TopBar } from '../shared/TopBar';
 import { Pill } from '../ui/Pill';
 import { Button } from '../ui/Button';
 import { CHANNELS, DRUM_INSTRUMENTS } from '../../lib/gameData/constants';
-import { songCombined } from '../../lib/patterns';
+import { songCombined, cellPitches } from '../../lib/patterns';
 import { useGameStore } from '../../state/useGameStore';
 
 const PX_PER_STEP = 6;
@@ -25,13 +25,13 @@ function clipActiveSteps(sec, track) {
   const len = (sec.bass || []).length || sec.length || 16;
   for (let i = 0; i < len; i++) {
     if (track === 'drums') { if (DRUM_INSTRUMENTS.some((di) => sec.drums[di.key][i])) out.push(i); }
-    else if (sec[track] && sec[track][i]) out.push(i);
+    else if (cellPitches(sec[track] && sec[track][i]).length) out.push(i);
   }
   return out;
 }
 function clipHasTrack(sec, track) {
   if (track === 'drums') return DRUM_INSTRUMENTS.some((di) => sec.drums[di.key].some(Boolean));
-  return (sec[track] || []).some(Boolean);
+  return (sec[track] || []).some((c) => cellPitches(c).length > 0);
 }
 
 export function ArrangeScreen() {

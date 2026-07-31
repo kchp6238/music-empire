@@ -3,6 +3,15 @@ import { DRUM_INSTRUMENTS, SECTION_TYPES, SECTION_COLORS, MELODIC_KEYS } from '.
 
 const DEFAULT_VELOCITY = 100; // 0-127, MIDI-style
 
+// A melodic step can now hold a CHORD. Cells are stored as an array of pitches
+// (['C4','E4','G4']), but legacy/NPC data and single-note writers (the bass
+// seed, presets) store a bare pitch string, and empty is null — normalise all
+// three to an array so readers never have to care.
+export function cellPitches(cell) {
+  if (Array.isArray(cell)) return cell;
+  return cell ? [cell] : [];
+}
+
 export function emptySection(length) {
   const drums = {};
   DRUM_INSTRUMENTS.forEach((di) => { drums[di.key] = Array(length).fill(false); });
@@ -42,7 +51,7 @@ export function basicPatternForLength(length) {
 export function sectionHasContent(sec) {
   if (!sec) return false;
   const drumHit = Object.values(sec.drums).some((arr) => arr.some(Boolean));
-  return drumHit || MELODIC_KEYS.some((k) => (sec[k] || []).some(Boolean));
+  return drumHit || MELODIC_KEYS.some((k) => (sec[k] || []).some((c) => cellPitches(c).length > 0));
 }
 
 // velocityFallback: older/NPC/community-feed song data may not have
@@ -69,7 +78,7 @@ function normLane(arr, len, fill) {
 export function buildCombinedPattern(sections, arrangement, defaultBpm) {
   const combined = { drums: {}, drumVel: {}, drumRatchet: {}, stepBpms: [], stepSwing: [] };
   DRUM_INSTRUMENTS.forEach((di) => { combined.drums[di.key] = []; combined.drumVel[di.key] = []; combined.drumRatchet[di.key] = []; });
-  MELODIC_KEYS.forEach((k) => { combined[k] = []; combined[`${k}Velocity`] = []; });
+  MELODIC_KEYS.forEach((k) => { combined[k] = []; combined[`${k}Velocity`] = []; combined[`${k}Retrig`] = []; });
   arrangement.forEach((key) => {
     const sec = sections[key];
     if (!sec) return;
@@ -87,11 +96,12 @@ export function buildCombinedPattern(sections, arrangement, defaultBpm) {
       // missing lane as all-rests of the section's length so lanes stay aligned.
       combined[k] = combined[k].concat(sec[k] || Array(len).fill(null));
       combined[`${k}Velocity`] = combined[`${k}Velocity`].concat(sec[k] ? velocityFallback(sec, k) : Array(len).fill(100));
+      combined[`${k}Retrig`] = combined[`${k}Retrig`].concat(Array(len).fill(!!sec[`${k}Retrig`]));
     });
   });
   if (combined.bass.length === 0) {
     DRUM_INSTRUMENTS.forEach((di) => { combined.drums[di.key] = [false]; });
-    MELODIC_KEYS.forEach((k) => { combined[k] = [null]; combined[`${k}Velocity`] = [100]; });
+    MELODIC_KEYS.forEach((k) => { combined[k] = [null]; combined[`${k}Velocity`] = [100]; combined[`${k}Retrig`] = [false]; });
     combined.stepBpms = [defaultBpm || 100];
     combined.stepSwing = [0];
   }
@@ -116,7 +126,7 @@ export function assembleTimeline(sections, timeline) {
     combined.drumVel[di.key] = Array(totalSteps).fill(100);
     combined.drumRatchet[di.key] = Array(totalSteps).fill(1);
   });
-  MELODIC_KEYS.forEach((k) => { combined[k] = Array(totalSteps).fill(null); combined[`${k}Velocity`] = Array(totalSteps).fill(100); });
+  MELODIC_KEYS.forEach((k) => { combined[k] = Array(totalSteps).fill(null); combined[`${k}Velocity`] = Array(totalSteps).fill(100); combined[`${k}Retrig`] = Array(totalSteps).fill(false); });
 
   (timeline || []).forEach((p) => {
     const sec = sections[p.clip];
@@ -138,7 +148,7 @@ export function assembleTimeline(sections, timeline) {
         });
       } else {
         const v = sec[p.track]?.[src];
-        if (v != null) { combined[p.track][dst] = v; combined[`${p.track}Velocity`][dst] = sec[`${p.track}Velocity`]?.[src] ?? 100; }
+        if (cellPitches(v).length) { combined[p.track][dst] = v; combined[`${p.track}Velocity`][dst] = sec[`${p.track}Velocity`]?.[src] ?? 100; combined[`${p.track}Retrig`][dst] = !!sec[`${p.track}Retrig`]; }
       }
     }
   });
@@ -171,7 +181,9 @@ export function timelineTracks(timeline) {
 export function analyzeCombinedPattern(combined) {
   const totalSteps = combined.bass.length;
   const drumCount = Object.values(combined.drums).reduce((a, arr) => a + arr.filter(Boolean).length, 0);
-  const melodicActive = MELODIC_KEYS.reduce((a, k) => a + (combined[k] || []).filter(Boolean).length, 0);
+  // A step counts once toward density whether it holds one note or a chord;
+  // variety counts every distinct pitch, so chords add variety, not density.
+  const melodicActive = MELODIC_KEYS.reduce((a, k) => a + (combined[k] || []).filter((c) => cellPitches(c).length > 0).length, 0);
   const totalActive = drumCount + melodicActive;
   // Capacity denominator stays at the original 3 melodic lanes on purpose: the
   // new instruments add note credit (density/variety go up when you use them)
@@ -179,7 +191,7 @@ export function analyzeCombinedPattern(combined) {
   // as it did before — new instruments only ever help, never nerf.
   const capacity = Math.max(totalSteps * (DRUM_INSTRUMENTS.length + 3) * 0.3, 1);
   const density = clamp((totalActive / capacity) * 100, 0, 100);
-  const uniqueNotes = new Set(MELODIC_KEYS.flatMap((k) => (combined[k] || []).filter(Boolean))).size;
+  const uniqueNotes = new Set(MELODIC_KEYS.flatMap((k) => (combined[k] || []).flatMap(cellPitches))).size;
   const variety = clamp(uniqueNotes * 10, 0, 100);
   return { density, variety, totalActive, totalSteps };
 }

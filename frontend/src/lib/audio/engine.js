@@ -1,5 +1,6 @@
 import * as Tone from 'tone';
 import { DRUM_INSTRUMENTS, EFFECT_TYPES, CHANNEL_KEYS, MELODIC_KEYS, CHORDAL_KEYS } from '../gameData/constants';
+import { cellPitches } from '../patterns';
 
 /**
  * Single app-wide audio engine (module-level singleton, not a React ref) —
@@ -682,22 +683,26 @@ export async function loadVocalSample(audioBuffer, baseNote = 'C4') {
 /** Whether a vocal take has been recorded this session (drives the UI badge). */
 export function hasVocalSample() { return Boolean(vocalSampleBuffer); }
 
-// Collapses consecutive equal-pitch steps into runs, keyed by their start
-// index — one held note (length = run length) instead of retriggering every
-// step. This is what makes a "painted" multi-step note in the piano roll
-// actually sound sustained instead of machine-gunned.
-function computeRuns(arr) {
-  const byStart = {};
-  let i = 0;
-  while (i < arr.length) {
-    if (!arr[i]) { i++; continue; }
-    const pitch = arr[i];
-    let j = i + 1;
-    while (j < arr.length && arr[j] === pitch) j++;
-    byStart[i] = { length: j - i, pitch };
-    i = j;
+// Per step, the note runs that START there — one entry {pitch, length} per
+// pitch, so a chord starts several at once and a held note counts its length in
+// steps (one sustained trigger instead of machine-gunning every step).
+// `retrig[i]` truthy forces every note at step i to be its own 1-step hit
+// (띵띵띵 instead of 띵~~~).
+function computeRuns(arr, retrig) {
+  const cells = arr.map(cellPitches);
+  const rt = (i) => (Array.isArray(retrig) ? !!retrig[i] : !!retrig);
+  const startsAt = Array.from({ length: cells.length }, () => []);
+  for (let i = 0; i < cells.length; i++) {
+    for (const pitch of cells[i]) {
+      // a run continues (no new trigger) only when the previous step held the
+      // same pitch and neither step is set to retrigger
+      if (!rt(i) && i > 0 && !rt(i - 1) && cells[i - 1].includes(pitch)) continue;
+      let len = 1;
+      if (!rt(i)) while (i + len < cells.length && !rt(i + len) && cells[i + len].includes(pitch)) len++;
+      startsAt[i].push({ pitch, length: len });
+    }
   }
-  return byStart;
+  return startsAt;
 }
 
 export async function playPattern(pattern, bpm, audio, onStep) {
@@ -727,7 +732,7 @@ export async function playPattern(pattern, bpm, audio, onStep) {
   const swingAt = (i) => clamp((stepSwing ? stepSwing[i] : (pattern.swing ?? 0)), 0, 1) * 0.5;
 
   const runsByTrack = {};
-  MELODIC_KEYS.forEach((k) => { runsByTrack[k] = computeRuns(pattern[k] || []); });
+  MELODIC_KEYS.forEach((k) => { runsByTrack[k] = computeRuns(pattern[k] || [], pattern[`${k}Retrig`]); });
   // A sung topline lane, outside the channel roster (rival songs carry one so
   // they play as songs rather than bare beats). Played by the formant voice.
   const vocalRuns = computeRuns(pattern.vocal || []);
@@ -760,19 +765,21 @@ export async function playPattern(pattern, bpm, audio, onStep) {
     });
     MELODIC_KEYS.forEach((k) => {
       const voice = s[k];
-      const run = runsByTrack[k]?.[idx];
-      if (!voice || !run) return;
+      const starts = runsByTrack[k]?.[idx];
+      if (!voice || !starts || !starts.length) return;
       const vel = velAt(pattern[`${k}Velocity`], idx);
-      if (PLUCK_KEYS.has(k)) {
-        voice.triggerAttack(run.pitch, t0, vel);
-      } else if (CHORDAL_SET.has(k)) {
-        voice.triggerAttackRelease(openFifth(run.pitch), runSeconds(idx, run.length), t0, vel);
-      } else {
-        voice.triggerAttackRelease(run.pitch, runSeconds(idx, run.length), t0, vel);
-      }
+      // Keep the single-note "open fifth" thickening on pad/strings, but when a
+      // real chord is placed, play exactly the notes the player chose.
+      const isChord = cellPitches(pattern[k]?.[idx]).length > 1;
+      starts.forEach(({ pitch, length }) => {
+        if (PLUCK_KEYS.has(k)) voice.triggerAttack(pitch, t0, vel);
+        else if (CHORDAL_SET.has(k) && !isChord) voice.triggerAttackRelease(openFifth(pitch), runSeconds(idx, length), t0, vel);
+        else voice.triggerAttackRelease(pitch, runSeconds(idx, length), t0, vel);
+      });
     });
-    const vrun = vocalRuns[idx];
-    if (vrun && s.vocal) s.vocal.triggerAttackRelease(vrun.pitch, runSeconds(idx, vrun.length), t0, 0.85);
+    (vocalRuns[idx] || []).forEach(({ pitch, length }) => {
+      if (s.vocal) s.vocal.triggerAttackRelease(pitch, runSeconds(idx, length), t0, 0.85);
+    });
     Tone.Draw.schedule(() => onStep(idx), time);
   }, Array.from({ length: totalSteps }, (_, i) => i), '16n');
   seq.start(0);

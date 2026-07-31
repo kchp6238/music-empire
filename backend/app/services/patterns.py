@@ -37,17 +37,27 @@ def clamp(v: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, v))
 
 
+def cell_pitches(v) -> list:
+    """A melodic step may hold a chord (list of pitches), a bare pitch string,
+    or be empty — normalise to a list. Mirrors cellPitches() in the frontend."""
+    if isinstance(v, list):
+        return v
+    return [v] if v else []
+
+
 def analyze_combined_pattern(combined: dict) -> dict:
     total_steps = len(combined["bass"])
     drum_count = sum(sum(1 for v in arr if v) for arr in combined["drums"].values())
-    melodic_active = sum(sum(1 for v in combined.get(k, []) if v) for k in MELODIC_KEYS)
+    # A chord counts once toward density (steps with any note), but every
+    # distinct pitch counts toward variety.
+    melodic_active = sum(sum(1 for v in combined.get(k, []) if cell_pitches(v)) for k in MELODIC_KEYS)
     total_active = drum_count + melodic_active
     # Denominator stays at the original 3 melodic lanes (see the JS twin's note):
     # new instruments add credit without inflating capacity, so a classic
     # 3-lane song scores identically and parity with the client holds.
     capacity = max(total_steps * (len(DRUM_KEYS) + 3) * 0.3, 1)
     density = clamp((total_active / capacity) * 100, 0, 100)
-    all_notes = [v for k in MELODIC_KEYS for v in combined.get(k, []) if v]
+    all_notes = [p for k in MELODIC_KEYS for v in combined.get(k, []) for p in cell_pitches(v)]
     unique_notes = len(set(all_notes))
     variety = clamp(unique_notes * 10, 0, 100)
     return {"density": density, "variety": variety, "total_active": total_active, "total_steps": total_steps}

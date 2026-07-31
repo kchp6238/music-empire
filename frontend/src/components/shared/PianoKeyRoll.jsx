@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { auditionNote } from '../../lib/audio/engine';
+import { cellPitches } from '../../lib/patterns';
 
 // Click a cell to toggle a single-step note. Mousedown + vertical drag across
 // rows in the SAME pitch column paints one sustained note (mirrors
@@ -76,19 +77,20 @@ export function PianoKeyRoll({ label, icon, track, pitches, steps, velocities, o
             <div key={stepIdx} style={{ display: 'flex', marginBottom: (stepIdx % 4 === 3) ? 6 : 0 }}>
               {pitches.map((p) => {
                 const painting = drag && drag.pitch === p && stepIdx >= Math.min(drag.start, drag.end) && stepIdx <= Math.max(drag.start, drag.end);
-                const active = steps[stepIdx] === p || painting;
+                const placed = cellPitches(steps[stepIdx]).includes(p);
+                const active = placed || painting;
                 const velocity = velocities?.[stepIdx] ?? 100;
                 return (
                   <div
                     key={p}
                     onMouseDown={(e) => { e.preventDefault(); startPaint(p, stepIdx); }}
                     onMouseEnter={() => { if (drag && drag.pitch === p) setDrag((d) => ({ ...d, end: stepIdx })); }}
-                    onWheel={(e) => { if (steps[stepIdx] === p) { e.preventDefault(); onAdjustVelocity(stepIdx, e.deltaY < 0 ? 8 : -8); } }}
-                    title={steps[stepIdx] === p ? `벨로시티 ${velocity}` : undefined}
+                    onWheel={(e) => { if (placed) { e.preventDefault(); onAdjustVelocity(stepIdx, e.deltaY < 0 ? 8 : -8); } }}
+                    title={placed ? `벨로시티 ${velocity}` : undefined}
                     style={{
                       width: cellW, height: rowH, cursor: 'pointer', boxSizing: 'border-box',
                       background: active ? color : (p.includes('#') ? 'rgba(255,255,255,0.045)' : 'rgba(255,255,255,0.02)'),
-                      opacity: (steps[stepIdx] === p) ? (0.45 + (velocity / 127) * 0.55) : 1,
+                      opacity: placed ? (0.45 + (velocity / 127) * 0.55) : 1,
                       border: currentStep === stepIdx ? '2px solid #EDE9F0' : '1px solid rgba(255,255,255,0.05)',
                     }}
                   />

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { auditionNote } from '../../lib/audio/engine';
+import { cellPitches } from '../../lib/patterns';
 
 // Click a cell to toggle a single-step note (unchanged). Mousedown + drag
 // across cells in the SAME row paints one sustained note spanning the
@@ -45,7 +46,7 @@ export function PianoRoll({ label, icon, track, pitches, steps, onSetNote, onPai
               <div key={p} style={{ display: 'flex' }}>
                 {steps.map((val, colIdx) => {
                   const painting = drag && drag.pitch === p && colIdx >= Math.min(drag.start, drag.end) && colIdx <= Math.max(drag.start, drag.end);
-                  const active = val === p || painting;
+                  const active = cellPitches(val).includes(p) || painting;
                   return (
                     <div
                       key={colIdx}

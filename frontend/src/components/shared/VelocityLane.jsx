@@ -1,3 +1,5 @@
+import { cellPitches } from '../../lib/patterns';
+
 // Horizontal velocity strip beneath a PianoRoll (bass/guitar) — one bar per
 // step, only interactive where that step has a note. Drag a bar vertically
 // to set 1-127. Not used by PianoKeyRoll (transposed layout — see its own
@@ -6,7 +8,7 @@ export function VelocityLane({ steps, velocities, onSetVelocity, cellWidth = 22,
   const height = 36;
 
   function startDrag(idx, e) {
-    if (!steps[idx]) return;
+    if (!cellPitches(steps[idx]).length) return;
     e.preventDefault();
     const track = e.currentTarget.parentElement.getBoundingClientRect();
     function apply(clientY) {
@@ -27,7 +29,7 @@ export function VelocityLane({ steps, velocities, onSetVelocity, cellWidth = 22,
       <div style={{ width: leftOffset - 8, fontSize: 10, color: '#6B6577', flexShrink: 0, textAlign: 'right', paddingTop: 12 }}>벨로시티</div>
       <div style={{ display: 'flex', alignItems: 'flex-end', height, position: 'relative', background: 'rgba(255,255,255,0.02)', borderRadius: 4 }}>
         {steps.map((val, idx) => {
-          const active = Boolean(val);
+          const active = cellPitches(val).length > 0;
           const v = velocities?.[idx] ?? 100;
           const barH = active ? Math.max(3, (v / 127) * height) : 2;
           return (
