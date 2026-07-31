@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Newspaper, CalendarPlus, Trophy } from 'lucide-react';
+import { CalendarPlus, Trophy } from 'lucide-react';
+import { SceneHero } from '../shared/SceneHero';
 import { TopBar } from '../shared/TopBar';
 import { ArtistAvatar } from '../shared/ArtistAvatar';
 import { PageTransition } from '../ui/PageTransition';
@@ -144,10 +145,7 @@ export function NewsScreen() {
       <TopBar character={character} />
       <PageTransition>
         <div className="max-w-[1080px] mx-auto px-4 md:px-6 pt-6 pb-16">
-          <div className="font-display text-2xl font-extrabold mb-1 flex items-center gap-2">
-            <Newspaper size={20} className="text-accent" /> 소식
-          </div>
-          <div className="text-muted text-xs mb-4">하루를 보내면 그날의 소식이 도착해요. 가끔은 당신의 결정이 필요한 일도 생깁니다.</div>
+          <SceneHero scene="newsroom" title="소식" subtitle="하루를 보내면 그날의 소식이 도착해요. 가끔은 당신의 결정이 필요한 일도 생깁니다." />
 
           <div className="grid grid-cols-1 lg:[grid-template-columns:1fr_300px] gap-5 items-start">
             {/* main column */}

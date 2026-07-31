@@ -18,6 +18,7 @@ import { CollabInvitePanel } from './CollabInvitePanel';
 import { CHANNELS } from '../../lib/gameData/constants';
 import { buildCombinedPattern, analyzeCombinedPattern, sectionHasContent, songCombined } from '../../lib/patterns';
 import { useGameStore } from '../../state/useGameStore';
+import { SceneHero } from '../shared/SceneHero';
 
 export function BeatmakerScreen() {
   const navigate = useNavigate();
@@ -115,6 +116,7 @@ export function BeatmakerScreen() {
       <TopBar character={character} />
 
       <div className="max-w-[1400px] w-full mx-auto px-5 pt-5 flex-1">
+        <SceneHero scene="studio" title="비트 작업실" subtitle="채널을 골라 비트를 찍고, 악기와 보컬로 곡을 완성하세요." height={96} />
         <DraftBar />
 
         <div className="grid grid-cols-1 gap-4 items-start md:[grid-template-columns:minmax(210px,240px)_minmax(0,1fr)_minmax(190px,220px)]">

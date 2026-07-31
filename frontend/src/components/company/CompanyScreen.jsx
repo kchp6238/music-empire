@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Building2, Users, Sparkles } from 'lucide-react';
+import { Users, Sparkles } from 'lucide-react';
 import { TopBar } from '../shared/TopBar';
 import * as companyApi from '../../lib/api/company';
 import { useGameStore } from '../../state/useGameStore';
+import { SceneHero } from '../shared/SceneHero';
 import { won } from '../../lib/utils';
 
 const DEBUT_MIN_STAGE = 3;
@@ -65,10 +66,7 @@ export function CompanyScreen() {
     <div>
       <TopBar character={character} />
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px 60px' }}>
-        <div className="me-display" style={{ fontSize: 22, fontWeight: 800, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Building2 size={20} style={{ color: '#E8A33D' }} /> 회사
-        </div>
-        <div style={{ color: '#8B8496', fontSize: 12, marginBottom: 20 }}>연습생을 모집·육성해 그룹으로 데뷔시키세요.</div>
+        <SceneHero scene="office" title="회사" subtitle="연습생을 모집·육성해 그룹으로 데뷔시키세요." />
         {error && <div style={{ color: '#C4576B', fontSize: 12, marginBottom: 14 }}>{error}</div>}
 
         {company === undefined && <div style={{ fontSize: 12, color: '#6B6577' }}>불러오는 중...</div>}

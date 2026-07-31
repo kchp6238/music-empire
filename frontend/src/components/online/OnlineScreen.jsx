@@ -5,6 +5,7 @@ import * as onlineApi from '../../lib/api/online';
 import { won, compactNum } from '../../lib/utils';
 import { TIER_COLOR } from '../../lib/gameData/constants';
 import { useGameStore } from '../../state/useGameStore';
+import { SceneHero } from '../shared/SceneHero';
 
 export function OnlineScreen() {
   const character = useGameStore((s) => s.character);
@@ -15,6 +16,7 @@ export function OnlineScreen() {
     <div>
       <TopBar character={character} />
       <div className="max-w-[900px] mx-auto px-4 md:px-6 pt-7 pb-16">
+        <SceneHero scene="stage" title="무대 · 온라인" subtitle="공연을 열고, 다른 아티스트와 합동 콘서트로 무대에 서요." />
         <div className="flex gap-2 mb-6 flex-wrap">
           <div className={`me-pill ${tab === 'perform' ? 'active' : ''}`} onClick={() => setTab('perform')}>공연 열기</div>
           <div className={`me-pill ${tab === 'concerts' ? 'active' : ''}`} onClick={() => setTab('concerts')}>합동 콘서트</div>
