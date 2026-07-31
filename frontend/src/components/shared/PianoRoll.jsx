@@ -34,7 +34,7 @@ export function PianoRoll({ label, icon, track, pitches, steps, onSetNote, onPai
       <div style={{ width: 84, fontSize: 11, color: '#8B8496', flexShrink: 0, paddingTop: 2 }}>
         {icon && <span style={{ marginRight: 4 }}>{icon}</span>}{label}
       </div>
-      <div className="me-scroll" style={{ overflowX: 'auto' }}>
+      <div className="me-scroll" style={{ overflow: 'auto', maxHeight: 380 }}>
         <div style={{ display: 'flex' }}>
           <div style={{ flexShrink: 0 }}>
             {pitches.map((p) => (

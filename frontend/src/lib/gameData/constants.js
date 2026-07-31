@@ -206,25 +206,28 @@ export function buildPitchRange(startOctave, numOctaves) {
   }
   return notes;
 }
-export const BASS_PITCHES = buildPitchRange(2, 2);
-export const PIANO_PITCHES = buildPitchRange(3, 2);
-export const GUITAR_PITCHES = buildPitchRange(4, 2);
-export const ELEC_GUITAR_PITCHES = buildPitchRange(3, 2);
-export const BRASS_PITCHES = buildPitchRange(3, 2);
-export const SYNTH_LEAD_PITCHES = buildPitchRange(4, 2);
-export const PAD_PITCHES = buildPitchRange(3, 2);
-export const STRINGS_PITCHES = buildPitchRange(3, 2);
-export const EPIANO_PITCHES = buildPitchRange(3, 2);
-export const HARPSICHORD_PITCHES = buildPitchRange(3, 2);
-export const ORGAN_PITCHES = buildPitchRange(3, 2);
-export const VIOLIN_PITCHES = buildPitchRange(4, 2);
-export const CELLO_PITCHES = buildPitchRange(2, 2);
-export const HARP_PITCHES = buildPitchRange(3, 2);
-export const FLUTE_PITCHES = buildPitchRange(4, 2);
-export const CLARINET_PITCHES = buildPitchRange(3, 2);
-// Vocal instrument sits in a comfortable sung range (C3–B4) around the base
-// note the sampler is recorded at, so pitch-shifting stays natural-sounding.
-export const VOCAL_INST_PITCHES = buildPitchRange(3, 2);
+// Wider ranges so there's room to actually write a melody — most instruments
+// span 3 octaves, the keyboard-style piano 4, each starting in that
+// instrument's natural register.
+export const BASS_PITCHES = buildPitchRange(1, 3);        // C1–B3
+export const PIANO_PITCHES = buildPitchRange(2, 4);       // C2–B5
+export const GUITAR_PITCHES = buildPitchRange(2, 4);      // C2–B5
+export const ELEC_GUITAR_PITCHES = buildPitchRange(2, 4); // C2–B5
+export const BRASS_PITCHES = buildPitchRange(2, 3);       // C2–B4
+export const SYNTH_LEAD_PITCHES = buildPitchRange(3, 3);  // C3–B5
+export const PAD_PITCHES = buildPitchRange(2, 3);         // C2–B4
+export const STRINGS_PITCHES = buildPitchRange(2, 3);     // C2–B4
+export const EPIANO_PITCHES = buildPitchRange(2, 4);      // C2–B5
+export const HARPSICHORD_PITCHES = buildPitchRange(2, 4); // C2–B5
+export const ORGAN_PITCHES = buildPitchRange(2, 3);       // C2–B4
+export const VIOLIN_PITCHES = buildPitchRange(3, 3);      // C3–B5
+export const CELLO_PITCHES = buildPitchRange(2, 3);       // C2–B4
+export const HARP_PITCHES = buildPitchRange(2, 4);        // C2–B5
+export const FLUTE_PITCHES = buildPitchRange(3, 3);       // C3–B5
+export const CLARINET_PITCHES = buildPitchRange(2, 3);    // C2–B4
+// Vocal instrument: kept nearer the base note it's recorded at (pitch-shifting
+// too far sounds unnatural), but still a full 3 octaves to sing across.
+export const VOCAL_INST_PITCHES = buildPitchRange(2, 3); // C2–B4
 
 // Every pitched (non-drum) instrument, as one source of truth: the beatmaker
 // editor, the piano-roll config, the pattern helpers (empty/build/analyze) and
