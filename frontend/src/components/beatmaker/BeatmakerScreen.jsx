@@ -16,7 +16,7 @@ import { VoiceToPattern } from './VoiceToPattern';
 import { VoiceInstrument } from './VoiceInstrument';
 import { CollabInvitePanel } from './CollabInvitePanel';
 import { CHANNELS } from '../../lib/gameData/constants';
-import { buildCombinedPattern, analyzeCombinedPattern, sectionHasContent } from '../../lib/patterns';
+import { buildCombinedPattern, analyzeCombinedPattern, sectionHasContent, songCombined } from '../../lib/patterns';
 import { useGameStore } from '../../state/useGameStore';
 
 export function BeatmakerScreen() {
@@ -73,9 +73,12 @@ export function BeatmakerScreen() {
   if (!character) return null;
 
   const editingSec = draft.sections[draft.editingSection];
-  const combinedDraft = buildCombinedPattern(draft.sections, draft.arrangement);
+  // Reflect the real song — the per-instrument 편곡 timeline if the player set
+  // one up, otherwise the clip arrangement.
+  const combinedDraft = songCombined(draft);
   const patternInfo = analyzeCombinedPattern(combinedDraft);
-  const canRelease = draft.title.trim() && draft.genres.length > 0 && draft.moods.length > 0 && draft.arrangement.length > 0 && patternInfo.totalActive >= 6;
+  const hasStructure = draft.arrangement.length > 0 || (draft.timeline && draft.timeline.length > 0);
+  const canRelease = draft.title.trim() && draft.genres.length > 0 && draft.moods.length > 0 && hasStructure && patternInfo.totalActive >= 6;
 
   async function onRelease() {
     if (!canRelease || releasing) return;

@@ -3,7 +3,7 @@ import { X, Copy, Layers } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Pill } from '../ui/Pill';
 import { DRUM_INSTRUMENTS, MELODIC_KEYS } from '../../lib/gameData/constants';
-import { buildCombinedPattern } from '../../lib/patterns';
+import { songCombined } from '../../lib/patterns';
 import { useGameStore } from '../../state/useGameStore';
 
 const PX_PER_STEP = 6;
@@ -142,7 +142,7 @@ export function Timeline() {
         </div>
         <Button
           variant="primary" size="sm" disabled={arrangement.length === 0}
-          onClick={() => playingFull ? stop() : play(buildCombinedPattern(sections, arrangement, draft.bpm), draft.bpm, 'draft-full')}
+          onClick={() => playingFull ? stop() : play(songCombined(draft), draft.bpm, 'draft-full')}
         >
           {playingFull ? '■ 정지' : '▶ 전체 곡 재생'}
         </Button>

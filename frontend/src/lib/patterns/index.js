@@ -98,6 +98,76 @@ export function buildCombinedPattern(sections, arrangement, defaultBpm) {
   return combined;
 }
 
+/* ---- per-instrument timeline (the 편곡 / arrange screen) ------------------
+   A DAW-style arrangement: instead of a flat sequence of whole clips, the song
+   is a list of independent placements, each `{ id, clip, track, start, bars }`
+   — one clip's ONE instrument, dropped at bar `start`, looping to fill `bars`.
+   Every placement moves on its own, so drums can sit under bar 1 while the
+   vocal only enters at bar 8. assembleTimeline flattens them back into the same
+   combined-pattern shape the engine plays and the scorer reads. */
+const SPB = 16; // steps per bar
+
+export function assembleTimeline(sections, timeline) {
+  const totalBars = (timeline || []).reduce((m, p) => Math.max(m, p.start + p.bars), 1);
+  const totalSteps = Math.max(totalBars * SPB, SPB);
+  const combined = { drums: {}, drumVel: {}, drumRatchet: {} };
+  DRUM_INSTRUMENTS.forEach((di) => {
+    combined.drums[di.key] = Array(totalSteps).fill(false);
+    combined.drumVel[di.key] = Array(totalSteps).fill(100);
+    combined.drumRatchet[di.key] = Array(totalSteps).fill(1);
+  });
+  MELODIC_KEYS.forEach((k) => { combined[k] = Array(totalSteps).fill(null); combined[`${k}Velocity`] = Array(totalSteps).fill(100); });
+
+  (timeline || []).forEach((p) => {
+    const sec = sections[p.clip];
+    if (!sec) return;
+    const clipLen = (sec.bass || []).length || sec.length || SPB;
+    const startStep = p.start * SPB;
+    const span = p.bars * SPB;
+    for (let i = 0; i < span; i++) {
+      const dst = startStep + i;
+      if (dst < 0 || dst >= totalSteps) continue;
+      const src = i % clipLen; // loop the clip to fill the placement
+      if (p.track === 'drums') {
+        DRUM_INSTRUMENTS.forEach((di) => {
+          if (sec.drums[di.key]?.[src]) {
+            combined.drums[di.key][dst] = true;
+            combined.drumVel[di.key][dst] = sec.drumVel?.[di.key]?.[src] ?? 100;
+            combined.drumRatchet[di.key][dst] = sec.drumRatchet?.[di.key]?.[src] ?? 1;
+          }
+        });
+      } else {
+        const v = sec[p.track]?.[src];
+        if (v != null) { combined[p.track][dst] = v; combined[`${p.track}Velocity`][dst] = sec[`${p.track}Velocity`]?.[src] ?? 100; }
+      }
+    }
+  });
+  return combined;
+}
+
+/** The full song's combined pattern — from the per-instrument timeline if the
+ *  song uses one, else the classic clip arrangement. One source of truth for
+ *  playback and scoring. */
+export function songCombined(draft) {
+  if (draft.timeline && draft.timeline.length) return assembleTimeline(draft.sections, draft.timeline);
+  return buildCombinedPattern(draft.sections, draft.arrangement, draft.bpm);
+}
+
+/** Bake a timeline into a single synthetic `_song` clip + structure so the
+ *  backend (which speaks sections+structure) scores the exact assembled song
+ *  with no backend change. */
+export function bakeTimeline(sections, timeline) {
+  const song = assembleTimeline(sections, timeline);
+  song.length = song.bass.length;
+  song.lyrics = '';
+  return { sections: { ...sections, _song: song }, structure: ['_song'] };
+}
+
+/** Which instrument lanes a timeline actually uses (for the track list). */
+export function timelineTracks(timeline) {
+  return [...new Set((timeline || []).map((p) => p.track))];
+}
+
 export function analyzeCombinedPattern(combined) {
   const totalSteps = combined.bass.length;
   const drumCount = Object.values(combined.drums).reduce((a, arr) => a + arr.filter(Boolean).length, 0);

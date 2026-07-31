@@ -4,7 +4,7 @@ import {
   DEFAULT_CHANNEL_MIX, DRUM_INSTRUMENTS, PRESET_STEP_LENGTH, CHANNEL_KEYS, MELODIC_KEYS,
   GENRE_PROFILES, CLIP_PALETTE,
 } from '../lib/gameData/constants';
-import { emptySections, emptySection, basicPatternForLength, buildCombinedPattern } from '../lib/patterns';
+import { emptySections, emptySection, basicPatternForLength, buildCombinedPattern, assembleTimeline, songCombined, bakeTimeline } from '../lib/patterns';
 import * as engine from '../lib/audio/engine';
 import { playSuccessChime } from '../lib/audio/uiSounds';
 import * as charactersApi from '../lib/api/characters';
@@ -83,6 +83,7 @@ function mapSong(apiSong) {
 const initialDraft = () => ({
   title: '', genres: [], moods: [], bpm: 100, chordPresetId: 'p1', productionMode: 'beginner', vocalSource: 'self',
   sections: emptySections(), arrangement: [], editingSection: SECTION_TYPES[0],
+  timeline: [], // per-instrument DAW arrangement (편곡 screen); [] = use the clip sequence
 });
 
 const emptyChannelFx = () => Object.fromEntries(CHANNEL_KEYS.map((k) => [k, []]));
@@ -104,6 +105,12 @@ const MIX_KEY = '_mix';
 // Editor draft -> API payload. Single source of truth for the shape, shared by
 // manual save, collab draft-persist, and release.
 function buildDraftPayload(draft, audio) {
+  // A timeline-arranged song bakes into a single synthetic clip so the backend
+  // scores the exact assembled arrangement with no backend change; the raw
+  // timeline rides along under _timeline so it can be re-edited on load.
+  const usesTimeline = draft.timeline && draft.timeline.length > 0;
+  const baked = usesTimeline ? bakeTimeline(draft.sections, draft.timeline) : null;
+  const patternSections = baked ? baked.sections : draft.sections;
   return {
     title: draft.title,
     bpm: draft.bpm,
@@ -112,8 +119,8 @@ function buildDraftPayload(draft, audio) {
     chord_preset_id: draft.chordPresetId,
     production_mode: draft.productionMode,
     vocal_source: draft.vocalSource,
-    structure: draft.arrangement,
-    pattern: { ...draft.sections, [MIX_KEY]: audio },
+    structure: baked ? baked.structure : draft.arrangement,
+    pattern: { ...patternSections, [MIX_KEY]: audio, ...(usesTimeline ? { _timeline: draft.timeline } : {}) },
     lyrics: Object.fromEntries(Object.keys(draft.sections).map((k) => [k, draft.sections[k].lyrics])),
   };
 }
@@ -139,8 +146,10 @@ function mapApiSongToDraft(apiSong) {
   // Custom clips: keep every clip in the saved pattern, not just the default
   // five — a clip named "벌스 B" must survive a reload. Skip the reserved _mix
   // blob, which rides in the same object but isn't a clip.
+  const timeline = apiSong.pattern?._timeline || [];
   Object.entries(apiSong.pattern || {}).forEach(([key, sec]) => {
-    if (key === MIX_KEY) return;
+    // reserved keys: mix blob, baked song clip, raw timeline — never clips
+    if (key === MIX_KEY || key === '_song' || key === '_timeline') return;
     const base = sections[key] || emptySection((sec.bass || []).length || 16);
     sections[key] = { ...base, ...sec };
   });
@@ -149,7 +158,9 @@ function mapApiSongToDraft(apiSong) {
   });
   // Backfill a color for any clip that predates per-clip colors.
   Object.keys(sections).forEach((k, i) => { if (!sections[k].color) sections[k].color = CLIP_PALETTE[i % CLIP_PALETTE.length]; });
-  const arrangement = apiSong.structure || [];
+  // A timeline song stores its real order in _timeline; the baked '_song' key is
+  // scoring-only, so it never appears as a clip in the arrangement.
+  const arrangement = (apiSong.structure || []).filter((k) => k !== '_song');
   return {
     title: apiSong.title || '',
     genres: apiSong.genre_tags || [],
@@ -160,9 +171,24 @@ function mapApiSongToDraft(apiSong) {
     vocalSource: apiSong.vocal_source || 'self',
     sections,
     arrangement,
+    timeline,
     editingSection: arrangement[0] || SECTION_TYPES[0],
   };
 }
+
+// A short unique id for a timeline placement — stable across moves/resizes.
+let _pidSeq = 0;
+const pid = () => `p${Date.now().toString(36)}${(_pidSeq++).toString(36)}`;
+
+// Which instrument lanes a clip actually plays — one placement per lane, so
+// each instrument can then be moved independently on the timeline.
+function clipTracks(sec) {
+  const tracks = [];
+  if (DRUM_INSTRUMENTS.some((di) => sec.drums[di.key].some(Boolean))) tracks.push('drums');
+  MELODIC_KEYS.forEach((k) => { if ((sec[k] || []).some(Boolean)) tracks.push(k); });
+  return tracks;
+}
+const clipBars = (sec) => Math.max(1, Math.ceil(((sec.bass || []).length || 16) / 16));
 
 export const useGameStore = create((set, get) => ({
   artistNameInput: '',
@@ -466,6 +492,37 @@ export const useGameStore = create((set, get) => ({
   // Replace the whole arrangement at once — the DAW timeline computes repeats,
   // duplicates and group moves as a new flat list and commits it here.
   setArrangement: (list) => set((s) => ({ draft: { ...s.draft, arrangement: list } })),
+
+  // ---- per-instrument timeline (편곡 screen): independent placements ----
+  // Build the timeline once from the current clip sequence so opening 편곡 shows
+  // the song laid out per instrument, ready to move each block independently.
+  seedTimelineFromArrangement: () => set((s) => {
+    if (s.draft.timeline.length) return {};
+    const { arrangement, sections } = s.draft;
+    const placements = [];
+    let bar = 0;
+    arrangement.forEach((key) => {
+      const sec = sections[key];
+      if (!sec) return;
+      const bars = clipBars(sec);
+      clipTracks(sec).forEach((track) => placements.push({ id: pid(), clip: key, track, start: bar, bars }));
+      bar += bars;
+    });
+    return { draft: { ...s.draft, timeline: placements } };
+  }),
+  // Drop a clip: one independent placement per instrument it uses.
+  addTimelineClip: (clip, startBar = 0) => set((s) => {
+    const sec = s.draft.sections[clip];
+    if (!sec) return {};
+    const bars = clipBars(sec);
+    const at = Math.max(0, Math.round(startBar));
+    const added = clipTracks(sec).map((track) => ({ id: pid(), clip, track, start: at, bars }));
+    return { draft: { ...s.draft, timeline: [...s.draft.timeline, ...added] } };
+  }),
+  moveTimelinePlacement: (id, start) => set((s) => ({ draft: { ...s.draft, timeline: s.draft.timeline.map((p) => (p.id === id ? { ...p, start: Math.max(0, Math.round(start)) } : p)) } })),
+  resizeTimelinePlacement: (id, bars) => set((s) => ({ draft: { ...s.draft, timeline: s.draft.timeline.map((p) => (p.id === id ? { ...p, bars: Math.max(1, Math.round(bars)) } : p)) } })),
+  deleteTimelinePlacement: (id) => set((s) => ({ draft: { ...s.draft, timeline: s.draft.timeline.filter((p) => p.id !== id) } })),
+  clearTimeline: () => set((s) => ({ draft: { ...s.draft, timeline: [] } })),
 
   // ---- custom clips: create / duplicate / rename / delete ----
   // Clips are the reusable building blocks a song is arranged from. They live
