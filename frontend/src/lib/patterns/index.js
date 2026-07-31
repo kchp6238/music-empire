@@ -96,7 +96,7 @@ export function buildCombinedPattern(sections, arrangement, defaultBpm) {
       // missing lane as all-rests of the section's length so lanes stay aligned.
       combined[k] = combined[k].concat(sec[k] || Array(len).fill(null));
       combined[`${k}Velocity`] = combined[`${k}Velocity`].concat(sec[k] ? velocityFallback(sec, k) : Array(len).fill(100));
-      combined[`${k}Retrig`] = combined[`${k}Retrig`].concat(Array(len).fill(!!sec[`${k}Retrig`]));
+      combined[`${k}Retrig`] = combined[`${k}Retrig`].concat(normLane(sec[`${k}Retrig`], len, false));
     });
   });
   if (combined.bass.length === 0) {
@@ -148,7 +148,7 @@ export function assembleTimeline(sections, timeline) {
         });
       } else {
         const v = sec[p.track]?.[src];
-        if (cellPitches(v).length) { combined[p.track][dst] = v; combined[`${p.track}Velocity`][dst] = sec[`${p.track}Velocity`]?.[src] ?? 100; combined[`${p.track}Retrig`][dst] = !!sec[`${p.track}Retrig`]; }
+        if (cellPitches(v).length) { combined[p.track][dst] = v; combined[`${p.track}Velocity`][dst] = sec[`${p.track}Velocity`]?.[src] ?? 100; combined[`${p.track}Retrig`][dst] = !!sec[`${p.track}Retrig`]?.[src]; }
       }
     }
   });

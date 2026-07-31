@@ -705,7 +705,7 @@ function computeRuns(arr, retrig) {
   return startsAt;
 }
 
-export async function playPattern(pattern, bpm, audio, onStep) {
+export async function playPattern(pattern, bpm, audio, onStep, startStep = 0) {
   await Tone.start();
   stopPattern();
   const { mixer, fx, channelMix, channelFx, drumParams } = audio;
@@ -716,6 +716,7 @@ export async function playPattern(pattern, bpm, audio, onStep) {
   syncAudioState({ mixer, channelMix, channelFx, drumParams });
 
   const totalSteps = pattern.bass.length;
+  const from = Math.max(0, Math.min(totalSteps - 1, Math.round(startStep) || 0));
   // Per-step BPM: pattern.stepBpms[i] overrides the song default for step i.
   // A Tone.Sequence subdivides in Transport ticks, so changing Transport.bpm at
   // a section boundary re-tempos every step after it — that's how per-section
@@ -723,7 +724,7 @@ export async function playPattern(pattern, bpm, audio, onStep) {
   const stepBpms = pattern.stepBpms && pattern.stepBpms.length === totalSteps ? pattern.stepBpms : null;
   const bpmAt = (i) => (stepBpms ? stepBpms[i] : bpm) || bpm || 100;
   const stepDur = (i) => 60 / bpmAt(i) / 4;
-  Tone.Transport.bpm.value = bpmAt(0);
+  Tone.Transport.bpm.value = bpmAt(from);
 
   // Swing delays the off-beat 16ths by up to half a step. Per-section swing
   // rides in stepSwing[] (like stepBpms); a scalar pattern.swing is the
@@ -783,7 +784,11 @@ export async function playPattern(pattern, bpm, audio, onStep) {
     Tone.Draw.schedule(() => onStep(idx), time);
   }, Array.from({ length: totalSteps }, (_, i) => i), '16n');
   seq.start(0);
-  Tone.Transport.start();
+  // Seek: begin the transport partway in so playback starts at `from` (click a
+  // progress bar / timeline to jump there), instead of always from the top.
+  let offset = 0;
+  for (let j = 0; j < from; j++) offset += stepDur(j);
+  Tone.Transport.start(undefined, offset);
   sequence = seq;
 }
 

@@ -50,6 +50,7 @@ export function Timeline() {
   const addClip = useGameStore((s) => s.addClip);
   const play = useGameStore((s) => s.play);
   const stop = useGameStore((s) => s.stop);
+  const seek = useGameStore((s) => s.seek);
 
   const [dragGroup, setDragGroup] = useState(null);
   const [resizing, setResizing] = useState(null); // { gi, key, previewCount }
@@ -162,8 +163,17 @@ export function Timeline() {
       ) : (
         <div className="me-scroll" style={{ overflowX: 'auto', marginBottom: 14 }} ref={containerRef}>
           <div style={{ width: totalWidth, minWidth: '100%', position: 'relative' }}>
-            {/* bar ruler */}
-            <div style={{ position: 'relative', height: 16, marginBottom: 4 }}>
+            {/* bar ruler — click to jump/play from that point */}
+            <div
+              style={{ position: 'relative', height: 16, marginBottom: 4, cursor: 'pointer' }}
+              title="클릭해서 그 위치부터 재생"
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const step = Math.max(0, Math.min(totalSteps - 1, Math.floor((e.clientX - rect.left) / PX_PER_STEP)));
+                if (playingFull) seek(step);
+                else play(songCombined(draft), draft.bpm, 'draft-full', null, '', step);
+              }}
+            >
               {Array.from({ length: bars }, (_, b) => (
                 <div key={b} style={{ position: 'absolute', left: b * STEPS_PER_BAR * PX_PER_STEP, top: 0, bottom: 0 }}>
                   <div style={{ width: 1, height: 6, background: 'rgba(255,255,255,0.18)' }} />

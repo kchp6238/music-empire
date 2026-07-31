@@ -24,6 +24,8 @@ const FAN_PERSONAS_BY_ID = Object.fromEntries(FAN_PERSONAS.map((p) => [p.id, p])
 let vocalAudios = [];
 let vocalTimers = [];
 const vocalUrlCache = new Map();
+// The last thing sent to play(), so seek() can restart it from a new step.
+let lastPlay = null;
 
 // Normalize a vocals list (API snake_case or local camelCase) to {recordingId,
 // offsetSec}; also accepts a bare recording-id string for the old single-take
@@ -352,49 +354,46 @@ export const useGameStore = create((set, get) => ({
   // Single-cell click: toggle. Used by PianoRoll/PianoKeyRoll's plain click
   // (no drag) — see paintNoteRange for the multi-step drag gesture.
   // Single click toggles ONE pitch in the step's chord — so clicking several
-  // rows in the same column stacks them into a chord (두 음 동시에).
+  // rows in the same column stacks them into a chord (두 음 동시에). A click is
+  // a DISCRETE hit: retrig[idx]=true keeps it from merging into a neighbour, so
+  // clicking three cells one-by-one plays 띵띵띵, not one long 띵~~~.
   setNoteStep: (track, idx, pitch) => {
     set((s) => {
       const sec = s.draft.sections[s.draft.editingSection];
       const arr = [...sec[track]];
       const velArr = [...sec[`${track}Velocity`]];
+      const retArr = [...(sec[`${track}Retrig`] || Array(arr.length).fill(false))];
       const cur = cellPitches(arr[idx]);
       const has = cur.includes(pitch);
       const next = has ? cur.filter((p) => p !== pitch) : [...cur, pitch];
       arr[idx] = next.length ? next : null;
-      if (!has && cur.length === 0) velArr[idx] = 100; // first note in an empty cell
-      return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [track]: arr, [`${track}Velocity`]: velArr } } } };
+      if (!has) { retArr[idx] = true; if (cur.length === 0) velArr[idx] = 100; }
+      else if (!next.length) retArr[idx] = false;
+      return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [track]: arr, [`${track}Velocity`]: velArr, [`${track}Retrig`]: retArr } } } };
     });
   },
 
-  // Drag-paint (PianoRoll/PianoKeyRoll): lays one pitch across a run of steps —
-  // a single held note. It ADDS the pitch (keeping any others in the cell), so
-  // a held line can sit inside a chord; engine.js merges the run into one
-  // sustained trigger instead of retriggering every step.
+  // Drag-paint (PianoRoll/PianoKeyRoll): lays one pitch across a run of steps as
+  // ONE held note (띵~~~) — retrig=false across the range so engine.js merges it
+  // into a single sustained trigger. Adds the pitch (keeping others in the
+  // cell), so a held line can sit inside a chord.
   paintNoteRange: (track, fromIdx, toIdx, pitch) => {
     set((s) => {
       const sec = s.draft.sections[s.draft.editingSection];
       const arr = [...sec[track]];
       const velArr = [...sec[`${track}Velocity`]];
+      const retArr = [...(sec[`${track}Retrig`] || Array(arr.length).fill(false))];
       const lo = Math.min(fromIdx, toIdx);
       const hi = Math.max(fromIdx, toIdx);
       for (let i = lo; i <= hi; i++) {
         const cur = cellPitches(arr[i]);
         if (!cur.includes(pitch)) arr[i] = [...cur, pitch];
         if (cur.length === 0) velArr[i] = 100;
+        retArr[i] = false; // held note, no retrigger
       }
-      return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [track]: arr, [`${track}Velocity`]: velArr } } } };
+      return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [track]: arr, [`${track}Velocity`]: velArr, [`${track}Retrig`]: retArr } } } };
     });
   },
-
-  // 또박또박(retrigger) vs 이어서(sustain) for a track in the current clip:
-  // when on, consecutive same-pitch cells fire separately (띵띵띵) instead of
-  // sustaining into one note (띵~~~).
-  toggleRetrig: (track) => set((s) => {
-    const sec = s.draft.sections[s.draft.editingSection];
-    const key = `${track}Retrig`;
-    return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [key]: !sec[key] } } } };
-  }),
 
   setVelocity: (track, idx, velocity) => set((s) => {
     const sec = s.draft.sections[s.draft.editingSection];
@@ -783,10 +782,20 @@ export const useGameStore = create((set, get) => ({
   // each voice is layered over the Tone.js beat. A take with offset 0 starts
   // with the beat; a section take is delayed to its section's start; multiple
   // takes sharing an offset stack as harmony.
-  play: async (pattern, bpm, id, vocals = null, label = '') => {
+  play: async (pattern, bpm, id, vocals = null, label = '', startStep = 0) => {
     const audio = get().audioState();
-    set({ isPlaying: true, playingId: id, currentStep: -1, playingTotal: pattern?.bass?.length || 0, playingLabel: label });
+    const total = pattern?.bass?.length || 0;
+    const from = Math.max(0, Math.min(total - 1, Math.round(startStep) || 0));
+    lastPlay = { pattern, bpm, id, vocals, label };
+    set({ isPlaying: true, playingId: id, currentStep: from, playingTotal: total, playingLabel: label });
     stopVocals();
+
+    // Seconds from the top to `from`, honouring per-section tempo — used to line
+    // vocal takes up when seeking into the middle of a song.
+    const stepBpms = pattern.stepBpms && pattern.stepBpms.length === total ? pattern.stepBpms : null;
+    const stepDur = (i) => 60 / ((stepBpms ? stepBpms[i] : bpm) || bpm || 100) / 4;
+    let seekSec = 0;
+    for (let j = 0; j < from; j++) seekSec += stepDur(j);
 
     const list = normalizeVocals(vocals);
     if (list.length) {
@@ -800,10 +809,10 @@ export const useGameStore = create((set, get) => ({
       list.forEach((v) => {
         const url = vocalUrlCache.get(v.recordingId);
         if (!url) return;
-        const startTake = () => { const el = new Audio(url); vocalAudios.push(el); el.play().catch(() => {}); };
-        const offsetMs = Math.max(0, (v.offsetSec || 0) * 1000);
-        if (offsetMs < 20) startTake();
-        else vocalTimers.push(setTimeout(startTake, offsetMs));
+        const startTake = (into = 0) => { const el = new Audio(url); if (into > 0) el.addEventListener('loadedmetadata', () => { try { el.currentTime = into; } catch { /* ignore */ } }, { once: true }); vocalAudios.push(el); el.play().catch(() => {}); };
+        const rel = (v.offsetSec || 0) - seekSec; // seconds from now until this take enters
+        if (rel >= 0) { if (rel * 1000 < 20) startTake(); else vocalTimers.push(setTimeout(() => startTake(), rel * 1000)); }
+        else startTake(-rel); // seek point is inside this take — start it partway in
       });
     }
 
@@ -813,11 +822,18 @@ export const useGameStore = create((set, get) => ({
     // now subscribed to currentStep (Timeline's playhead) — "Cannot update a
     // component while rendering a different component". Deferring the store
     // update by one microtask guarantees it lands after the current render.
-    await engine.playPattern(pattern, bpm, audio, (idx) => queueMicrotask(() => set({ currentStep: idx })));
+    await engine.playPattern(pattern, bpm, audio, (idx) => queueMicrotask(() => set({ currentStep: idx })), from);
+  },
+  // Jump playback to a step (click a progress bar / timeline, YouTube-style).
+  seek: (step) => {
+    if (!get().isPlaying || !lastPlay) return;
+    const { pattern, bpm, id, vocals, label } = lastPlay;
+    get().play(pattern, bpm, id, vocals, label, step);
   },
   stop: () => {
     engine.stopPattern();
     stopVocals();
+    lastPlay = null;
     set({ isPlaying: false, currentStep: -1, playingId: null, playingTotal: 0, playingLabel: '' });
   },
 

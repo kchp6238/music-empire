@@ -43,6 +43,7 @@ export function ArrangeScreen() {
   const currentStep = useGameStore((s) => s.currentStep);
   const play = useGameStore((s) => s.play);
   const stop = useGameStore((s) => s.stop);
+  const seek = useGameStore((s) => s.seek);
   const seedTimeline = useGameStore((s) => s.seedTimelineFromArrangement);
   const addTimelineClip = useGameStore((s) => s.addTimelineClip);
   const moveTimelinePlacement = useGameStore((s) => s.moveTimelinePlacement);
@@ -170,7 +171,16 @@ export function ArrangeScreen() {
               {/* scrolling timeline */}
               <div className="me-scroll" style={{ overflowX: 'auto', flex: 1 }}>
                 <div style={{ width: totalWidth, minWidth: '100%', position: 'relative' }}>
-                  <div style={{ position: 'relative', height: RULER_H, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div
+                    style={{ position: 'relative', height: RULER_H, borderBottom: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}
+                    title="클릭해서 그 위치부터 재생"
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const step = Math.max(0, Math.min(totalBars * STEPS_PER_BAR - 1, Math.floor((e.clientX - rect.left) / PX_PER_STEP)));
+                      if (playingFull) seek(step);
+                      else play(songCombined(draft), draft.bpm, 'arrange-full', null, '', step);
+                    }}
+                  >
                     {Array.from({ length: totalBars }, (_, b) => (
                       <div key={b} style={{ position: 'absolute', left: b * BAR_PX, top: 4 }}>
                         <div style={{ width: 1, height: 5, background: 'rgba(255,255,255,0.18)' }} />
