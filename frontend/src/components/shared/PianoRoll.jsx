@@ -9,7 +9,7 @@ import { cellPitches } from '../../lib/patterns';
 //
 // Every cell press also auditions the real instrument at that pitch, so you
 // can hear what you're placing instead of guessing from the grid.
-export function PianoRoll({ label, icon, track, pitches, steps, onSetNote, onPaintRange, currentStep, color }) {
+export function PianoRoll({ label, icon, track, pitches, steps, retrig, onSetNote, onPaintRange, onToggleRetrig, currentStep, color }) {
   const [drag, setDrag] = useState(null); // { pitch, start, end }
 
   function startPaint(pitch, col) {
@@ -46,16 +46,24 @@ export function PianoRoll({ label, icon, track, pitches, steps, onSetNote, onPai
               <div key={p} style={{ display: 'flex' }}>
                 {steps.map((val, colIdx) => {
                   const painting = drag && drag.pitch === p && colIdx >= Math.min(drag.start, drag.end) && colIdx <= Math.max(drag.start, drag.end);
-                  const active = cellPitches(val).includes(p) || painting;
+                  const placed = cellPitches(val).includes(p);
+                  const active = placed || painting;
+                  // A note's "attack" — a fresh hit (또박또박) or the start of a held
+                  // run — gets a bright left edge, so a long note reads as one bar
+                  // and repeated hits read as separate blocks.
+                  const isAttack = placed && (retrig?.[colIdx] || colIdx === 0 || !cellPitches(steps[colIdx - 1]).includes(p));
                   return (
                     <div
                       key={colIdx}
                       onMouseDown={(e) => { e.preventDefault(); startPaint(p, colIdx); }}
                       onMouseEnter={() => { if (drag && drag.pitch === p) setDrag((d) => ({ ...d, end: colIdx })); }}
+                      onContextMenu={(e) => { if (placed && onToggleRetrig) { e.preventDefault(); onToggleRetrig(colIdx); } }}
+                      title={placed ? '우클릭: 또박또박 ↔ 길게' : undefined}
                       style={{
                         width: 22, height: 18, cursor: 'pointer', boxSizing: 'border-box',
                         background: active ? color : (rowIdx % 12 === 11 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.025)'),
                         border: currentStep === colIdx ? '2px solid #EDE9F0' : '1px solid rgba(255,255,255,0.06)',
+                        borderLeft: isAttack ? '3px solid rgba(255,255,255,0.9)' : (currentStep === colIdx ? '2px solid #EDE9F0' : '1px solid rgba(255,255,255,0.06)'),
                         marginRight: (colIdx % 4 === 3) ? 8 : 0,
                       }}
                     />

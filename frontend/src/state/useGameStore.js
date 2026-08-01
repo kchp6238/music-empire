@@ -395,6 +395,17 @@ export const useGameStore = create((set, get) => ({
     });
   },
 
+  // Flip a single note between 또박또박(separate hit) and 길게(merge with its
+  // neighbour) — right-clicking a note calls this, so both can be mixed freely
+  // in one part and any note changed after the fact.
+  toggleCellRetrig: (track, idx) => set((s) => {
+    const sec = s.draft.sections[s.draft.editingSection];
+    const len = (sec[track] || []).length;
+    const retArr = [...(sec[`${track}Retrig`] || Array(len).fill(false))];
+    retArr[idx] = !retArr[idx];
+    return { draft: { ...s.draft, sections: { ...s.draft.sections, [s.draft.editingSection]: { ...sec, [`${track}Retrig`]: retArr } } } };
+  }),
+
   setVelocity: (track, idx, velocity) => set((s) => {
     const sec = s.draft.sections[s.draft.editingSection];
     const velArr = [...sec[`${track}Velocity`]];

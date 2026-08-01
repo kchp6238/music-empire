@@ -9,7 +9,7 @@ import { cellPitches } from '../../lib/patterns';
 //
 // The drawn keyboard along the top is playable: pressing a key auditions that
 // pitch without writing anything, so you can hunt for a note first.
-export function PianoKeyRoll({ label, icon, track, pitches, steps, velocities, onSetNote, onPaintRange, onAdjustVelocity, currentStep, color }) {
+export function PianoKeyRoll({ label, icon, track, pitches, steps, velocities, retrig, onSetNote, onPaintRange, onAdjustVelocity, onToggleRetrig, currentStep, color }) {
   const cellW = 22;
   const rowH = 18;
   const whiteKeyH = 46;
@@ -80,18 +80,23 @@ export function PianoKeyRoll({ label, icon, track, pitches, steps, velocities, o
                 const placed = cellPitches(steps[stepIdx]).includes(p);
                 const active = placed || painting;
                 const velocity = velocities?.[stepIdx] ?? 100;
+                // A fresh attack (또박또박, or the start of a held run) gets a bright
+                // top edge, since time runs downward here.
+                const isAttack = placed && (retrig?.[stepIdx] || stepIdx === 0 || !cellPitches(steps[stepIdx - 1]).includes(p));
                 return (
                   <div
                     key={p}
                     onMouseDown={(e) => { e.preventDefault(); startPaint(p, stepIdx); }}
                     onMouseEnter={() => { if (drag && drag.pitch === p) setDrag((d) => ({ ...d, end: stepIdx })); }}
                     onWheel={(e) => { if (placed) { e.preventDefault(); onAdjustVelocity(stepIdx, e.deltaY < 0 ? 8 : -8); } }}
-                    title={placed ? `벨로시티 ${velocity}` : undefined}
+                    onContextMenu={(e) => { if (placed && onToggleRetrig) { e.preventDefault(); onToggleRetrig(stepIdx); } }}
+                    title={placed ? `벨로시티 ${velocity} · 우클릭: 또박또박 ↔ 길게` : undefined}
                     style={{
                       width: cellW, height: rowH, cursor: 'pointer', boxSizing: 'border-box',
                       background: active ? color : (p.includes('#') ? 'rgba(255,255,255,0.045)' : 'rgba(255,255,255,0.02)'),
                       opacity: placed ? (0.45 + (velocity / 127) * 0.55) : 1,
                       border: currentStep === stepIdx ? '2px solid #EDE9F0' : '1px solid rgba(255,255,255,0.05)',
+                      borderTop: isAttack ? '3px solid rgba(255,255,255,0.9)' : (currentStep === stepIdx ? '2px solid #EDE9F0' : '1px solid rgba(255,255,255,0.05)'),
                     }}
                   />
                 );
