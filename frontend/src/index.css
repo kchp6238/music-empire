@@ -42,6 +42,17 @@
 body { margin: 0; }
 #root { min-height: 100svh; }
 
+/* App-like feel when installed (or in any browser): no rubber-band overscroll,
+   no grey tap flash, no accidental double-tap zoom. Inputs/textareas keep normal
+   text selection; only the chrome opts out. */
+html { -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+body { overscroll-behavior: none; touch-action: manipulation; }
+button, .me-pill, .me-card, nav { -webkit-user-select: none; user-select: none; }
+input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
+/* Keep the sticky top bar clear of the notch / status bar in standalone mode. */
+.me-topbar { padding-top: max(12px, env(safe-area-inset-top)); }
+@media (max-width: 767px) { .me-topbar { padding-top: max(10px, env(safe-area-inset-top)); } }
+
 /* focus-visible ring, applied globally so every real <button>/<input> gets
    consistent keyboard-focus feedback without repeating it per component */
 :focus-visible { outline: 2px solid var(--color-accent2); outline-offset: 2px; border-radius: 4px; }
