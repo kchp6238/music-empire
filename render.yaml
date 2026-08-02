@@ -1,0 +1,30 @@
+# Render blueprint — free backend host for Music Empire (replaces Railway when
+# its trial ends). The database is a separate FREE Neon Postgres; set its
+# connection string as DATABASE_URL in the Render dashboard.
+#
+# Deploy: render.com → New → Blueprint → pick this repo. Then fill the three
+# `sync: false` vars (they're marked manual so secrets never live in git).
+# See docs/deployment.md for the full step-by-step.
+services:
+  - type: web
+    name: music-empire-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.12.6"
+      - key: JWT_SECRET
+        generateValue: true       # Render generates a strong random secret
+      - key: DATABASE_URL
+        sync: false               # ← paste your Neon DIRECT connection string
+      - key: INVITE_CODES
+        sync: false               # ← e.g. music-empire-2026
+      - key: CORS_ORIGINS
+        sync: false               # ← your Vercel URL, e.g. https://music-empire.vercel.app

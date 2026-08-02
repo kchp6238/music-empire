@@ -8,6 +8,55 @@
 
 ---
 
+## ⭐ Railway 무료 트라이얼 종료 → Render + Neon로 무료 이전 (~2026-08-06 전)
+
+> Railway 무료 크레딧이 곧 끝납니다. **카드 등록 없이 계속 무료**로 돌릴 조합:
+>
+> **프론트: Vercel (그대로)** · **백엔드: Render 무료** · **DB: Neon 무료 Postgres**
+>
+> 코드는 이미 어떤 Postgres와도 호환됩니다(`DATABASE_URL` + `db/session.py`의 URL 정규화). **백엔드 코드 수정은 없습니다.** 저장소 루트의 `render.yaml`이 Render 배포를 자동 구성합니다.
+
+**트레이드오프**: Render 무료 웹서비스는 15분간 요청이 없으면 잠들고, 그다음 첫 요청 때 ~30초 깨어납니다(그 요청만 느림). DB(Neon)는 안 사라집니다. 항상 켜둬야 하면 Railway Hobby($5/월)가 대안.
+
+### A. Neon Postgres 만들기 (무료, 카드 X)
+
+1. [neon.tech](https://neon.tech) 가입 → **Create project** (리전은 아무거나, 서울이면 좋음)
+2. 대시보드에서 **Connection string** 복사. 두 종류가 보이면 **`-pooler`가 없는 "직접(Direct)" 문자열**을 쓰세요.
+   > 이유: 이 앱은 psycopg 3를 쓰는데, Neon의 pooler(pgBouncer)는 prepared statement와 충돌할 수 있습니다. 소규모라 직접 연결로 충분합니다.
+   > 형태: `postgresql://user:pass@ep-xxxx.ap-southeast-1.aws.neon.tech/neondb?sslmode=require`
+   > `sslmode=require`는 그대로 두세요 — 코드가 이 뒤를 보존해서 psycopg에 전달합니다.
+
+### B. 백엔드 배포 (Render, 무료, 카드 X)
+
+1. [render.com](https://render.com) 가입 → **New +** → **Blueprint** → 이 GitHub 저장소 선택
+   > 루트의 `render.yaml`을 읽어 서비스를 자동 구성합니다. (Blueprint가 안 보이면 **New + → Web Service**로 만들고 Root Directory `backend`, Start Command는 `render.yaml`의 `startCommand`를 복붙.)
+2. 배포 전 환경변수 3개를 채우라고 물어봅니다(`sync: false`로 표시된 것):
+
+   | 변수 | 값 |
+   |---|---|
+   | `DATABASE_URL` | A에서 복사한 Neon **직접** 연결 문자열 |
+   | `INVITE_CODES` | 정한 초대 코드 (예: `music-empire-2026`) |
+   | `CORS_ORIGINS` | 기존 Vercel 주소 (예: `https://music-empire.vercel.app`) |
+
+   > `JWT_SECRET`은 Render가 자동 생성(`generateValue`), `ENVIRONMENT=production`도 자동 설정됩니다.
+3. **Apply / Deploy** → 첫 배포 로그에서 `alembic upgrade head`가 성공하는지 확인.
+4. Render가 준 주소(`https://music-empire-backend.onrender.com`) → `/health` 열어 `{"status":"ok"}` 확인. (잠들어 있으면 첫 로딩 ~30초)
+
+### C. 프론트를 새 백엔드로 연결
+
+1. [vercel.com](https://vercel.com) → 프로젝트 → **Settings → Environment Variables**
+2. `VITE_API_URL`을 **B의 Render 주소**로 변경 (끝에 `/` 없이) → **Redeploy**.
+
+이게 끝입니다. Railway 프로젝트는 이제 지워도 됩니다.
+
+> **기존 데이터(계정·곡)는 새 DB로 자동 이전되지 않습니다.** 새로 시작하면 시드(NPC·월드)는 자동 생성되고 플레이어만 다시 가입하면 됩니다. 기존 데이터를 꼭 옮기려면 Railway Postgres에서 `pg_dump` → Neon으로 `psql` 복원(원하면 명령을 만들어 드릴게요).
+
+---
+
+## (기존) Railway로 배포하는 경우
+
+아래는 Railway를 계속 쓸 때의 원래 절차입니다. 위 무료 이전을 택했다면 건너뛰세요.
+
 ## 0. 사전 준비
 
 1. **GitHub에 코드 올리기** — Vercel/Railway 둘 다 GitHub 저장소에서 배포합니다.
@@ -101,6 +150,9 @@ CORS_ORIGINS=https://xxx.vercel.app
 |---|---|
 | 화면은 뜨는데 로그인·저장이 다 실패 | `CORS_ORIGINS`에 Vercel 주소가 정확히(https 포함, 끝 슬래시 없이) 들어갔는지 |
 | 새로고침하면 404 | `frontend/vercel.json`이 저장소에 있는지 (SPA 라우팅 처리) |
-| 백엔드가 안 뜸 | Railway 로그에서 `JWT_SECRET is still the sample value` → 시크릿 미설정 |
+| 백엔드가 안 뜸 | 로그에서 `JWT_SECRET is still the sample value` → 시크릿 미설정 (Render는 `generateValue`라 보통 자동) |
 | 가입이 안 됨 | 초대 코드 오타, 또는 비밀번호 8자 미만 |
-| DB 연결 실패 | `DATABASE_URL`이 `${{Postgres.DATABASE_URL}}`로 연결됐는지 |
+| DB 연결 실패 (Railway) | `DATABASE_URL`이 `${{Postgres.DATABASE_URL}}`로 연결됐는지 |
+| 첫 요청이 30초쯤 걸림 (Render) | 정상 — 무료 웹서비스가 잠들었다 깨는 중. 이후 요청은 빠름 |
+| `prepared statement ... already exists` (Neon) | pooler 문자열을 썼을 때. `-pooler` 없는 **직접** 연결 문자열로 교체 |
+| Render 배포는 됐는데 로그인 실패 | `CORS_ORIGINS`에 Vercel 주소, `VITE_API_URL`에 Render 주소가 서로 맞게 들어갔는지 |

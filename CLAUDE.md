@@ -25,4 +25,4 @@ cd backend && python -m venv .venv && .venv/Scripts/activate && pip install -r r
 - 파일은 단일 책임, 가급적 짧게. 오디오는 Tone.js 사용.
 
 ## Notes
-- Railway 무료 트라이얼 종료 예정(~2026-08-06). 배포 관련 작업 시 `docs/deployment.md` 확인.
+- Railway 무료 트라이얼 종료 예정(~2026-08-06). 무료 유지 경로는 **Render(백엔드) + Neon(Postgres)** — 루트 `render.yaml` 블루프린트 + `docs/deployment.md` 상단 이전 가이드 참고. 코드는 host-agnostic(`DATABASE_URL` + `db/session.py` 정규화), 백엔드 수정 불필요.
