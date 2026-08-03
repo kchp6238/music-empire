@@ -182,6 +182,22 @@ input[type=range].me-slider::-webkit-slider-thumb{ -webkit-appearance:none; widt
 .me-stage-dust{ animation:me-dust-rise linear infinite; }
 @keyframes me-dust-rise{ 0%{ transform:translateY(20px); opacity:0; } 20%{ opacity:.6; } 80%{ opacity:.4; } 100%{ transform:translateY(-220px); opacity:0; } }
 
+/* LED wall equalizer bars */
+.me-stage-led{ animation:me-led-bar ease-in-out infinite alternate; }
+@keyframes me-led-bar{ from{ transform:scaleY(.35); } to{ transform:scaleY(1); } }
+
+/* laser flicker */
+.me-stage-laser{ animation:me-laser-flick 2.6s steps(1) infinite; }
+@keyframes me-laser-flick{ 0%,40%,100%{ opacity:.34; } 45%,55%{ opacity:.12; } 70%{ opacity:.5; } }
+
+/* confetti drifting down */
+.me-stage-confetti{ animation:me-confetti linear infinite; }
+@keyframes me-confetti{ 0%{ transform:translateY(-20px) rotate(0deg); opacity:0; } 8%{ opacity:.9; } 92%{ opacity:.8; } 100%{ transform:translateY(700px) rotate(540deg); opacity:0; } }
+
+/* the warm spotlight breathing */
+.me-stage-spot{ animation:me-spot-breathe 5s ease-in-out infinite; transform-origin:500px 42px; }
+@keyframes me-spot-breathe{ 0%,100%{ opacity:.9; } 50%{ opacity:1; } }
+
 /* a black veil over the stage — its opacity is animated 1 -> 0 to "brighten"
    the reveal, and it dims the stage a touch while the login card is up */
 .me-stage-veil{ position:fixed; inset:0; z-index:1; background:radial-gradient(80% 70% at 50% 42%, rgba(5,3,8,0) 0%, rgba(5,3,8,0.55) 100%); pointer-events:none; }
@@ -196,6 +212,8 @@ input[type=range].me-slider::-webkit-slider-thumb{ -webkit-appearance:none; widt
 @keyframes me-cue-pulse{ 0%,100%{ opacity:.45; } 50%{ opacity:1; } }
 
 @media (prefers-reduced-motion: reduce){
-  .me-stage-phone, .me-stage-dust, .me-stage-cue{ animation:none !important; }
+  .me-stage-phone, .me-stage-dust, .me-stage-cue, .me-stage-led,
+  .me-stage-laser, .me-stage-confetti, .me-stage-spot{ animation:none !important; }
   .me-stage-phone{ opacity:.75; } .me-stage-dust{ opacity:.4; }
+  .me-stage-led{ transform:scaleY(.7); } .me-stage-confetti{ opacity:.6; }
 }
