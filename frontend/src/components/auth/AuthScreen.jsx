@@ -1,21 +1,20 @@
 import { useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Disc3, ChevronRight } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { getAuthConfig } from '../../lib/api/auth';
 import { useAuthStore } from '../../state/useAuthStore';
-import { AuthBackdrop } from './AuthBackdrop';
+import { StageHero } from './StageHero';
+import { playIntroCue } from '../../lib/audio/introCue';
 
-// A short cinematic opener — the arc of a music life, one line at a time —
-// before the login card resolves in. Plays once per browser session (skippable);
-// returning to this screen (e.g. after a failed login) goes straight to the form.
-const INTRO_LINES = [
-  '누구나 밑바닥에서 시작한다',
-  '작은 방, 마이크 하나',
-  '첫 곡이 세상에 닿는 순간',
-  '무대는, 점점 커진다',
-];
+// Entry cinematic: a dark house → tap → the spotlight snaps on with a swell,
+// the camera pulls back off the star, and the crowd roars → the login card
+// rises. Plays once per browser session (a tap is also what lets the sound
+// play under autoplay rules); returning here later goes straight to the form.
+function seenIntro() {
+  try { return sessionStorage.getItem('me_intro_seen') === '1'; } catch { return false; }
+}
 
 export function AuthScreen() {
   const [mode, setMode] = useState('login');
@@ -28,23 +27,24 @@ export function AuthScreen() {
   const login = useAuthStore((s) => s.login);
   const register = useAuthStore((s) => s.register);
 
-  const [showForm, setShowForm] = useState(() => {
-    try { return sessionStorage.getItem('me_intro_seen') === '1'; } catch { return false; }
-  });
-  const [line, setLine] = useState(0);
+  const reduce = useReducedMotion();
+  const [phase, setPhase] = useState(() => (seenIntro() ? 'form' : 'gate')); // gate → reveal → form
 
   function finishIntro() {
-    setShowForm(true);
+    setPhase('form');
     try { sessionStorage.setItem('me_intro_seen', '1'); } catch { /* ignore */ }
   }
+  function begin() {
+    playIntroCue();
+    setPhase('reveal');
+  }
 
-  // Advance the intro one line at a time, then reveal the form.
+  // Hold on the reveal, then bring up the form.
   useEffect(() => {
-    if (showForm) return undefined;
-    if (line >= INTRO_LINES.length) { finishIntro(); return undefined; }
-    const t = setTimeout(() => setLine((l) => l + 1), line === 0 ? 800 : 1150);
+    if (phase !== 'reveal') return undefined;
+    const t = setTimeout(finishIntro, reduce ? 1100 : 2900);
     return () => clearTimeout(t);
-  }, [line, showForm]);
+  }, [phase, reduce]);
 
   // The deployed instance is invite-gated; local dev usually isn't. Ask the
   // server rather than hardcoding, so the same build works in both.
@@ -56,9 +56,7 @@ export function AuthScreen() {
     setError('');
     setBusy(true);
     try {
-      if (mode === 'register') {
-        await register(email, password, inviteCode);
-      }
+      if (mode === 'register') await register(email, password, inviteCode);
       await login(email, password);
     } catch (e) {
       setError(e.message || '오류가 발생했습니다');
@@ -72,62 +70,82 @@ export function AuthScreen() {
 
   return (
     <div className="min-h-screen relative flex flex-col items-center justify-center text-center p-6 overflow-hidden">
-      <AuthBackdrop />
+      {/* the stage, behind everything — mounts for the reveal and stays for the form */}
+      {phase !== 'gate' && (
+        <motion.div
+          className="me-stage"
+          initial={reduce ? { opacity: 0 } : { scale: 1.55 }}
+          animate={reduce ? { opacity: 1 } : { scale: 1 }}
+          transition={{ duration: 2.6, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <StageHero />
+        </motion.div>
+      )}
+
+      {/* the "lights up" brighten: a black veil fading off over the reveal */}
+      {phase === 'reveal' && !reduce && (
+        <motion.div
+          className="fixed inset-0 z-[1] pointer-events-none"
+          style={{ background: '#050308' }}
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0 }}
+          transition={{ duration: 2.3, ease: 'easeOut' }}
+        />
+      )}
+      {phase === 'form' && <div className="me-stage-veil" />}
 
       <AnimatePresence mode="wait">
-        {!showForm ? (
+        {/* ---- dark house: tap to start ---- */}
+        {phase === 'gate' && (
           <motion.div
-            key="intro"
-            className="relative z-10 flex flex-col items-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, y: -14 }}
-            transition={{ duration: 0.45 }}
-          >
-            <motion.div animate={{ rotate: 360 }} transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}>
-              <Disc3 size={54} className="text-accent" style={{ filter: 'drop-shadow(0 0 18px rgba(232,163,61,0.55))' }} />
-            </motion.div>
-
-            <div className="h-16 mt-9 flex items-center px-4">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={line}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -16 }}
-                  transition={{ duration: 0.5 }}
-                  className="font-display text-2xl sm:text-3xl font-bold text-text"
-                  style={{ textShadow: '0 2px 22px rgba(0,0,0,0.75)' }}
-                >
-                  {INTRO_LINES[Math.min(line, INTRO_LINES.length - 1)]}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            <button
-              onClick={finishIntro}
-              className="mt-10 text-faint text-xs hover:text-muted transition-colors cursor-pointer tracking-wide"
-            >
-              건너뛰기 ›
-            </button>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="auth"
-            className="relative z-10 w-full flex flex-col items-center"
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
+            key="gate"
+            className="fixed inset-0 z-10 flex flex-col items-center justify-center cursor-pointer select-none"
+            style={{ background: '#050308' }}
+            onClick={begin}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <motion.div initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.05, duration: 0.5 }}>
-              <Disc3 size={46} className="text-accent mb-3" style={{ filter: 'drop-shadow(0 0 16px rgba(232,163,61,0.5))' }} />
+            <div className="me-stage-cue" style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 44%, rgba(232,163,61,0.12), transparent 55%)' }} />
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 9, repeat: Infinity, ease: 'linear' }}>
+              <Disc3 size={46} className="text-accent" style={{ filter: 'drop-shadow(0 0 16px rgba(232,163,61,0.5))' }} />
             </motion.div>
-            <div className="font-display text-4xl font-extrabold tracking-tight" style={{ textShadow: '0 2px 26px rgba(0,0,0,0.65)' }}>
+            <div className="font-display text-3xl font-extrabold mt-6 relative">Music Empire</div>
+            <div className="me-stage-cue text-muted text-sm mt-4 relative tracking-wide">화면을 탭하면 시작합니다</div>
+          </motion.div>
+        )}
+
+        {/* ---- reveal: skip affordance only ---- */}
+        {phase === 'reveal' && (
+          <motion.button
+            key="skip"
+            onClick={finishIntro}
+            className="fixed z-10 text-faint text-xs hover:text-muted transition-colors cursor-pointer tracking-wide"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 22px)', right: 22 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.2, duration: 0.6 }}
+          >
+            건너뛰기 ›
+          </motion.button>
+        )}
+
+        {/* ---- the login card ---- */}
+        {phase === 'form' && (
+          <motion.div
+            key="form"
+            className="relative z-10 w-full flex flex-col items-center"
+            initial={{ opacity: 0, y: 22 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+          >
+            <div className="font-display text-4xl font-extrabold tracking-tight" style={{ textShadow: '0 2px 30px rgba(0,0,0,0.8)' }}>
               Music Empire
             </div>
-            <div className="text-muted mt-2 text-sm">당신의 음악 인생이 여기서 시작됩니다</div>
+            <div className="text-muted mt-2 text-sm" style={{ textShadow: '0 1px 12px rgba(0,0,0,0.8)' }}>
+              당신의 음악 인생이 여기서 시작됩니다
+            </div>
 
-            <div className="me-auth-card mt-7 w-full max-w-[19rem] text-left">
+            <div className="me-auth-card mt-6 w-full max-w-[19rem] text-left">
               <div className="text-[11px] text-faint mb-3 tracking-[0.15em] font-mono">
                 {mode === 'login' ? 'LOG IN' : 'SIGN UP'}
               </div>
