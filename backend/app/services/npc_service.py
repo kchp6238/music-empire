@@ -92,6 +92,11 @@ _NOTE_ORDER = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 _PENTA_MAJ = [0, 2, 4, 7, 9]
 _PENTA_MIN = [0, 3, 5, 7, 10]
 _MINOR_GENRES = {"발라드", "힙합", "R&B", "인디", "재즈"}
+# Chord loops (semitone offsets from the root) the rival song rides over so it
+# reads as a song, not one droning bar. Major: I–V–vi–IV; minor: i–iv–VI–III.
+_PROG_MAJ = [0, 7, 9, 5]
+_PROG_MIN = [0, 5, 8, 3]
+_SONG_BARS = 8  # how many bars the stored one-bar groove is expanded into
 
 
 def _note(root_pc: str, semis: int, octave: int) -> str:
@@ -122,19 +127,60 @@ def _vocal_topline(rng: random.Random, root_pc: str, genre: str, steps: int) -> 
 
 
 def enrich_npc_pattern(npc_song: NpcSong, genre: str | None) -> dict:
-    """Return the rival's pattern with a sung `vocal` topline + `pad` bed added.
-    Deterministic (seeded on the song id) and idempotent."""
-    pattern = dict(npc_song.pattern or {})
-    if pattern.get("vocal"):
-        return pattern
-    bass = pattern.get("bass") or []
-    steps = len(bass) or 16
-    root_note = next((b for b in bass if b), "C2")
-    root_pc = root_note[:-1] if root_note and root_note[-1].isdigit() else root_note
-    rng = random.Random(f"vocal:{npc_song.id}")
-    pattern["vocal"] = _vocal_topline(rng, root_pc, genre or "", steps)
-    pattern["pad"] = [_note(root_pc, 0, 3)] * steps  # held root → chord pad on the client
-    return pattern
+    """Expand the stored one-bar groove into a full multi-bar song: the drum
+    loop tiled across `_SONG_BARS`, a moving chord loop under a sung `vocal`
+    topline and `pad` bed. The stored one bar played back as a ~2s repeat;
+    this makes rival songs actually last. Deterministic (seeded on the song id)
+    and idempotent — the stored pattern is never mutated, only the served copy."""
+    stored = dict(npc_song.pattern or {})
+    if stored.get("vocal"):  # already a full song (e.g. an older cached copy)
+        return stored
+
+    base_bass = stored.get("bass") or [None] * 16
+    bar = len(base_bass) or 16
+    bars = _SONG_BARS
+    total = bar * bars
+    root_note = next((b for b in base_bass if b), "C2")
+    has_oct = bool(root_note) and root_note[-1:].isdigit()
+    root_pc = root_note[:-1] if has_oct else (root_note or "C")
+    root_oct = int(root_note[-1]) if has_oct else 2
+    prog = _PROG_MIN if (genre or "") in _MINOR_GENRES else _PROG_MAJ
+    rng = random.Random(f"song:{npc_song.id}")
+
+    # drums: tile the one-bar groove across the song, then accent the sections —
+    # a crash on every 4-bar downbeat and a snare fill into the last bar.
+    drums = {}
+    for key, lane in (stored.get("drums") or {}).items():
+        lane = list(lane) if lane else [False] * bar
+        drums[key] = (lane * bars)[:total]
+    if "crash" in drums:
+        for b in range(0, bars, 4):
+            drums["crash"][b * bar] = True
+    if "snare" in drums:
+        for i in range(bar - 4, bar):
+            drums["snare"][(bars - 1) * bar + i] = True
+
+    # bass + pad ride the chord loop so the harmony moves instead of droning
+    bass = [None] * total
+    pad = [None] * total
+    for b in range(bars):
+        semis = prog[b % len(prog)]
+        broot = _note(root_pc, semis, root_oct)
+        proot = _note(root_pc, semis, root_oct + 1)
+        for beat in (0, 4, 8, 12):
+            bass[b * bar + beat] = broot
+        for i in range(bar):
+            pad[b * bar + i] = proot
+
+    return {
+        **stored,
+        "drums": drums,
+        "bass": bass,
+        "pad": pad,
+        "piano": [None] * total,
+        "guitar": [None] * total,
+        "vocal": _vocal_topline(rng, root_pc, genre or "", total),
+    }
 
 
 def _release(world_id: str, spec: dict, artist_row: NpcArtist, index: int, released_on: date) -> NpcSong:
