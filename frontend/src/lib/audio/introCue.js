@@ -17,9 +17,12 @@ export async function playIntroCue() {
 
   const now = Tone.now() + 0.03;
 
-  // master: gentle reverb -> limiter so nothing clips
+  // master: reverb -> gain trim -> limiter. The trim keeps the whole cue at a
+  // comfortable level (it read as too loud before); the limiter still catches
+  // any peak so nothing clips.
   const limiter = new Tone.Limiter(-1.5).toDestination();
-  const verb = new Tone.Freeverb({ roomSize: 0.86, dampening: 2600, wet: 0.28 }).connect(limiter);
+  const master = new Tone.Volume(-12).connect(limiter);
+  const verb = new Tone.Freeverb({ roomSize: 0.86, dampening: 2600, wet: 0.28 }).connect(master);
 
   // 1) low impact on the "lights on"
   const boom = new Tone.MembraneSynth({
@@ -35,7 +38,7 @@ export async function playIntroCue() {
     noise: { type: 'white' },
     envelope: { attack: 1.55, decay: 0.1, sustain: 0.25, release: 0.7 },
   }).connect(riserFilter);
-  riser.volume.value = -22;
+  riser.volume.value = -25;
   riser.triggerAttackRelease(1.6, now);
   riserFilter.frequency.setValueAtTime(260, now);
   riserFilter.frequency.exponentialRampToValueAtTime(6500, now + 1.6);
@@ -53,12 +56,12 @@ export async function playIntroCue() {
     envelope: { attack: 0.001, decay: 1.3, release: 0.5 },
     harmonicity: 5.1, modulationIndex: 18, resonance: 4200, octaves: 1.4,
   }).connect(verb);
-  bell.volume.value = -28;
+  bell.volume.value = -32;
   bell.triggerAttackRelease('16n', now + 1.5);
 
   // dispose the whole graph after the tail
   setTimeout(() => {
-    [boom, riser, riserFilter, pad, bell, verb, limiter].forEach((n) => { try { n.dispose(); } catch { /* ignore */ } });
+    [boom, riser, riserFilter, pad, bell, verb, master, limiter].forEach((n) => { try { n.dispose(); } catch { /* ignore */ } });
     playing = false;
   }, 5500);
 }
