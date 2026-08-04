@@ -201,7 +201,16 @@ input[type=range].me-slider::-webkit-slider-thumb{ -webkit-appearance:none; widt
 .me-stage-cue{ animation:me-cue-pulse 2.4s ease-in-out infinite; }
 @keyframes me-cue-pulse{ 0%,100%{ opacity:.45; } 50%{ opacity:1; } }
 
+/* brand emblem + eyebrow + equalizer above the login card */
+.me-emblem{ width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; color:#F5C46B;
+  background:radial-gradient(circle at 50% 40%, rgba(232,163,61,0.28), rgba(10,14,26,0.5)); border:1px solid rgba(245,196,107,0.55);
+  box-shadow:0 0 28px -3px rgba(232,163,61,0.65), inset 0 1px 0 rgba(255,255,255,0.18); }
+.me-eyebrow{ font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.42em; text-indent:0.42em; color:#D3DDF0; margin-bottom:10px; text-shadow:0 1px 10px rgba(0,0,0,0.7); }
+.me-eq-intro{ display:flex; align-items:flex-end; justify-content:center; gap:3px; height:26px; margin-top:18px; }
+.me-eq-intro span{ width:3px; height:100%; border-radius:2px; transform-origin:bottom; background:linear-gradient(to top,#E8A33D,#F5C46B); box-shadow:0 0 8px rgba(232,163,61,0.5); animation:me-eqbar ease-in-out infinite alternate; }
+@keyframes me-eqbar{ from{ transform:scaleY(.2); } to{ transform:scaleY(1); } }
+
 @media (prefers-reduced-motion: reduce){
-  .me-photostage-img, .me-photostage-sparks span, .me-stage-cue{ animation:none !important; }
-  .me-photostage-sparks span{ opacity:.4; }
+  .me-photostage-img, .me-photostage-sparks span, .me-stage-cue, .me-eq-intro span{ animation:none !important; }
+  .me-photostage-sparks span{ opacity:.4; } .me-eq-intro span{ transform:scaleY(.5); }
 }

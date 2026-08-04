@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { Disc3, ChevronRight } from 'lucide-react';
+import { Disc3, ChevronRight, Crown } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { getAuthConfig } from '../../lib/api/auth';
@@ -138,11 +138,20 @@ export function AuthScreen() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            <div className="font-display text-4xl font-extrabold tracking-tight" style={{ textShadow: '0 2px 30px rgba(0,0,0,0.8)' }}>
+            <div className="me-emblem" aria-hidden>
+              <Crown size={26} />
+            </div>
+            <div className="me-eyebrow">THE MUSIC LIFE</div>
+            <div className="font-display text-4xl font-extrabold tracking-tight" style={{ textShadow: '0 2px 30px rgba(0,0,0,0.85)' }}>
               Music Empire
             </div>
-            <div className="text-muted mt-2 text-sm" style={{ textShadow: '0 1px 12px rgba(0,0,0,0.8)' }}>
+            <div className="mt-2 text-sm" style={{ color: '#c9d6ef', textShadow: '0 1px 12px rgba(0,0,0,0.85)' }}>
               당신의 음악 인생이 여기서 시작됩니다
+            </div>
+            <div className="me-eq-intro" aria-hidden>
+              {Array.from({ length: 24 }, (_, i) => (
+                <span key={i} style={{ animationDelay: `${(i * 0.07) % 1.2}s`, animationDuration: `${0.7 + (i % 5) * 0.12}s` }} />
+              ))}
             </div>
 
             <div className="me-auth-card mt-6 w-full max-w-[19rem] text-left">
