@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Settings, Volume2, VolumeX, X, BookOpen } from 'lucide-react';
-import { useSettingsStore } from '../../state/useSettingsStore';
+import { useSettingsStore, THEMES } from '../../state/useSettingsStore';
 
 // A labelled on/off switch styled to match the app's pill/toggle look.
 function Toggle({ on, onChange, label, hint }) {
@@ -32,6 +32,8 @@ export function SettingsModal() {
   const setUiSounds = useSettingsStore((s) => s.setUiSounds);
   const animations = useSettingsStore((s) => s.animations);
   const setAnimations = useSettingsStore((s) => s.setAnimations);
+  const theme = useSettingsStore((s) => s.theme);
+  const setTheme = useSettingsStore((s) => s.setTheme);
   const openGuide = useSettingsStore((s) => s.openGuide);
 
   if (!settingsOpen) return null;
@@ -83,6 +85,33 @@ export function SettingsModal() {
           label="UI 효과음" hint="비트를 찍거나 발매할 때 나는 짧은 효과음" />
         <Toggle on={animations} onChange={setAnimations}
           label="화면 전환 애니메이션" hint="끄면 화면이 즉시 바뀝니다 (모션 최소화)" />
+
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} className="my-2" />
+
+        {/* theme picker */}
+        <div className="py-1">
+          <div className="text-[13px] text-text mb-0.5">테마</div>
+          <div className="text-[10px] text-faint mb-2.5">취향에 맞는 색·질감을 고르세요. 바로 적용됩니다.</div>
+          <div className="grid grid-cols-2 gap-2">
+            {THEMES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTheme(t.id)}
+                aria-pressed={theme === t.id}
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 cursor-pointer text-left transition-colors bg-transparent"
+                style={{ border: `1px solid ${theme === t.id ? 'var(--color-accent)' : 'rgba(255,255,255,0.1)'}`, background: theme === t.id ? 'rgba(255,255,255,0.06)' : 'transparent' }}
+              >
+                <span className="flex shrink-0 rounded-md overflow-hidden" style={{ width: 30, height: 30, border: '1px solid rgba(0,0,0,0.3)' }}>
+                  {t.swatch.map((c, i) => <span key={i} style={{ background: c, width: 10, height: 30, display: 'block' }} />)}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[12px] text-text font-medium truncate">{t.name}</span>
+                  <span className="block text-[10px] text-faint truncate">{t.desc}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} className="my-2" />
 
