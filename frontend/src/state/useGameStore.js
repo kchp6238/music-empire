@@ -9,6 +9,7 @@ import * as engine from '../lib/audio/engine';
 import { playSuccessChime } from '../lib/audio/uiSounds';
 import * as charactersApi from '../lib/api/characters';
 import * as songsApi from '../lib/api/songs';
+import * as albumsApi from '../lib/api/albums';
 import * as communityApi from '../lib/api/community';
 import * as collabApi from '../lib/api/collab';
 import * as recordingsApi from '../lib/api/recordings';
@@ -217,6 +218,7 @@ export const useGameStore = create((set, get) => ({
   vocalSampleInfo: null, // { baseNote, duration } of the recorded 내 목소리 instrument (session-only)
   communityTab: 'feed',
   followedArtists: [],   // list of {followed_type, followed_id}
+  albums: [],            // released albums/EPs (from /albums)
   persistedDraftId: null, // server id of the open draft (set on first save/load)
   draftSavedAt: null,     // timestamp of the last successful save, for the UI indicator
   lastTimeSummary: null,  // what happened during the most recent timed action
@@ -268,12 +270,29 @@ export const useGameStore = create((set, get) => ({
       } catch {
         // ignore
       }
-      set({ character, characterLoaded: true, followedArtists });
+      let albums = [];
+      try {
+        albums = await albumsApi.listAlbums();
+      } catch {
+        // ignore
+      }
+      set({ character, characterLoaded: true, followedArtists, albums });
     } catch {
       set({ character: null, characterLoaded: true });
     }
   },
-  resetCharacterLoaded: () => set({ character: null, characterLoaded: false, lastTimeSummary: null, followedArtists: [] }),
+  loadAlbums: async () => {
+    try { set({ albums: await albumsApi.listAlbums() }); } catch { /* ignore */ }
+  },
+  // Bundling songs into an album grants a fame/money/fans bonus server-side, so
+  // reload the character (which also refreshes the album list) afterwards.
+  createAlbum: async (payload) => {
+    const album = await albumsApi.createAlbum(payload);
+    await get().loadCharacter();
+    return album;
+  },
+
+  resetCharacterLoaded: () => set({ character: null, characterLoaded: false, lastTimeSummary: null, followedArtists: [], albums: [] }),
 
   // Leave the current save and return to save selection — no reload needed.
   switchSave: () => {

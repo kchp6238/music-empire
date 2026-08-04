@@ -6,6 +6,7 @@ import { TrendBanner } from '../shared/TrendBanner';
 import { TimePassedToast } from '../shared/TimePassedToast';
 import { AchievementsPanel } from '../shared/AchievementsPanel';
 import { TrainingPanel } from './TrainingPanel';
+import { AlbumsPanel } from './AlbumsPanel';
 import { CoverThumb } from '../cover/CoverThumb';
 import { GENRES, MOODS, CHORD_PRESETS, TIER_COLOR, GENRE_PROFILES } from '../../lib/gameData/constants';
 import { compactNum } from '../../lib/utils';
@@ -132,6 +133,7 @@ export function StudioScreen() {
           </div>
           <TrainingPanel />
           <div style={{ marginBottom: 16 }}><AchievementsPanel /></div>
+          <div style={{ marginBottom: 16 }}><AlbumsPanel /></div>
           {character.songs.length > 0 && (
             <div className="me-panel">
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>발매 기록</div>

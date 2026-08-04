@@ -3,6 +3,7 @@ from app.models.user import User
 from app.models.world import World
 from app.models.character import Character
 from app.models.song import Song
+from app.models.album import Album
 from app.models.fan import FanPersona, CharacterFanLoyalty, SongReaction
 from app.models.npc import NpcArtist, NpcSong
 from app.models.community import Follow, SongLike, SongComment
@@ -22,6 +23,7 @@ __all__ = [
     "World",
     "Character",
     "Song",
+    "Album",
     "FanPersona",
     "CharacterFanLoyalty",
     "SongReaction",
