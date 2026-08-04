@@ -45,7 +45,7 @@ const DRUM_KEYS = DRUM_INSTRUMENTS.map((d) => d.key);
 // Self-decaying pluck voices take triggerAttack only; chordal voices get their
 // single melody note fanned into an open fifth. Kept as Sets for O(1) lookup
 // inside the per-step sequence callback.
-const PLUCK_KEYS = new Set(['guitar']);
+const PLUCK_KEYS = new Set(['guitar', 'nylonGuitar', 'xylophone']);
 const CHORDAL_SET = new Set(CHORDAL_KEYS);
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const semitoneRatio = (semitones) => 2 ** (semitones / 12);
@@ -163,6 +163,15 @@ const SAMPLE_NOTES = {
   flute: ['C4', 'E4', 'A4', 'C5', 'E5', 'A5', 'C6'],
   clarinet: ['D3', 'F3', 'As3', 'D4', 'F4', 'As4', 'D5'],
   elecGuitar: ['C3', 'A3', 'C4', 'A4', 'C5'],
+  // real-sample conversions of formerly-synth voices
+  bass: ['E1', 'As1', 'E2', 'As2', 'E3', 'G3'],
+  brass: ['F3', 'C4', 'F4', 'As4', 'D5', 'A5'],       // trumpet
+  organ: ['C2', 'Fs2', 'C3', 'Fs3', 'C4', 'Fs4', 'C5', 'C6'],
+  harp: ['A2', 'C3', 'E3', 'G3', 'B3', 'D4', 'A4', 'C5', 'E5'],
+  // new real-sampled instruments
+  sax: ['D3', 'G3', 'As3', 'D4', 'G4', 'C5', 'E5', 'G5'],
+  xylophone: ['G4', 'C5', 'G5', 'C6', 'G6', 'C7'],
+  nylonGuitar: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4', 'A4'],
 };
 
 /* ---------- drum voices ---------------------------------------------------
@@ -383,12 +392,14 @@ function buildSynths() {
     controls[key] = control;
   });
 
-  voices.bass = new Tone.MonoSynth({
+  // Electric bass: real recordings. Fallback while samples load is the filtered
+  // sawtooth mono synth.
+  voices.bass = makeSampledVoice('bass-electric', SAMPLE_NOTES.bass, () => new Tone.MonoSynth({
     oscillator: { type: 'sawtooth' },
     envelope: { attack: 0.02, decay: 0.3, sustain: 0.4, release: 0.2 },
     filter: { type: 'lowpass', rolloff: -24, Q: 1.2 },
     filterEnvelope: { attack: 0.02, decay: 0.25, sustain: 0.35, release: 0.3, baseFrequency: 90, octaves: 3.5 },
-  });
+  }));
 
   // Grand piano: real multisampled recordings (Salamander). Fallback while the
   // samples stream in is the old FM-piano synth.
@@ -416,12 +427,12 @@ function buildSynths() {
     filterEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.5, release: 0.4, baseFrequency: 500, octaves: 3 },
   }));
 
-  // Brass/wind: bright sawtooth ensemble with the slightly-slow attack that
-  // reads as a horn section rather than a synth stab.
-  voices.brass = new Tone.PolySynth(Tone.Synth, {
+  // Brass: real trumpet recordings, kept under a gentle lowpass so the top
+  // doesn't spit. Fallback is the bright sawtooth ensemble.
+  voices.brass = makeSampledVoice('trumpet', SAMPLE_NOTES.brass, () => new Tone.PolySynth(Tone.Synth, {
     oscillator: { type: 'sawtooth' },
     envelope: { attack: 0.06, decay: 0.2, sustain: 0.85, release: 0.3 },
-  });
+  }));
   const brassFilter = new Tone.Filter({ type: 'lowpass', frequency: 3200, Q: 0.5 });
 
   // Synth lead: square-wave mono line with a snappy filter envelope.
@@ -464,11 +475,11 @@ function buildSynths() {
   });
   const harpsichordHP = new Tone.Filter({ type: 'highpass', frequency: 300 });
 
-  // Organ: sustained, hollow triangle drawbar bed — full while a key is held.
-  voices.organ = new Tone.PolySynth(Tone.Synth, {
+  // Organ: real organ recordings. Fallback is the hollow triangle drawbar synth.
+  voices.organ = makeSampledVoice('organ', SAMPLE_NOTES.organ, () => new Tone.PolySynth(Tone.Synth, {
     oscillator: { type: 'triangle' },
     envelope: { attack: 0.02, decay: 0.05, sustain: 1, release: 0.15 },
-  });
+  }));
 
   // ---- orchestral strings family ----
 
@@ -486,11 +497,11 @@ function buildSynths() {
     filter: { type: 'lowpass', rolloff: -12, Q: 0.8 },
     filterEnvelope: { attack: 0.1, decay: 0.2, sustain: 0.7, release: 0.4, baseFrequency: 320, octaves: 2 },
   }));
-  // Harp: plucked, bright, long ringing decay.
-  voices.harp = new Tone.PolySynth(Tone.FMSynth, {
+  // Harp: real harp recordings. Fallback is the plucked FM synth with a long ring.
+  voices.harp = makeSampledVoice('harp', SAMPLE_NOTES.harp, () => new Tone.PolySynth(Tone.FMSynth, {
     harmonicity: 2, modulationIndex: 2,
     envelope: { attack: 0.004, decay: 1.6, sustain: 0, release: 1.2 },
-  });
+  }));
 
   // ---- woodwind family ----
 
@@ -507,6 +518,29 @@ function buildSynths() {
     envelope: { attack: 0.05, decay: 0.1, sustain: 0.9, release: 0.2 },
     filter: { type: 'lowpass', rolloff: -12, Q: 0.7 },
     filterEnvelope: { attack: 0.04, decay: 0.1, sustain: 0.7, release: 0.2, baseFrequency: 700, octaves: 1.8 },
+  }));
+
+  // ---- new real-sampled instruments ----
+
+  // Classical (nylon-string) guitar: real recordings, plucked attack-only.
+  // Fallback is the soft Karplus-Strong pluck.
+  voices.nylonGuitar = makeSampledVoice('guitar-nylon', SAMPLE_NOTES.nylonGuitar,
+    () => new Tone.PluckSynth({ attackNoise: 0.7, dampening: 3000, resonance: 0.94 }));
+
+  // Saxophone: real recordings with the slow reedy attack. Fallback is a
+  // filtered sawtooth mono line.
+  voices.sax = makeSampledVoice('saxophone', SAMPLE_NOTES.sax, () => new Tone.MonoSynth({
+    oscillator: { type: 'sawtooth' },
+    envelope: { attack: 0.08, decay: 0.15, sustain: 0.85, release: 0.3 },
+    filter: { type: 'lowpass', rolloff: -12, Q: 0.8 },
+    filterEnvelope: { attack: 0.06, decay: 0.15, sustain: 0.75, release: 0.3, baseFrequency: 600, octaves: 2.2 },
+  }));
+
+  // Xylophone: real mallet recordings, bright and short. Fallback is a fast-decay
+  // FM bell.
+  voices.xylophone = makeSampledVoice('xylophone', SAMPLE_NOTES.xylophone, () => new Tone.PolySynth(Tone.FMSynth, {
+    harmonicity: 3.5, modulationIndex: 6,
+    envelope: { attack: 0.001, decay: 0.35, sustain: 0, release: 0.3 },
   }));
 
   // ---- vocal instrument (the player's own recorded voice) ----
@@ -547,6 +581,9 @@ function buildSynths() {
   voices.harp.connect(chanBusses.harp);
   voices.flute.connect(chanBusses.flute);
   voices.clarinet.connect(chanBusses.clarinet);
+  voices.nylonGuitar.connect(chanBusses.nylonGuitar);
+  voices.sax.connect(chanBusses.sax);
+  voices.xylophone.connect(chanBusses.xylophone);
   voices.vocalInst.connect(chanBusses.vocalInst);
   voices.vocal.connect(compressor);
 

@@ -72,9 +72,11 @@ export const CHANNELS = [
   { key: 'ePiano', label: '일렉 피아노', icon: '🎹', color: '#4FD1C5', plugin: null, cat: 'keys' },
   { key: 'harpsichord', label: '하프시코드', icon: '🎹', color: '#7FD1C5', plugin: null, cat: 'keys' },
   { key: 'organ', label: '오르간', icon: '⛪', color: '#6FC5B5', plugin: null, cat: 'keys' },
+  { key: 'xylophone', label: '실로폰', icon: '🎶', color: '#7FD1A5', plugin: null, cat: 'keys' },
 
   { key: 'bass', label: 'Bass Synth', icon: '🎸', color: '#8B7FD1', plugin: null, cat: 'guitars' },
   { key: 'guitar', label: '어쿠스틱 기타', icon: '🎸', color: '#5FBF8F', plugin: null, cat: 'guitars' },
+  { key: 'nylonGuitar', label: '클래식 기타', icon: '🎸', color: '#C9A15F', plugin: null, cat: 'guitars' },
   { key: 'elecGuitar', label: 'Elec Guitar', icon: '⚡', color: '#E86A4D', plugin: null, cat: 'guitars' },
 
   { key: 'strings', label: '스트링 앙상블', icon: '🎻', color: '#7FA8D1', plugin: null, cat: 'strings' },
@@ -85,6 +87,7 @@ export const CHANNELS = [
   { key: 'brass', label: 'Brass', icon: '🎺', color: '#E8A33D', plugin: null, cat: 'winds' },
   { key: 'flute', label: '플루트', icon: '🪈', color: '#E8C34D', plugin: null, cat: 'winds' },
   { key: 'clarinet', label: '클라리넷', icon: '🎷', color: '#D8B33D', plugin: null, cat: 'winds' },
+  { key: 'sax', label: '색소폰', icon: '🎷', color: '#E8934D', plugin: null, cat: 'winds' },
 
   { key: 'synthLead', label: 'Synth Lead', icon: '🎛️', color: '#E893A6', plugin: null, cat: 'synth' },
   { key: 'pad', label: 'Synth Pad', icon: '🌊', color: '#8B7FD1', plugin: null, cat: 'synth' },
@@ -229,6 +232,11 @@ export const CLARINET_PITCHES = buildPitchRange(2, 3);    // C2–B4
 // too far sounds unnatural), but still a full 3 octaves to sing across.
 export const VOCAL_INST_PITCHES = buildPitchRange(2, 3); // C2–B4
 
+// Real-sample additions: alto sax, xylophone, classical (nylon) guitar.
+export const SAX_PITCHES = buildPitchRange(3, 3);    // C3–B5
+export const XYLO_PITCHES = buildPitchRange(4, 3);   // C4–B6
+export const NYLON_PITCHES = buildPitchRange(2, 3);  // C2–B4
+
 // Every pitched (non-drum) instrument, as one source of truth: the beatmaker
 // editor, the piano-roll config, the pattern helpers (empty/build/analyze) and
 // the audio engine all iterate this rather than hard-coding bass/piano/guitar.
@@ -240,7 +248,9 @@ export const MELODIC_TRACKS = [
   { key: 'ePiano', label: '일렉 피아노', pitches: EPIANO_PITCHES, color: '#4FD1C5', chordal: false },
   { key: 'harpsichord', label: '하프시코드', pitches: HARPSICHORD_PITCHES, color: '#7FD1C5', chordal: false },
   { key: 'organ', label: '오르간', pitches: ORGAN_PITCHES, color: '#6FC5B5', chordal: true },
+  { key: 'xylophone', label: '실로폰', pitches: XYLO_PITCHES, color: '#7FD1A5', chordal: false },
   { key: 'guitar', label: '어쿠스틱 기타', pitches: GUITAR_PITCHES, color: '#E8C34D', chordal: false },
+  { key: 'nylonGuitar', label: '클래식 기타', pitches: NYLON_PITCHES, color: '#C9A15F', chordal: false },
   { key: 'elecGuitar', label: '일렉 기타', pitches: ELEC_GUITAR_PITCHES, color: '#E86A4D', chordal: false },
   { key: 'strings', label: '스트링 앙상블', pitches: STRINGS_PITCHES, color: '#7FA8D1', chordal: true },
   { key: 'violin', label: '바이올린', pitches: VIOLIN_PITCHES, color: '#8FB8E1', chordal: false },
@@ -249,6 +259,7 @@ export const MELODIC_TRACKS = [
   { key: 'brass', label: '브라스(관악)', pitches: BRASS_PITCHES, color: '#E8A33D', chordal: false },
   { key: 'flute', label: '플루트', pitches: FLUTE_PITCHES, color: '#E8C34D', chordal: false },
   { key: 'clarinet', label: '클라리넷', pitches: CLARINET_PITCHES, color: '#D8B33D', chordal: false },
+  { key: 'sax', label: '색소폰', pitches: SAX_PITCHES, color: '#E8934D', chordal: false },
   { key: 'synthLead', label: '신스 리드', pitches: SYNTH_LEAD_PITCHES, color: '#E893A6', chordal: false },
   { key: 'pad', label: '신스 패드', pitches: PAD_PITCHES, color: '#8B7FD1', chordal: true },
   { key: 'vocalInst', label: '내 목소리', pitches: VOCAL_INST_PITCHES, color: '#F08AB0', chordal: false },
@@ -271,6 +282,7 @@ export const DEFAULT_MIXER = {
   ePiano: { vol: -5, mute: false }, harpsichord: { vol: -6, mute: false }, organ: { vol: -7, mute: false },
   violin: { vol: -6, mute: false }, cello: { vol: -5, mute: false }, harp: { vol: -6, mute: false },
   flute: { vol: -7, mute: false }, clarinet: { vol: -7, mute: false },
+  nylonGuitar: { vol: -6, mute: false }, xylophone: { vol: -8, mute: false }, sax: { vol: -6, mute: false },
   vocalInst: { vol: -4, mute: false },
 };
 

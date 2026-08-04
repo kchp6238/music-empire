@@ -8,8 +8,8 @@ DRUM_KEYS = ["kick", "snare", "hihatClosed", "hihatOpen", "clap", "tom", "crash"
 # lanes. The first three are the historical set; the rest were added with the
 # expanded instrument roster. A song missing a lane is treated as all-rests.
 MELODIC_KEYS = [
-    "bass", "piano", "guitar", "elecGuitar", "brass", "synthLead", "pad", "strings",
-    "ePiano", "harpsichord", "organ", "violin", "cello", "harp", "flute", "clarinet",
+    "bass", "piano", "guitar", "nylonGuitar", "elecGuitar", "brass", "synthLead", "pad", "strings",
+    "ePiano", "harpsichord", "organ", "xylophone", "violin", "cello", "harp", "flute", "clarinet", "sax",
     "vocalInst",
 ]
 
