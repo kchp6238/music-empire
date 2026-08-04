@@ -78,24 +78,30 @@ function makeVoice(buildNodes) {
    from a CDN-hosted, freely-licensed instrument set; while they load, a synth
    fallback keeps the instrument audible so the first play is never silent. */
 const SAMPLE_BASE = 'https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/';
+// A second freely-licensed set (FluidR3 GM soundfont) for the instruments the
+// first lacks — electric piano, harpsichord, string ensemble. Its files are
+// flat-named (Bb4.mp3, Db4.mp3) and cover every semitone.
+const GM_BASE = 'https://cdn.jsdelivr.net/gh/gleitz/midi-js-soundfonts@gh-pages/FluidR3_GM/';
 
-// notes are given in file form ('Fs4'); the Sampler key wants Tone's '#' form.
+// nbrosowsky notes are file-form ('Fs4'); the Sampler key wants Tone's '#' form.
 function sampleUrls(notes) {
   const urls = {};
   notes.forEach((n) => { urls[n.replace('s', '#')] = `${n}.mp3`; });
   return urls;
 }
+// FluidR3 files are flat-named and Tone parses flats directly, so the key is the
+// note itself and the file is `${note}.mp3`.
+function gmUrls(notes) {
+  const urls = {};
+  notes.forEach((n) => { urls[n] = `${n}.mp3`; });
+  return urls;
+}
 
-// Same Tone.Channel wrapper contract as makeVoice: a real .volume/.connect node
-// with triggerAttack(Release) that routes to the Sampler once its buffers are
-// loaded, and to the fallback synth until then.
-function makeSampledVoice(folder, notes, buildFallback) {
+// A Tone.Channel wrapper (same contract as makeVoice): routes to the Sampler
+// once its buffers are loaded, and to the fallback synth until then.
+function makeSamplerVoice(baseUrl, urls, buildFallback) {
   const channel = new Tone.Channel();
-  const sampler = new Tone.Sampler({
-    urls: sampleUrls(notes),
-    baseUrl: `${SAMPLE_BASE}${folder}/`,
-    release: 1,
-  }).connect(channel);
+  const sampler = new Tone.Sampler({ urls, baseUrl, release: 1 }).connect(channel);
   const fallback = buildFallback().connect(channel);
   const active = () => (sampler.loaded ? sampler : fallback);
   channel.triggerAttackRelease = (pitch, dur, time, vel) => active().triggerAttackRelease(pitch, dur, time, vel);
@@ -103,6 +109,12 @@ function makeSampledVoice(folder, notes, buildFallback) {
   const disposeChannel = channel.dispose.bind(channel);
   channel.dispose = () => { sampler.dispose(); fallback.dispose(); disposeChannel(); };
   return channel;
+}
+function makeSampledVoice(folder, notes, buildFallback) {
+  return makeSamplerVoice(`${SAMPLE_BASE}${folder}/`, sampleUrls(notes), buildFallback);
+}
+function makeGmVoice(instrument, notes, buildFallback) {
+  return makeSamplerVoice(`${GM_BASE}${instrument}-mp3/`, gmUrls(notes), buildFallback);
 }
 
 /* ---------- vocal instrument (record-your-own-voice sampler) --------------
@@ -172,6 +184,14 @@ const SAMPLE_NOTES = {
   sax: ['D3', 'G3', 'As3', 'D4', 'G4', 'C5', 'E5', 'G5'],
   xylophone: ['G4', 'C5', 'G5', 'C6', 'G6', 'C7'],
   nylonGuitar: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4', 'A4'],
+};
+
+// FluidR3 GM note maps (flat-named, every semitone available) for the voices
+// sourced from that set — electric piano, harpsichord, string ensemble.
+const GM_NOTES = {
+  ePiano: ['C2', 'F2', 'C3', 'F3', 'C4', 'F4', 'C5', 'C6'],
+  harpsichord: ['C3', 'F3', 'C4', 'F4', 'C5', 'F5', 'C6'],
+  strings: ['C2', 'G2', 'C3', 'G3', 'C4', 'G4', 'C5', 'C6'],
 };
 
 /* ---------- drum voices ---------------------------------------------------
@@ -450,29 +470,31 @@ function buildSynths() {
   });
   const padFilter = new Tone.Filter({ type: 'lowpass', frequency: 1400, Q: 0.4 });
 
-  // Strings: AM voices + chorus for an ensemble shimmer, slow bowed attack.
-  voices.strings = new Tone.PolySynth(Tone.AMSynth, {
+  // Strings: real string-ensemble recordings, kept under a light chorus for
+  // width. Fallback while samples load is the AM-voice ensemble synth.
+  voices.strings = makeGmVoice('string_ensemble_1', GM_NOTES.strings, () => new Tone.PolySynth(Tone.AMSynth, {
     harmonicity: 2,
     envelope: { attack: 0.3, decay: 0.3, sustain: 0.9, release: 0.9 },
-  });
+  }));
   const stringsChorus = new Tone.Chorus({ frequency: 1.6, delayTime: 3.5, depth: 0.6 }).start();
 
   // ---- keys family ----
 
-  // Electric piano (Rhodes-ish): FM bell tone with a soft chorus wobble.
-  voices.ePiano = new Tone.PolySynth(Tone.FMSynth, {
+  // Electric piano (Rhodes): real recordings with a soft chorus wobble.
+  // Fallback while samples load is the FM-bell synth.
+  voices.ePiano = makeGmVoice('electric_piano_1', GM_NOTES.ePiano, () => new Tone.PolySynth(Tone.FMSynth, {
     harmonicity: 3, modulationIndex: 8,
     envelope: { attack: 0.005, decay: 1.2, sustain: 0.12, release: 1 },
     modulation: { type: 'sine' },
     modulationEnvelope: { attack: 0.01, decay: 0.4, sustain: 0.05, release: 0.4 },
-  });
+  }));
   const ePianoChorus = new Tone.Chorus({ frequency: 2.2, delayTime: 3, depth: 0.5 }).start();
 
-  // Harpsichord: bright plucked keys — fast, no sustain, a touch of highpass.
-  voices.harpsichord = new Tone.PolySynth(Tone.Synth, {
+  // Harpsichord: real recordings. Fallback is the bright plucked-sawtooth synth.
+  voices.harpsichord = makeGmVoice('harpsichord', GM_NOTES.harpsichord, () => new Tone.PolySynth(Tone.Synth, {
     oscillator: { type: 'sawtooth' },
     envelope: { attack: 0.002, decay: 0.35, sustain: 0, release: 0.2 },
-  });
+  }));
   const harpsichordHP = new Tone.Filter({ type: 'highpass', frequency: 300 });
 
   // Organ: real organ recordings. Fallback is the hollow triangle drawbar synth.
