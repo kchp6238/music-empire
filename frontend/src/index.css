@@ -171,49 +171,37 @@ input[type=range].me-slider::-webkit-slider-thumb{ -webkit-appearance:none; widt
    brighten choreography is in AuthScreen (framer-motion); the ambient
    flicker below is disabled under prefers-reduced-motion.
    ============================================================ */
-.me-stage{ position:fixed; inset:0; overflow:hidden; z-index:0; background:#050308; }
-.me-stage-svg{ position:absolute; inset:0; width:100%; height:100%; }
+.me-stage{ position:fixed; inset:0; overflow:hidden; z-index:0; background:#05080f; }
 
-/* phones twinkling in the crowd */
-.me-stage-phone{ animation:me-phone-flick 3.2s ease-in-out infinite; }
-@keyframes me-phone-flick{ 0%,100%{ opacity:.25; } 50%{ opacity:1; } }
-
-/* dust motes drifting up the beam */
-.me-stage-dust{ animation:me-dust-rise linear infinite; }
-@keyframes me-dust-rise{ 0%{ transform:translateY(20px); opacity:0; } 20%{ opacity:.6; } 80%{ opacity:.4; } 100%{ transform:translateY(-220px); opacity:0; } }
-
-/* LED wall equalizer bars */
-.me-stage-led{ animation:me-led-bar ease-in-out infinite alternate; }
-@keyframes me-led-bar{ from{ transform:scaleY(.35); } to{ transform:scaleY(1); } }
-
-/* laser flicker */
-.me-stage-laser{ animation:me-laser-flick 2.6s steps(1) infinite; }
-@keyframes me-laser-flick{ 0%,40%,100%{ opacity:.34; } 45%,55%{ opacity:.12; } 70%{ opacity:.5; } }
-
-/* confetti drifting down */
-.me-stage-confetti{ animation:me-confetti linear infinite; }
-@keyframes me-confetti{ 0%{ transform:translateY(-20px) rotate(0deg); opacity:0; } 8%{ opacity:.9; } 92%{ opacity:.8; } 100%{ transform:translateY(700px) rotate(540deg); opacity:0; } }
-
-/* the warm spotlight breathing */
-.me-stage-spot{ animation:me-spot-breathe 5s ease-in-out infinite; transform-origin:500px 42px; }
-@keyframes me-spot-breathe{ 0%,100%{ opacity:.9; } 50%{ opacity:1; } }
+/* a real concert photo, drifting slowly (Ken Burns) so it isn't dead-still */
+.me-photostage{ position:absolute; inset:0; overflow:hidden; }
+.me-photostage-img{ position:absolute; inset:-5%; background-size:cover; background-position:center;
+  animation:me-kenburns 28s ease-in-out infinite alternate; will-change:transform; }
+@keyframes me-kenburns{ from{ transform:scale(1.05) translate(0,0); } to{ transform:scale(1.15) translate(-1.5%,-1.2%); } }
+/* legibility gradient — dark toward the bottom where the card sits */
+.me-photostage-grad{ position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(4,7,15,0.25) 0%, rgba(4,7,15,0.04) 36%, rgba(4,7,15,0.74) 100%),
+             radial-gradient(120% 82% at 50% 28%, rgba(4,7,15,0) 44%, rgba(4,7,15,0.5) 100%); }
+/* twinkling stage sparkle over the photo */
+.me-photostage-sparks{ position:absolute; inset:0; pointer-events:none; }
+.me-photostage-sparks span{ position:absolute; width:4px; height:4px; border-radius:50%; background:#fff;
+  box-shadow:0 0 8px 2px rgba(190,225,255,0.85); opacity:0; animation:me-spark ease-in-out infinite; }
+@keyframes me-spark{ 0%,100%{ opacity:0; transform:scale(.5); } 50%{ opacity:.9; transform:scale(1); } }
 
 /* a black veil over the stage — its opacity is animated 1 -> 0 to "brighten"
    the reveal, and it dims the stage a touch while the login card is up */
-.me-stage-veil{ position:fixed; inset:0; z-index:1; background:radial-gradient(80% 70% at 50% 42%, rgba(5,3,8,0) 0%, rgba(5,3,8,0.55) 100%); pointer-events:none; }
+.me-stage-veil{ position:fixed; inset:0; z-index:1; background:radial-gradient(80% 70% at 50% 42%, rgba(4,7,15,0) 0%, rgba(4,7,15,0.5) 100%); pointer-events:none; }
 
 /* the login card floating over the stage */
-.me-auth-card{ background:rgba(18,14,26,0.66); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
-  border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:22px 20px;
-  box-shadow:0 28px 70px -22px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06); }
+.me-auth-card{ background:rgba(10,14,26,0.5); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,0.16); border-radius:16px; padding:22px 20px;
+  box-shadow:0 28px 70px -22px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.08); }
 
 /* soft pulse on the tap-to-start prompt */
 .me-stage-cue{ animation:me-cue-pulse 2.4s ease-in-out infinite; }
 @keyframes me-cue-pulse{ 0%,100%{ opacity:.45; } 50%{ opacity:1; } }
 
 @media (prefers-reduced-motion: reduce){
-  .me-stage-phone, .me-stage-dust, .me-stage-cue, .me-stage-led,
-  .me-stage-laser, .me-stage-confetti, .me-stage-spot{ animation:none !important; }
-  .me-stage-phone{ opacity:.75; } .me-stage-dust{ opacity:.4; }
-  .me-stage-led{ transform:scaleY(.7); } .me-stage-confetti{ opacity:.6; }
+  .me-photostage-img, .me-photostage-sparks span, .me-stage-cue{ animation:none !important; }
+  .me-photostage-sparks span{ opacity:.4; }
 }
