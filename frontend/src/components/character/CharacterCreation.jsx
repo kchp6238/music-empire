@@ -1,7 +1,21 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Guitar, Mic, Headphones, Piano, PersonStanding, Disc3, Building, Building2, Dices } from 'lucide-react';
 import { BACKGROUNDS } from '../../lib/gameData/constants';
+
+// A themed banner (icon + gradient) per starting background — keyed by id so
+// each card reads at a glance.
+const BG_ART = {
+  unknown: { Icon: Guitar, grad: 'linear-gradient(135deg,#3A2D1F,#1B1620)', color: '#E8C34D' },
+  star: { Icon: Mic, grad: 'linear-gradient(135deg,#521E38,#26122C)', color: '#E893A6' },
+  producer: { Icon: Headphones, grad: 'linear-gradient(135deg,#123039,#101724)', color: '#4FD1C5' },
+  genius: { Icon: Piano, grad: 'linear-gradient(135deg,#352755,#1D1730)', color: '#B794F4' },
+  trainee: { Icon: PersonStanding, grad: 'linear-gradient(135deg,#26371E,#141B16)', color: '#5FBF8F' },
+  indie: { Icon: Disc3, grad: 'linear-gradient(135deg,#3A3320,#1E1A13)', color: '#E8A33D' },
+  ceo_small: { Icon: Building, grad: 'linear-gradient(135deg,#1F2F3A,#131922)', color: '#7FA8D1' },
+  ceo_big: { Icon: Building2, grad: 'linear-gradient(135deg,#2A2A3A,#15151F)', color: '#B6BECC' },
+  random: { Icon: Dices, grad: 'linear-gradient(135deg,#38203F,#191123)', color: '#C88BFF' },
+};
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { useGameStore } from '../../state/useGameStore';
@@ -57,7 +71,17 @@ export function CharacterCreation() {
       <div style={{ fontSize: 12, color: '#8B8496', marginBottom: 10 }}>시작 배경</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, opacity: busy || !nameReady ? 0.5 : 1, pointerEvents: busy ? 'none' : 'auto' }}>
         {BACKGROUNDS.map((bg) => (
-          <div key={bg.id} className="me-card" onClick={() => handleSelect(bg)}>
+          <div key={bg.id} className="me-card" onClick={() => handleSelect(bg)} style={{ overflow: 'hidden' }}>
+            {(() => {
+              const art = BG_ART[bg.id] || BG_ART.unknown;
+              const Icon = art.Icon;
+              return (
+                <div style={{ margin: '-16px -16px 12px', height: 64, background: art.grad, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(65% 130% at 50% 0%, ${art.color}26, transparent 70%)` }} />
+                  <Icon size={30} style={{ color: art.color, filter: `drop-shadow(0 2px 8px ${art.color}66)`, position: 'relative' }} />
+                </div>
+              );
+            })()}
             <div className="me-display" style={{ fontSize: 16, fontWeight: 700, marginBottom: 2 }}>{bg.name}</div>
             <div style={{ fontSize: 12, color: '#8B8496', marginBottom: 10 }}>{bg.tagline}</div>
             <div style={{ fontSize: 11, color: '#4FD1C5', marginBottom: 2 }}>+ {bg.pro}</div>
