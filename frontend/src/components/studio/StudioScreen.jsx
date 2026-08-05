@@ -8,6 +8,7 @@ import { AchievementsPanel } from '../shared/AchievementsPanel';
 import { TrainingPanel } from './TrainingPanel';
 import { AlbumsPanel } from './AlbumsPanel';
 import { MusicVideoButton } from './MusicVideoButton';
+import { LifeEvent } from '../shared/LifeEvent';
 import { CoverThumb } from '../cover/CoverThumb';
 import { GENRES, MOODS, CHORD_PRESETS, TIER_COLOR, GENRE_PROFILES } from '../../lib/gameData/constants';
 import { compactNum } from '../../lib/utils';
@@ -32,7 +33,7 @@ export function StudioScreen() {
     <div>
       <TopBar character={character} />
       <div className="max-w-[1080px] mx-auto px-4 md:px-6 pt-5">
-        <SceneHero scene="studio" title={`${character.artistName}의 스튜디오`} subtitle="곡의 방향을 정하고, 비트메이커에서 완성하세요." />
+        <SceneHero scene="studio" title={`${character.artistName}의 스튜디오`} subtitle="곡의 방향을 정하고, 비트메이커에서 완성하세요." right={<LifeEvent />} />
         <TimePassedToast />
         <TrendBanner />
       </div>
