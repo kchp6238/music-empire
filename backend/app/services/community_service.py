@@ -325,6 +325,16 @@ def global_chart(db: Session, viewer: Character) -> dict:
             "score": round(g, 1), "flag": _FLAGS[(i * 3 + week) % len(_FLAGS)], "is_you": False,
         })
 
+    # the player's own label groups chart too — a well-run roster shows up here.
+    from app.models.company import Company, Group
+    company = db.query(Company).filter(Company.owner_character_id == viewer.id).first()
+    if company is not None:
+        for grp in db.query(Group).filter(Group.company_id == company.id).all():
+            gf = float(grp.fame)
+            gn = int(grp.fans_count)
+            gs = 58 + gf * 0.4 + min(16.0, _math.log10(max(1, gn)) * 3.5) + _random.Random(f"grp:{grp.id}:{week}").uniform(-5, 8)
+            entries.append({"name": grp.name, "title": "컴백", "score": round(gs, 1), "flag": "🇰🇷", "is_you": False, "is_group": True})
+
     entries.sort(key=lambda e: e["score"], reverse=True)
     top = entries[:50]
     for i, e in enumerate(top):

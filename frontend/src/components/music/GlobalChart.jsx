@@ -43,6 +43,7 @@ export function GlobalChart() {
               <span style={{ fontWeight: e.is_you ? 800 : 600, color: e.is_you ? 'var(--sk-accent)' : 'var(--color-text)' }}>{e.name}</span>
               <span style={{ color: 'var(--color-muted)' }}> — {e.title}</span>
               {e.is_you && <span style={{ color: 'var(--sk-accent)', fontWeight: 800 }}> · 나</span>}
+              {e.is_group && <span style={{ color: '#B794F4', fontWeight: 700, fontSize: 11 }}> · 내 소속</span>}
             </span>
             <span className="me-mono" style={{ fontSize: 11, color: 'var(--color-faint)' }}>{e.score}</span>
           </div>
