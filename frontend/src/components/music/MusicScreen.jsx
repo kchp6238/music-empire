@@ -33,6 +33,17 @@ export function MusicScreen() {
   const [fanBusy, setFanBusy] = useState(false);
   const [fanResult, setFanResult] = useState(null);
 
+  async function doRest() {
+    setFanBusy(true); setError('');
+    try {
+      await musicApi.rest();
+      await refresh();
+      await loadCharacter();
+    } catch (e) {
+      setError(e.message || '휴식에 실패했어요');
+    } finally { setFanBusy(false); }
+  }
+
   async function doWorldTour() {
     setFanBusy(true); setError('');
     try {
@@ -151,8 +162,28 @@ export function MusicScreen() {
           )}
         </div>
 
-        {/* right: fandom + trophies */}
+        {/* right: condition + fandom + trophies */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {(() => {
+            const cond = status?.condition ?? character.condition ?? 100;
+            const cColor = cond >= 60 ? '#5FBF8F' : cond >= 30 ? 'var(--sk-accent)' : '#C4576B';
+            return (
+              <div className="me-panel">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+                  <span>🔋 컨디션</span>
+                  <span className="me-mono" style={{ color: cColor }}>{cond}</span>
+                </div>
+                <div style={{ height: 8, borderRadius: 4, background: 'var(--sk-panel-b)', overflow: 'hidden', marginBottom: 8 }}>
+                  <div style={{ height: '100%', width: `${cond}%`, background: cColor, borderRadius: 4, transition: 'width .2s' }} />
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--color-faint)', marginBottom: 10 }}>
+                  활동하면 닳고, 낮으면 음방 성적이 떨어져요. 휴식으로 회복 (2일).
+                </div>
+                <button className="me-btn-ghost w-full justify-center" disabled={fanBusy || cond >= 100} onClick={doRest}>😴 휴식</button>
+              </div>
+            );
+          })()}
+
           <div className="me-panel">
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Heart size={15} style={{ color: '#E893A6' }} /> 팬덤
@@ -194,7 +225,7 @@ export function MusicScreen() {
           <div className="me-panel">
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>🌍 해외 진출</div>
             {(() => {
-              const eligible = (character.fame ?? 0) >= 70 && (character.fans_count ?? 0) >= 100000;
+              const eligible = (character.fame ?? 0) >= 70 && (character.fansCount ?? 0) >= 100000;
               return eligible ? (
                 <>
                   <div style={{ fontSize: 11, color: 'var(--color-muted)', marginBottom: 10 }}>월드투어로 대형 수익·명성·팬을 확보해요 (5일 소요).</div>
@@ -203,7 +234,7 @@ export function MusicScreen() {
               ) : (
                 <div style={{ fontSize: 11, color: 'var(--color-faint)' }}>
                   조건: 명성 70+ · 팬 10만+<br />
-                  <span style={{ color: 'var(--color-muted)' }}>현재 명성 {Math.round(character.fame ?? 0)} · 팬 {compactNum(character.fans_count ?? 0)}</span>
+                  <span style={{ color: 'var(--color-muted)' }}>현재 명성 {Math.round(character.fame ?? 0)} · 팬 {compactNum(character.fansCount ?? 0)}</span>
                 </div>
               );
             })()}

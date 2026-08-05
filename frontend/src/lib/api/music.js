@@ -19,3 +19,7 @@ export function fanEvent(kind) {
 export function worldTour() {
   return apiFetch('/music/world-tour', { method: 'POST' });
 }
+
+export function rest() {
+  return apiFetch('/music/rest', { method: 'POST' });
+}

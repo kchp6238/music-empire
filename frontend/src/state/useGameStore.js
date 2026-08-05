@@ -60,6 +60,7 @@ function mapCharacter(apiChar) {
     money: apiChar.money,
     fansCount: apiChar.fans_count,
     totalStreams: apiChar.total_streams ?? 0,
+    condition: apiChar.condition ?? 100,
     gameDate: apiChar.game_date,
     age: apiChar.age,
     songs: [],

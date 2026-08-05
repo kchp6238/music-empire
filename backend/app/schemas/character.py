@@ -22,6 +22,7 @@ class CharacterOut(BaseModel):
     money: float
     fans_count: int
     total_streams: int
+    condition: int = 100
     game_date: date
     birth_date: date
     age: int
@@ -69,6 +70,7 @@ class SeasonRecordOut(BaseModel):
     money: float
     fans_count: int
     total_streams: int
+    condition: int = 100
     releases_this_season: int
     best_song: dict | None
 

@@ -74,6 +74,7 @@ export function TopBar({ character }) {
           <Stat label="명성" value={Math.round(character.fame)} color="#4FD1C5" />
           <Stat label="자금" value={won(character.money)} color="#E8A33D" />
           <Stat label="팬" value={character.fansCount.toLocaleString('ko-KR')} color="#E893A6" />
+          <Stat label="컨디션" value={character.condition ?? 100} color={(character.condition ?? 100) >= 60 ? '#5FBF8F' : (character.condition ?? 100) >= 30 ? '#E8A33D' : '#C4576B'} />
           <Stat label="발매곡" value={character.songs.length} color="#EDE9F0" />
           <button className="me-btn-ghost !px-2.5 !py-1.5" onClick={openGuide} title="게임 가이드" aria-label="게임 가이드">
             <HelpCircle size={14} />

@@ -50,6 +50,10 @@ class Character(Base):
     # promo is once per game-week). -1 so week 0 is still promotable.
     fandom_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
     last_music_show_week: Mapped[int] = mapped_column(Integer, nullable=False, default=-1, server_default="-1")
+    # Physical/mental condition (0-100). Drained by promotional activities,
+    # restored by rest. Only nudges music-show performance — never core song
+    # scoring — so balance/parity elsewhere is untouched.
+    condition: Mapped[int] = mapped_column(Integer, nullable=False, default=100, server_default="100")
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(

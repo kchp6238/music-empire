@@ -40,6 +40,7 @@ class FandomStatus(BaseModel):
 class MusicStatus(BaseModel):
     fandom: FandomStatus
     week: int
+    condition: int = 100
     can_promote: bool
     trophies: int
     results: list[MusicShowResultOut] = []

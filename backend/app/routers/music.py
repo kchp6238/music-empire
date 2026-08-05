@@ -39,3 +39,8 @@ def fan_event(payload: FanEventRequest, db: Session = Depends(get_db), character
 @router.post("/world-tour", status_code=status.HTTP_201_CREATED)
 def world_tour(db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
     return music_service.world_tour(db, character)
+
+
+@router.post("/rest", status_code=status.HTTP_201_CREATED)
+def rest(db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    return music_service.rest(db, character)

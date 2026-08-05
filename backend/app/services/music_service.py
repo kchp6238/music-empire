@@ -54,6 +54,7 @@ def world_tour(db: Session, character: Character) -> dict:
     character.money = float(character.money) + earnings
     character.fame = max(0, min(100, fame + fame_gain))
     character.fans_count = fans + fans_gain
+    character.condition = max(0, int(character.condition) - 30)
     db.commit()
     time_service.advance_days(db, character, 5, reason="world_tour")
     return {
@@ -61,6 +62,15 @@ def world_tour(db: Session, character: Character) -> dict:
         "character_fame": float(character.fame), "character_fans": int(character.fans_count),
         "character_money": float(character.money),
     }
+
+
+def rest(db: Session, character: Character) -> dict:
+    """Take time off to recover condition (advances 2 days)."""
+    before = int(character.condition)
+    character.condition = min(100, before + 35)
+    db.commit()
+    time_service.advance_days(db, character, 2, reason="rest")
+    return {"condition": int(character.condition), "restored": int(character.condition) - before}
 
 
 def fan_event(db: Session, character: Character, kind: str) -> dict:
@@ -76,6 +86,7 @@ def fan_event(db: Session, character: Character, kind: str) -> dict:
     character.money = float(character.money) + earnings
     character.fans_count = fans + fans_gain
     character.fame = max(0, min(100, float(character.fame) + cfg["fame"]))
+    character.condition = max(0, int(character.condition) - 6)
     db.commit()
     time_service.advance_days(db, character, 1, reason="fan_event")
     return {
@@ -153,6 +164,7 @@ def get_status(db: Session, character: Character) -> dict:
     return {
         "fandom": fandom_status(character),
         "week": week,
+        "condition": int(character.condition),
         "can_promote": week > (character.last_music_show_week if character.last_music_show_week is not None else -1),
         "trophies": trophies,
         "results": [_result_out(r) for r in results],
@@ -180,10 +192,12 @@ def promote(db: Session, character: Character, song_id: str) -> dict:
     fans = int(character.fans_count)
     weeks_since = max(0, (character.game_date - song.released_on).days // 7) if song.released_on else 0
 
-    # points = song quality + fame + how fresh the release is + fanbase + luck
+    # points = song quality + fame + how fresh the release is + fanbase + luck,
+    # then nudged by the artist's condition (a tired star underperforms).
     recency = max(0, 8 - weeks_since) * 2.0            # 0..16, decays over ~2 months
     fan_bonus = min(20.0, math.log10(max(1, fans)) * 4.0)
-    points = round(score + fame * 0.4 + recency + fan_bonus + rng.uniform(-8, 12), 1)
+    condition = int(getattr(character, "condition", 100))
+    points = round(score + fame * 0.4 + recency + fan_bonus + (condition - 60) * 0.12 + rng.uniform(-8, 12), 1)
 
     win_line = 100 + rng.uniform(-6, 10)               # weekly competition strength
     if points >= win_line:
@@ -216,6 +230,7 @@ def promote(db: Session, character: Character, song_id: str) -> dict:
     character.money = max(0, float(character.money) + money_delta)
     song.views = int(song.views or 0) + streams_delta
     character.last_music_show_week = week
+    character.condition = max(0, condition - 10)
 
     row = MusicShowResult(
         character_id=character.id, song_id=song.id, song_title=song.title, show_name=rng.choice(SHOW_NAMES),
