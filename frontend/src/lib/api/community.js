@@ -6,6 +6,10 @@ export function getFeed() {
   return apiFetch('/community/feed');
 }
 
+export function getGlobalChart() {
+  return apiFetch('/community/global-chart');
+}
+
 export function getChart() {
   return apiFetch('/community/chart');
 }

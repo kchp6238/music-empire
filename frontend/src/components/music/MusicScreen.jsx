@@ -6,6 +6,7 @@ import { useGameStore } from '../../state/useGameStore';
 import { TIER_COLOR } from '../../lib/gameData/constants';
 import { compactNum } from '../../lib/utils';
 import * as musicApi from '../../lib/api/music';
+import { GlobalChart } from './GlobalChart';
 
 const RANK_STYLE = {
   1: { label: '🏆 1위', color: '#F5C46B' },
@@ -118,8 +119,9 @@ export function MusicScreen() {
       </div>
 
       <div className="max-w-[1080px] mx-auto px-4 md:px-6 pb-24 grid grid-cols-1 gap-5 md:[grid-template-columns:1fr_320px]">
-        {/* left: music-show activity */}
-        <div className="me-panel">
+        {/* left: music-show activity + global chart */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div className="me-panel">
           <div className="me-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Radio size={18} style={{ color: 'var(--sk-accent)' }} /> 음악방송 활동
           </div>
@@ -160,6 +162,8 @@ export function MusicScreen() {
               </button>
             </>
           )}
+          </div>
+          <GlobalChart />
         </div>
 
         {/* right: condition + fandom + trophies */}

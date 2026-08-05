@@ -21,6 +21,11 @@ def chart(db: Session = Depends(get_db), character=Depends(get_current_character
     return community_service.get_chart(db, character)
 
 
+@router.get("/global-chart")
+def global_chart(db: Session = Depends(get_db), character=Depends(get_current_character)):
+    return community_service.global_chart(db, character)
+
+
 @router.get("/search")
 def search(q: str = "", db: Session = Depends(get_db), character=Depends(get_current_character)):
     return community_service.search(db, character, q)

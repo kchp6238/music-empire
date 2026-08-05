@@ -7,7 +7,7 @@ from app.models.npc import NpcArtist, NpcSong
 from app.models.community import Follow
 from app.models.fan import FanPersona, SongReaction
 from app.services.patterns import build_combined_pattern
-from app.services import covers_service, reactions as reactions_service, recordings_service
+from app.services import covers_service, reactions as reactions_service, recordings_service, time_service
 from app.services.game_data import NPC_ARTISTS
 
 _NPC_BY_NAME = {a["name"]: a for a in NPC_ARTISTS}
@@ -266,3 +266,68 @@ def unfollow(db: Session, follower_character_id: str, followed_type: str, follow
         Follow.follower_character_id == follower_character_id, Follow.followed_type == followed_type, Follow.followed_id == followed_id
     ).delete()
     db.commit()
+
+
+# ---- global chart (billboard-style world ranking) -----------------------------
+import math as _math
+import random as _random
+
+_GLOBAL_NAMES = [
+    "LUNA", "Kai Reyes", "Aria Blake", "DJ Volt", "Mei Lin", "Noah Frost", "SASA",
+    "Elena Cruz", "Marco Vidal", "Yuki", "Zane", "Nova", "Priya", "Diego", "Amara",
+    "The Midnights", "Vela", "Ren", "Sofia Marchetti", "OKAY", "Bjorn", "Isla", "Tavi",
+]
+_GLOBAL_TITLES = [
+    "Midnight Drive", "Gravity", "Neon Heart", "Wildfire", "Paper Planes", "Echoes",
+    "Supernova", "Golden Hour", "Lost in Tokyo", "Rooftop", "Bloom", "Vertigo",
+    "Afterglow", "Riptide", "Halo", "Silhouette", "Cosmic", "Fever", "Ivory", "Mirage",
+]
+_FLAGS = ["🇺🇸", "🇬🇧", "🇯🇵", "🇧🇷", "🇫🇷", "🇮🇳", "🇨🇦", "🇪🇸", "🇩🇪", "🇦🇺", "🇸🇪", "🇲🇽"]
+
+
+def global_chart(db: Session, viewer: Character) -> dict:
+    """A billboard-style world ranking: the player's released songs and world
+    rivals against a rotating field of fictional international stars. Deterministic
+    per (world, week) so it's stable within a week but shifts over time."""
+    week = time_service.week_index(viewer)
+    rng = _random.Random(f"global:{viewer.world_id}:{week}")
+    fame = float(viewer.fame)
+    fans = int(viewer.fans_count)
+    fan_factor = min(15.0, _math.log10(max(1, fans)) * 3.0)
+
+    entries: list[dict] = []
+
+    for s in db.query(Song).filter(Song.character_id == viewer.id, Song.released_at.isnot(None)).all():
+        weeks_since = max(0, (viewer.game_date - s.released_on).days // 7) if s.released_on else 0
+        recency = max(0, 6 - weeks_since) * 1.5
+        j = _random.Random(f"you:{s.id}:{week}").uniform(-6, 6)
+        g = float(s.overall_score or 0) + fame * 0.4 + fan_factor + recency + j
+        entries.append({"name": viewer.artist_name, "title": s.title, "score": round(g, 1), "flag": "🇰🇷", "is_you": True})
+
+    npc_rows = (
+        db.query(NpcSong, NpcArtist)
+        .join(NpcArtist, NpcSong.npc_artist_id == NpcArtist.id)
+        .filter(NpcSong.world_id == viewer.world_id, NpcSong.released_on <= viewer.game_date)
+        .order_by(NpcSong.score.desc())
+        .limit(40)
+        .all()
+    )
+    for ns, artist in npc_rows:
+        j = _random.Random(f"npc:{ns.id}:{week}").uniform(-6, 8)
+        g = float(ns.score) + 8 + j
+        entries.append({"name": artist.name, "title": ns.title, "score": round(g, 1), "flag": "🇰🇷", "is_you": False})
+
+    for i in range(40):
+        g = rng.uniform(78, 104)
+        entries.append({
+            "name": _GLOBAL_NAMES[(i * 7 + week) % len(_GLOBAL_NAMES)],
+            "title": _GLOBAL_TITLES[(i * 5 + week) % len(_GLOBAL_TITLES)],
+            "score": round(g, 1), "flag": _FLAGS[(i * 3 + week) % len(_FLAGS)], "is_you": False,
+        })
+
+    entries.sort(key=lambda e: e["score"], reverse=True)
+    top = entries[:50]
+    for i, e in enumerate(top):
+        e["rank"] = i + 1
+    best = next((e["rank"] for e in top if e["is_you"]), None)
+    return {"week": week, "your_best_rank": best, "entries": top}
