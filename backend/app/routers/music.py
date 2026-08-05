@@ -28,7 +28,7 @@ def set_fandom_name(payload: FandomNameUpdate, db: Session = Depends(get_db), ch
 
 @router.post("/promote", response_model=PromoteResult, status_code=status.HTTP_201_CREATED)
 def promote(payload: PromoteRequest, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
-    return music_service.promote(db, character, payload.song_id)
+    return music_service.promote(db, character, payload.song_id, payload.performance)
 
 
 @router.post("/fan-event", status_code=status.HTTP_201_CREATED)

@@ -8,6 +8,7 @@ class FandomNameUpdate(BaseModel):
 
 class PromoteRequest(BaseModel):
     song_id: str
+    performance: float | None = None  # 0..1 rhythm-game result; None = skipped (base)
 
 
 class MusicShowResultOut(BaseModel):

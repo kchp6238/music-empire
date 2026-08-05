@@ -7,6 +7,7 @@ import { TIER_COLOR } from '../../lib/gameData/constants';
 import { compactNum } from '../../lib/utils';
 import * as musicApi from '../../lib/api/music';
 import { GlobalChart } from './GlobalChart';
+import { RhythmGame } from './RhythmGame';
 
 const RANK_STYLE = {
   1: { label: '🏆 1위', color: '#F5C46B' },
@@ -28,6 +29,7 @@ export function MusicScreen() {
   const [songId, setSongId] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
+  const [stage, setStage] = useState(null); // null | 'choice' | 'rhythm'
   const [error, setError] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
@@ -89,12 +91,13 @@ export function MusicScreen() {
     } catch (e) { setError(e.message || '이름 저장 실패'); }
   }
 
-  async function promote() {
+  async function runPromote(performance = null) {
+    setStage(null);
     if (!songId) return;
     setError(''); setBusy(true);
     try {
-      const res = await musicApi.promoteSong(songId);
-      setResult(res);
+      const res = await musicApi.promoteSong(songId, performance);
+      setResult({ ...res, performance });
       await refresh();
       await loadCharacter(); // reflect fame/fans/money on the top bar
     } catch (e) {
@@ -157,7 +160,7 @@ export function MusicScreen() {
                 })}
               </div>
               {error && <div style={{ color: 'var(--color-danger)', fontSize: 12, marginBottom: 8 }}>{error}</div>}
-              <button className="me-btn-primary w-full justify-center" onClick={promote} disabled={busy || !songId}>
+              <button className="me-btn-primary w-full justify-center" onClick={() => setStage('choice')} disabled={busy || !songId}>
                 {busy ? '무대 오르는 중…' : '음악방송 출연 🎤'}
               </button>
             </>
@@ -278,7 +281,12 @@ export function MusicScreen() {
                 <div style={{ fontSize: 40, marginBottom: 4 }}>{result.result.is_win ? '🏆' : '🎤'}</div>
                 <div style={{ fontSize: 13, color: 'var(--color-muted)' }}>{result.result.show_name}</div>
                 <div className="me-display" style={{ fontSize: 24, fontWeight: 800, color: b.color, margin: '4px 0 2px' }}>{b.label}</div>
-                <div style={{ fontSize: 13, marginBottom: 14 }}>{result.result.song_title}</div>
+                <div style={{ fontSize: 13, marginBottom: result.performance != null ? 6 : 14 }}>{result.result.song_title}</div>
+                {result.performance != null && (
+                  <div style={{ fontSize: 12, marginBottom: 14, color: result.performance >= 0.75 ? '#4FD1C5' : result.performance >= 0.5 ? '#E8A33D' : '#C4576B' }}>
+                    🎵 리듬 {Math.round(result.performance * 100)}% — {result.performance >= 0.75 ? '완벽한 무대! 보너스' : result.performance >= 0.5 ? '무난한 무대' : '삐끗한 무대… 감점'}
+                  </div>
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
                   <Reward label="명성" value={`+${result.fame_delta}`} color="var(--sk-accent)" />
                   <Reward label="팬" value={`+${compactNum(result.fans_delta)}`} color="#E893A6" />
@@ -288,6 +296,32 @@ export function MusicScreen() {
                 <button className="me-btn-primary w-full justify-center" onClick={() => setResult(null)}>확인</button>
               </>
             ); })()}
+          </div>
+        </div>
+      )}
+
+      {stage === 'choice' && (
+        <div className="me-modal-backdrop" onClick={() => setStage(null)}>
+          <div className="me-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 360, textAlign: 'center' }}>
+            <div style={{ fontSize: 30 }}>🎤</div>
+            <div className="me-display" style={{ fontSize: 17, fontWeight: 800, marginBottom: 4 }}>무대에 오르기 전</div>
+            <div style={{ fontSize: 12, color: 'var(--color-muted)', marginBottom: 16 }}>리듬게임을 잘하면 순위·보상이 올라가고, 못하면 떨어져요. 안 하면 기본 성적으로 출연해요.</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button className="me-btn-primary w-full justify-center" onClick={() => setStage('rhythm')}>🎮 리듬게임 도전</button>
+              <button className="me-btn-ghost w-full justify-center" onClick={() => runPromote(null)}>🎤 그냥 출연 (기본 보상)</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {stage === 'rhythm' && (
+        <div className="me-modal-backdrop" onClick={() => { /* ignore backdrop during play */ }}>
+          <div className="me-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380 }}>
+            <RhythmGame
+              bpm={character?.songs?.find((s) => s.id === songId)?.bpm ?? 120}
+              onFinish={(perf) => runPromote(perf)}
+              onCancel={() => runPromote(null)}
+            />
           </div>
         </div>
       )}

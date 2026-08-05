@@ -8,8 +8,8 @@ export function setFandomName(name) {
   return apiFetch('/music/fandom-name', { method: 'POST', body: { name } });
 }
 
-export function promoteSong(songId) {
-  return apiFetch('/music/promote', { method: 'POST', body: { song_id: songId } });
+export function promoteSong(songId, performance = null) {
+  return apiFetch('/music/promote', { method: 'POST', body: { song_id: songId, performance } });
 }
 
 export function fanEvent(kind) {

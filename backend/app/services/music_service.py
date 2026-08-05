@@ -172,7 +172,7 @@ def get_status(db: Session, character: Character) -> dict:
     }
 
 
-def promote(db: Session, character: Character, song_id: str) -> dict:
+def promote(db: Session, character: Character, song_id: str, performance: float | None = None) -> dict:
     week = time_service.week_index(character)
     if week <= (character.last_music_show_week if character.last_music_show_week is not None else -1):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
@@ -198,6 +198,11 @@ def promote(db: Session, character: Character, song_id: str) -> dict:
     fan_bonus = min(20.0, math.log10(max(1, fans)) * 4.0)
     condition = int(getattr(character, "condition", 100))
     points = round(score + fame * 0.4 + recency + fan_bonus + (condition - 60) * 0.12 + rng.uniform(-8, 12), 1)
+    # Rhythm-game stage performance (0..1): great play lifts the ranking, a poor
+    # showing drags it, skipping (None) is the neutral base.
+    if performance is not None:
+        p = max(0.0, min(1.0, performance))
+        points = round(points + (p - 0.5) * 24, 1)
 
     win_line = 100 + rng.uniform(-6, 10)               # weekly competition strength
     if points >= win_line:
