@@ -46,6 +46,11 @@ class Character(Base):
     # before the epoch so the first completed year triggers a ceremony.
     last_awarded_year: Mapped[int] = mapped_column(Integer, nullable=False, default=GAME_EPOCH.year - 1, server_default=str(GAME_EPOCH.year - 1))
 
+    # Fandom identity + the last week a music-show promotion was used (music
+    # promo is once per game-week). -1 so week 0 is still promotable.
+    fandom_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    last_music_show_week: Mapped[int] = mapped_column(Integer, nullable=False, default=-1, server_default="-1")
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)

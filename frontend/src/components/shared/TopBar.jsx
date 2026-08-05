@@ -1,4 +1,4 @@
-import { Disc3, LogOut, LibraryBig, Music2, SlidersHorizontal, ListMusic, Mic, Users, Handshake, Building2, Globe, Newspaper, HelpCircle, Settings } from 'lucide-react';
+import { Disc3, LogOut, LibraryBig, Music2, SlidersHorizontal, ListMusic, Mic, Users, Handshake, Building2, Globe, Newspaper, Radio, HelpCircle, Settings } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { won } from '../../lib/utils';
 import { useAuthStore } from '../../state/useAuthStore';
@@ -17,6 +17,7 @@ const TABS = [
   { path: '/collab', label: '협업', icon: Handshake },
   { path: '/company', label: '회사', icon: Building2 },
   { path: '/online', label: '온라인', icon: Globe },
+  { path: '/music', label: '음방', icon: Radio },
 ];
 
 function Stat({ label, value, color }) {
