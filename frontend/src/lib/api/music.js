@@ -11,3 +11,7 @@ export function setFandomName(name) {
 export function promoteSong(songId) {
   return apiFetch('/music/promote', { method: 'POST', body: { song_id: songId } });
 }
+
+export function fanEvent(kind) {
+  return apiFetch('/music/fan-event', { method: 'POST', body: { kind } });
+}

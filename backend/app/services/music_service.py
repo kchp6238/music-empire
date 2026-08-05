@@ -23,6 +23,35 @@ FANDOM_LEVELS = [
 # Fictional show names (no real-broadcast trademarks).
 SHOW_NAMES = ["뮤직 스테이지", "더 스테이지", "케이 차트쇼", "인기가요쇼", "뮤직 온에어", "탑뮤직"]
 
+# Fan events (팬미팅·팬사인회) — meet the fandom for ticket/goods income and
+# tighter loyalty. per_fan = revenue per current fan; fan_mult = fan growth.
+FAN_EVENTS = {
+    "fanmeet": {"label": "팬미팅", "per_fan": 25, "fan_mult": 0.02, "fame": 0.5},
+    "fansign": {"label": "팬사인회", "per_fan": 12, "fan_mult": 0.01, "fame": 0.3},
+}
+
+
+def fan_event(db: Session, character: Character, kind: str) -> dict:
+    cfg = FAN_EVENTS.get(kind)
+    if cfg is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="알 수 없는 팬 이벤트입니다")
+    fans = int(character.fans_count)
+    rng = random.Random()
+    roll = 0.8 + rng.random() * 0.4
+    earnings = round(fans * cfg["per_fan"] * roll + 100_000)
+    fans_gain = int(fans * cfg["fan_mult"] + 100)
+
+    character.money = float(character.money) + earnings
+    character.fans_count = fans + fans_gain
+    character.fame = max(0, min(100, float(character.fame) + cfg["fame"]))
+    db.commit()
+    time_service.advance_days(db, character, 1, reason="fan_event")
+    return {
+        "kind": kind, "label": cfg["label"], "earnings": earnings, "fans_gain": fans_gain, "fame_gain": cfg["fame"],
+        "character_fans": int(character.fans_count), "character_money": float(character.money),
+        "character_fame": float(character.fame),
+    }
+
 
 def fandom_status(character: Character) -> dict:
     fans = int(character.fans_count)

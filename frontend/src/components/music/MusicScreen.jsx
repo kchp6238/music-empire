@@ -30,6 +30,20 @@ export function MusicScreen() {
   const [error, setError] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
+  const [fanBusy, setFanBusy] = useState(false);
+  const [fanResult, setFanResult] = useState(null);
+
+  async function doFanEvent(kind) {
+    setFanBusy(true); setError('');
+    try {
+      const res = await musicApi.fanEvent(kind);
+      setFanResult(res);
+      await refresh();
+      await loadCharacter();
+    } catch (e) {
+      setError(e.message || '팬 이벤트에 실패했습니다');
+    } finally { setFanBusy(false); }
+  }
 
   async function refresh() {
     try { setStatus(await musicApi.getMusicStatus()); } catch { /* ignore */ }
@@ -158,6 +172,11 @@ export function MusicScreen() {
             <div style={{ fontSize: 10, color: 'var(--color-faint)', marginTop: 6 }}>
               {nextAt ? `다음 등급까지 ${compactNum(Math.max(0, nextAt - fans))}명` : '최고 등급 달성!'}
             </div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+              <button className="me-btn-ghost" style={{ flex: 1, justifyContent: 'center', fontSize: 12, padding: '8px 4px' }} disabled={fanBusy} onClick={() => doFanEvent('fanmeet')}>💗 팬미팅</button>
+              <button className="me-btn-ghost" style={{ flex: 1, justifyContent: 'center', fontSize: 12, padding: '8px 4px' }} disabled={fanBusy} onClick={() => doFanEvent('fansign')}>✍️ 팬사인회</button>
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--color-faint)', marginTop: 6 }}>팬을 만나 수익·팬을 늘려요 (하루 진행).</div>
           </div>
 
           <div className="me-panel">
@@ -204,6 +223,21 @@ export function MusicScreen() {
                 <button className="me-btn-primary w-full justify-center" onClick={() => setResult(null)}>확인</button>
               </>
             ); })()}
+          </div>
+        </div>
+      )}
+
+      {fanResult && (
+        <div className="me-modal-backdrop" onClick={() => setFanResult(null)}>
+          <div className="me-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 340, textAlign: 'center' }}>
+            <div style={{ fontSize: 34, marginBottom: 2 }}>{fanResult.kind === 'fanmeet' ? '💗' : '✍️'}</div>
+            <div className="me-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>{fanResult.label} 성료!</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
+              <Reward label="수익" value={`+₩${compactNum(fanResult.earnings)}`} color="#5FBF8F" />
+              <Reward label="팬" value={`+${compactNum(fanResult.fans_gain)}`} color="#E893A6" />
+              <Reward label="명성" value={`+${fanResult.fame_gain}`} color="var(--sk-accent)" />
+            </div>
+            <button className="me-btn-primary w-full justify-center" onClick={() => setFanResult(null)}>확인</button>
           </div>
         </div>
       )}
