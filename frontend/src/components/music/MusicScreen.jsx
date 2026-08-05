@@ -33,6 +33,18 @@ export function MusicScreen() {
   const [fanBusy, setFanBusy] = useState(false);
   const [fanResult, setFanResult] = useState(null);
 
+  async function doWorldTour() {
+    setFanBusy(true); setError('');
+    try {
+      const res = await musicApi.worldTour();
+      setFanResult({ kind: 'tour', label: '월드투어', earnings: res.earnings, fans_gain: res.fans_gain, fame_gain: res.fame_gain });
+      await refresh();
+      await loadCharacter();
+    } catch (e) {
+      setError(e.message || '해외 진출에 실패했어요');
+    } finally { setFanBusy(false); }
+  }
+
   async function doFanEvent(kind) {
     setFanBusy(true); setError('');
     try {
@@ -180,6 +192,24 @@ export function MusicScreen() {
           </div>
 
           <div className="me-panel">
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>🌍 해외 진출</div>
+            {(() => {
+              const eligible = (character.fame ?? 0) >= 70 && (character.fans_count ?? 0) >= 100000;
+              return eligible ? (
+                <>
+                  <div style={{ fontSize: 11, color: 'var(--color-muted)', marginBottom: 10 }}>월드투어로 대형 수익·명성·팬을 확보해요 (5일 소요).</div>
+                  <button className="me-btn-primary w-full justify-center" disabled={fanBusy} onClick={doWorldTour}>월드투어 출발 ✈️</button>
+                </>
+              ) : (
+                <div style={{ fontSize: 11, color: 'var(--color-faint)' }}>
+                  조건: 명성 70+ · 팬 10만+<br />
+                  <span style={{ color: 'var(--color-muted)' }}>현재 명성 {Math.round(character.fame ?? 0)} · 팬 {compactNum(character.fans_count ?? 0)}</span>
+                </div>
+              );
+            })()}
+          </div>
+
+          <div className="me-panel">
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Trophy size={15} style={{ color: '#F5C46B' }} /> 음방 기록
               <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--color-muted)' }}>🏆 {status?.trophies ?? 0}</span>
@@ -230,7 +260,7 @@ export function MusicScreen() {
       {fanResult && (
         <div className="me-modal-backdrop" onClick={() => setFanResult(null)}>
           <div className="me-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 340, textAlign: 'center' }}>
-            <div style={{ fontSize: 34, marginBottom: 2 }}>{fanResult.kind === 'fanmeet' ? '💗' : '✍️'}</div>
+            <div style={{ fontSize: 34, marginBottom: 2 }}>{fanResult.kind === 'fanmeet' ? '💗' : fanResult.kind === 'tour' ? '🌍' : '✍️'}</div>
             <div className="me-display" style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>{fanResult.label} 성료!</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
               <Reward label="수익" value={`+₩${compactNum(fanResult.earnings)}`} color="#5FBF8F" />

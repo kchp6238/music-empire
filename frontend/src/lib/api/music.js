@@ -15,3 +15,7 @@ export function promoteSong(songId) {
 export function fanEvent(kind) {
   return apiFetch('/music/fan-event', { method: 'POST', body: { kind } });
 }
+
+export function worldTour() {
+  return apiFetch('/music/world-tour', { method: 'POST' });
+}

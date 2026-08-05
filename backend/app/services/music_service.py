@@ -31,6 +31,38 @@ FAN_EVENTS = {
 }
 
 
+# Going global — a top-tier milestone activity. Gated on real standing; pays
+# big and eats several days.
+WORLD_TOUR_MIN_FAME = 70
+WORLD_TOUR_MIN_FANS = 100_000
+
+
+def world_tour(db: Session, character: Character) -> dict:
+    fame = float(character.fame)
+    fans = int(character.fans_count)
+    if fame < WORLD_TOUR_MIN_FAME or fans < WORLD_TOUR_MIN_FANS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"해외 진출 조건 미달 — 명성 {WORLD_TOUR_MIN_FAME}+ (현재 {round(fame)}), 팬 {WORLD_TOUR_MIN_FANS:,}+ (현재 {fans:,})",
+        )
+    rng = random.Random()
+    roll = 0.8 + rng.random() * 0.5
+    earnings = round(fans * 120 * roll + 20_000_000)
+    fame_gain = round(3 + rng.random() * 3, 1)
+    fans_gain = int(fans * 0.15 + 50_000 * roll)
+
+    character.money = float(character.money) + earnings
+    character.fame = max(0, min(100, fame + fame_gain))
+    character.fans_count = fans + fans_gain
+    db.commit()
+    time_service.advance_days(db, character, 5, reason="world_tour")
+    return {
+        "earnings": earnings, "fame_gain": fame_gain, "fans_gain": fans_gain,
+        "character_fame": float(character.fame), "character_fans": int(character.fans_count),
+        "character_money": float(character.money),
+    }
+
+
 def fan_event(db: Session, character: Character, kind: str) -> dict:
     cfg = FAN_EVENTS.get(kind)
     if cfg is None:
