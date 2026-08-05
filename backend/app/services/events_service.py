@@ -67,6 +67,31 @@ LIFE_EVENTS = [
         ],
     },
     {
+        "id": "collab_offer", "emoji": "🤝", "title": "콜라보 제안",
+        "desc": "정상급 아티스트가 합동 싱글을 제안했어요.",
+        "choices": [
+            {"label": "수락 (화제의 컬래버)", "fame": 5, "fans_pct": 0.06, "money": 3_000_000, "note": "듀엣이 대박 나며 양쪽 팬층이 합쳐졌어요."},
+            {"label": "내 색을 지킨다", "fame": 0, "fans_pct": 0.0, "money": 0, "note": "독자 노선을 택했어요."},
+        ],
+    },
+    {
+        "id": "diss_battle", "emoji": "🎤", "title": "라이벌의 디스",
+        "desc": "한 래퍼가 곡에서 당신을 직접 디스했어요. 판이 커지고 있어요.",
+        "choices": [
+            {"label": "디스곡으로 응수", "fame": 6, "fans_pct": 0.05, "money": 0, "note": "맞불 디스가 화제의 중심이 됐어요 — 대중은 열광, 일부는 눈살."},
+            {"label": "실력으로 증명", "fame": 3, "fans_pct": 0.03, "money": 0, "note": "묵묵히 좋은 곡으로 답했어요."},
+            {"label": "무대응", "fame": -1, "fans_pct": -0.01, "money": 0, "note": "회피로 비쳐 아쉬움을 남겼어요."},
+        ],
+    },
+    {
+        "id": "plagiarism", "emoji": "⚖️", "title": "표절 시비",
+        "desc": "신곡이 한 해외곡과 비슷하다는 의혹이 제기됐어요.",
+        "choices": [
+            {"label": "레퍼런스 투명 공개", "fame": 1, "fans_pct": 0.01, "money": 0, "note": "정면 돌파에 신뢰가 쌓였어요."},
+            {"label": "법적 대응 예고", "fame": -1, "fans_pct": 0.0, "money": -1_000_000, "note": "논란은 가라앉았지만 비용이 들었어요."},
+        ],
+    },
+    {
         "id": "dance_challenge", "emoji": "💃", "title": "챌린지 열풍",
         "desc": "당신 곡의 챌린지가 SNS에서 유행 조짐을 보여요.",
         "choices": [
