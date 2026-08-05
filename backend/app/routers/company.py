@@ -23,6 +23,10 @@ class DebutGroup(BaseModel):
     trainee_ids: list[str]
 
 
+class GroupActivity(BaseModel):
+    kind: str  # comeback | tour | cf
+
+
 @router.get("/me")
 def my_company(db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
     company = company_service.get_for_owner(db, character)
@@ -60,3 +64,10 @@ def train(trainee_id: str, db: Session = Depends(get_db), character: Character =
 def debut(payload: DebutGroup, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
     company_service.debut_group(db, character, payload.name, payload.trainee_ids)
     return company_service.serialize(db, company_service.get_for_owner(db, character))
+
+
+@router.post("/groups/{group_id}/activity")
+def group_activity(group_id: str, payload: GroupActivity, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    result = company_service.group_activity(db, character, group_id, payload.kind)
+    company = company_service.serialize(db, company_service.get_for_owner(db, character))
+    return {"company": company, "result": result}

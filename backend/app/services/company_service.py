@@ -153,6 +153,77 @@ def debut_group(db: Session, character: Character, name: str, trainee_ids: list[
     return group
 
 
+# What a debuted group can be sent to do. Each turns the roster into income:
+# earnings flow into the company's capital, the owner takes a dividend, and the
+# group gains fame/fans. Costs are what the label fronts (production etc.).
+GROUP_ACTIVITIES = {
+    "comeback": {"label": "컴백 발매", "cost": 2_000_000},
+    "tour": {"label": "콘서트 투어", "cost": 1_000_000},
+    "cf": {"label": "광고·예능", "cost": 0},
+}
+OWNER_DIVIDEND = 0.35  # share of a group's earnings paid out to the label head
+
+
+def group_activity(db: Session, character: Character, group_id: str, kind: str) -> dict:
+    company = _require_company(db, character)
+    group = db.get(Group, group_id)
+    if group is None or group.company_id != company.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="그룹을 찾을 수 없습니다")
+    cfg = GROUP_ACTIVITIES.get(kind)
+    if cfg is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="알 수 없는 활동입니다")
+    cost = cfg["cost"]
+    if float(character.money) < cost:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"활동 비용 {cost:,}원이 부족합니다")
+
+    members = list(group.members)
+    avg_skill = (sum(sum(t.stats.values()) / len(t.stats) for t in members) / len(members)) if members else 40.0
+    fame = float(group.fame)
+    fans = int(group.fans_count)
+    q = avg_skill / 100
+    rng = random.Random()
+    roll = 0.7 + rng.random() * 0.6  # 0.7 .. 1.3
+
+    if kind == "comeback":
+        earnings = round((fans * 30 + avg_skill * 6000 + 500_000) * roll)
+        fame_gain = round(2 + q * 6, 1)
+        fans_gain = int(fans * 0.12 + avg_skill * 45 * roll)
+    elif kind == "tour":
+        earnings = round((fans * 55 + 300_000) * roll)
+        fame_gain = round(1 + q * 3, 1)
+        fans_gain = int(fans * 0.05 + 300)
+    else:  # cf
+        earnings = round((fame * 45_000 + 400_000) * roll)
+        fame_gain = round(1.5 + q * 2.5, 1)
+        fans_gain = int(fans * 0.03 + 200)
+
+    dividend = round(earnings * OWNER_DIVIDEND)
+    character.money = float(character.money) - cost + dividend
+    company.capital = float(company.capital) + earnings
+    group.fame = min(100, fame + fame_gain)
+    group.fans_count = fans + fans_gain
+    group.total_earnings = float(group.total_earnings or 0) + earnings
+    # the label head gains a little prestige from a working roster
+    character.fame = max(0, min(100, float(character.fame) + round(fame_gain * 0.25, 1)))
+
+    entry = {
+        "kind": kind, "label": cfg["label"], "date": character.game_date.isoformat(),
+        "earnings": earnings, "fame_gain": fame_gain, "fans_gain": fans_gain,
+        # `text` is what the activity-log UI renders (settlement entries use it too)
+        "text": f"{cfg['label']} +{earnings // 10000:,}만원",
+    }
+    group.activity_log = [entry] + list(group.activity_log or [])[:19]
+    db.commit()
+    time_service.advance_days(db, character, 3, reason="group_activity")
+    db.refresh(group)
+
+    return {
+        **entry, "cost": cost, "dividend": dividend, "group_name": group.name,
+        "group_fame": float(group.fame), "group_fans": group.fans_count,
+        "company_capital": float(company.capital),
+    }
+
+
 def serialize(db: Session, company: Company) -> dict:
     return {
         "id": company.id,

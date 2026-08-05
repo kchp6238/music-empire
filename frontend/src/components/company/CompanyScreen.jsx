@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, Sparkles } from 'lucide-react';
+import { Users, Sparkles, Disc3, Ticket, Megaphone, Wallet, X } from 'lucide-react';
 import { TopBar } from '../shared/TopBar';
 import * as companyApi from '../../lib/api/company';
 import { useGameStore } from '../../state/useGameStore';
@@ -9,6 +9,13 @@ import { won } from '../../lib/utils';
 const DEBUT_MIN_STAGE = 3;
 const RECRUIT_COST = 1500000;
 const TRAINEE_TRAIN_COST = 500000;
+
+// What a debuted group can be sent to do (mirrors company_service.GROUP_ACTIVITIES).
+const ACTIVITIES = [
+  { kind: 'comeback', label: '컴백', cost: 2000000, icon: Disc3 },
+  { kind: 'tour', label: '투어', cost: 1000000, icon: Ticket },
+  { kind: 'cf', label: '광고', cost: 0, icon: Megaphone },
+];
 
 /** One founding-condition row: current value vs. the target, with a met/unmet
  *  marker so the player can see how far off they are. */
@@ -35,6 +42,21 @@ export function CompanyScreen() {
   const [companyName, setCompanyName] = useState('');
   const [groupName, setGroupName] = useState('');
   const [selected, setSelected] = useState([]);
+  const [actResult, setActResult] = useState(null);
+
+  async function doActivity(groupId, kind) {
+    setBusy(true); setError('');
+    try {
+      const res = await companyApi.groupActivity(groupId, kind);
+      setCompany(res.company);
+      await refreshCharacter();
+      setActResult(res.result);
+    } catch (e) {
+      setError(e.message || '활동에 실패했습니다');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function load() {
     try {
@@ -152,7 +174,12 @@ export function CompanyScreen() {
               </div>
             )}
 
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6, color: '#8B8496' }}><Sparkles size={14} /> 데뷔 그룹</div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6, color: '#8B8496' }}>
+              <Sparkles size={14} /> 데뷔 그룹
+              <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--sk-accent)' }}>
+                <Wallet size={13} /> <span className="me-mono" style={{ fontSize: 12 }}>회사 자본 {won(company.capital || 0)}</span>
+              </span>
+            </div>
             {company.groups.length === 0 && <div style={{ fontSize: 12, color: '#6B6577' }}>아직 데뷔한 그룹이 없습니다.</div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {company.groups.map((g) => (
@@ -161,9 +188,28 @@ export function CompanyScreen() {
                     <span style={{ fontSize: 14, fontWeight: 700 }}>{g.name}</span>
                     <span className="me-mono" style={{ fontSize: 11, color: '#8B8496' }}>명성 {Math.round(g.fame)} · 팬 {g.fans_count.toLocaleString('ko-KR')} · 멤버 {g.member_ids.length}명</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: g.activity_log?.length ? 10 : 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <span style={{ fontSize: 11, color: '#8B8496' }}>누적 수익</span>
                     <span className="me-mono" style={{ fontSize: 15, color: '#E8A33D', fontWeight: 700 }}>{won(g.total_earnings || 0)}</span>
+                  </div>
+                  {/* group activities — send them to earn */}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: g.activity_log?.length ? 12 : 0 }}>
+                    {ACTIVITIES.map((a) => {
+                      const Icon = a.icon;
+                      const afford = character.money >= a.cost;
+                      return (
+                        <button
+                          key={a.kind}
+                          className="me-btn-ghost"
+                          style={{ padding: '7px 11px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5, opacity: afford ? 1 : 0.45 }}
+                          disabled={busy || !afford}
+                          onClick={() => doActivity(g.id, a.kind)}
+                          title={a.cost ? `비용 ${won(a.cost)}` : '무료'}
+                        >
+                          <Icon size={13} /> {a.label} {a.cost ? <span style={{ color: '#6B6577', fontSize: 10 }}>{won(a.cost)}</span> : <span style={{ color: '#5FBF8F', fontSize: 10 }}>무료</span>}
+                        </button>
+                      );
+                    })}
                   </div>
                   {g.activity_log?.length > 0 && (
                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 8 }}>
@@ -184,6 +230,33 @@ export function CompanyScreen() {
           </>
         )}
       </div>
+
+      {actResult && (
+        <div className="me-modal-backdrop" onClick={() => setActResult(null)}>
+          <div className="me-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 360, textAlign: 'center', position: 'relative' }}>
+            <button onClick={() => setActResult(null)} aria-label="닫기" className="me-btn-ghost" style={{ position: 'absolute', top: 10, right: 10, padding: 4 }}><X size={15} /></button>
+            <div style={{ fontSize: 34, marginBottom: 4 }}>{actResult.kind === 'comeback' ? '💿' : actResult.kind === 'tour' ? '🎟️' : '📺'}</div>
+            <div className="me-display" style={{ fontSize: 18, fontWeight: 800 }}>{actResult.group_name} · {actResult.label}</div>
+            <div style={{ fontSize: 12, color: '#8B8496', marginBottom: 14 }}>회사 자본 {won(actResult.company_capital)}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+              <Reward label="수익" value={`+${won(actResult.earnings)}`} color="#E8A33D" />
+              <Reward label="내 배당" value={`+${won(actResult.dividend)}`} color="#5FBF8F" />
+              <Reward label="그룹 명성" value={`+${actResult.fame_gain}`} color="#B794F4" />
+              <Reward label="그룹 팬" value={`+${(actResult.fans_gain || 0).toLocaleString('ko-KR')}`} color="#4FD1C5" />
+            </div>
+            <button className="me-btn-primary w-full justify-center" onClick={() => setActResult(null)}>확인</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Reward({ label, value, color }) {
+  return (
+    <div style={{ background: 'var(--sk-panel-b)', borderRadius: 8, padding: '9px 6px', border: '1px solid var(--color-border)' }}>
+      <div style={{ fontSize: 10, color: '#6B6577' }}>{label}</div>
+      <div className="me-mono" style={{ fontSize: 14, fontWeight: 700, color, marginTop: 2 }}>{value}</div>
     </div>
   );
 }
