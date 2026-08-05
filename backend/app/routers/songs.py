@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -79,3 +80,12 @@ def update_draft(song_id: str, payload: SongDraftUpdate, db: Session = Depends(g
 def release_song(song_id: str, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
     song = songs_service.get_owned_draft(db, song_id, character)
     return songs_service.release_song(db, song, character)
+
+
+class MusicVideoRequest(BaseModel):
+    tier: str  # lowbudget | standard | blockbuster
+
+
+@router.post("/{song_id}/music-video", status_code=status.HTTP_201_CREATED)
+def make_music_video(song_id: str, payload: MusicVideoRequest, db: Session = Depends(get_db), character: Character = Depends(get_current_character)):
+    return songs_service.make_music_video(db, character, song_id, payload.tier)

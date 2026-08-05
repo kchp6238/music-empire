@@ -87,6 +87,59 @@ def update_draft(db: Session, song: Song, data: dict) -> Song:
     return song
 
 
+# Music-video budget tiers: production cost + how hard the release re-charts.
+MV_TIERS = {
+    "lowbudget": {"label": "저예산 MV", "cost": 1_000_000, "mult": 0.6},
+    "standard": {"label": "일반 MV", "cost": 5_000_000, "mult": 1.0},
+    "blockbuster": {"label": "블록버스터 MV", "cost": 20_000_000, "mult": 2.4},
+}
+
+
+def make_music_video(db: Session, character: Character, song_id: str, tier: str) -> dict:
+    """Produce one music video for a released song. Drives a burst of views plus
+    fame/fans, scaled by budget × song quality × luck. One MV per song."""
+    import random
+
+    cfg = MV_TIERS.get(tier)
+    if cfg is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="알 수 없는 MV 등급입니다")
+    song = (
+        db.query(Song)
+        .filter(Song.id == song_id, Song.character_id == character.id, Song.released_at.isnot(None))
+        .first()
+    )
+    if song is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="발매한 본인 곡을 선택하세요")
+    if song.mv_tier:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="이 곡은 이미 뮤직비디오가 있어요")
+    if float(character.money) < cfg["cost"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"제작비 {cfg['cost']:,}원이 부족합니다")
+
+    score = float(song.overall_score or 0)
+    fans = int(character.fans_count)
+    mult = cfg["mult"]
+    roll = 0.7 + random.random() * 0.6
+    views_boost = round((fans * 8 + score * 3000 + 200_000) * mult * roll)
+    fame_gain = round((1 + score / 60) * mult, 1)
+    fans_gain = int((fans * 0.05 + score * 30) * mult * roll)
+    ad_revenue = round(views_boost * 2.2)
+
+    character.money = float(character.money) - cfg["cost"] + ad_revenue
+    character.fame = max(0, min(100, float(character.fame) + fame_gain))
+    character.fans_count = fans + fans_gain
+    song.views = int(song.views or 0) + views_boost
+    song.mv_tier = tier
+    db.commit()
+    db.refresh(song)
+
+    return {
+        "tier": tier, "label": cfg["label"], "cost": cfg["cost"], "song_id": song.id, "song_title": song.title,
+        "views_boost": views_boost, "fame_gain": fame_gain, "fans_gain": fans_gain, "ad_revenue": ad_revenue,
+        "song_views": int(song.views), "character_fame": float(character.fame),
+        "character_fans": int(character.fans_count), "character_money": float(character.money),
+    }
+
+
 def release_song(db: Session, song: Song, character: Character) -> dict:
     """Server-side authoritative scoring — see docs/server-architecture.md §3.
     The client's own computeRelease() result is never trusted or accepted here.

@@ -42,6 +42,9 @@ class Song(Base):
     # Total plays/streams a song has racked up — seeded at release from how many
     # people it reached, shown as 조회수 in the feed/chart.
     views: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # Music-video tier once produced (lowbudget|standard|blockbuster); null = no
+    # MV yet. One MV per song. See services/songs_service.make_music_video.
+    mv_tier: Mapped[str | None] = mapped_column(String(12), nullable=True)
 
     released_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # In-game release date — what weekly charts and season records key off.

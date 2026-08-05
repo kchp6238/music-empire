@@ -7,6 +7,7 @@ import { TimePassedToast } from '../shared/TimePassedToast';
 import { AchievementsPanel } from '../shared/AchievementsPanel';
 import { TrainingPanel } from './TrainingPanel';
 import { AlbumsPanel } from './AlbumsPanel';
+import { MusicVideoButton } from './MusicVideoButton';
 import { CoverThumb } from '../cover/CoverThumb';
 import { GENRES, MOODS, CHORD_PRESETS, TIER_COLOR, GENRE_PROFILES } from '../../lib/gameData/constants';
 import { compactNum } from '../../lib/utils';
@@ -145,7 +146,8 @@ export function StudioScreen() {
                       {(isPlaying && playingId === s.id) ? '■' : '▶'}
                     </button>
                     <span style={{ color: '#EDE9F0', flex: 1, margin: '0 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</span>
-                    <span className="me-mono" style={{ color: '#8B8496', fontSize: 10, marginRight: 6 }} title="조회수">▷ {compactNum(s.views)}</span>
+                    <MusicVideoButton song={s} />
+                    <span className="me-mono" style={{ color: '#8B8496', fontSize: 10, margin: '0 6px' }} title="조회수">▷ {compactNum(s.views)}</span>
                     <span className="me-mono" style={{ color: TIER_COLOR[s.tier] }}>{s.tier} · {s.score}</span>
                   </div>
                 ))}

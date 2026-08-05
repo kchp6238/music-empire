@@ -79,6 +79,7 @@ function mapSong(apiSong) {
     vocalRecordingId: apiSong.vocal_recording_id || null,
     vocals: apiSong.vocals || [],
     views: apiSong.views || 0,
+    mvTier: apiSong.mv_tier || null,
     pattern: buildCombinedPattern(apiSong.pattern, apiSong.structure, apiSong.bpm),
   };
 }
@@ -283,6 +284,13 @@ export const useGameStore = create((set, get) => ({
   },
   loadAlbums: async () => {
     try { set({ albums: await albumsApi.listAlbums() }); } catch { /* ignore */ }
+  },
+  // Produce a music video for a released song — boosts views/fame/fans
+  // server-side; reload the character so the release history + top bar update.
+  makeMusicVideo: async (songId, tier) => {
+    const result = await songsApi.makeMusicVideo(songId, tier);
+    await get().loadCharacter();
+    return result;
   },
   // Bundling songs into an album grants a fame/money/fans bonus server-side, so
   // reload the character (which also refreshes the album list) afterwards.

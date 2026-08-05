@@ -16,6 +16,10 @@ export function releaseSong(songId) {
   return apiFetch(`/songs/${songId}/release`, { method: 'POST' });
 }
 
+export function makeMusicVideo(songId, tier) {
+  return apiFetch(`/songs/${songId}/music-video`, { method: 'POST', body: { tier } });
+}
+
 export function listMySongs() {
   return apiFetch('/songs');
 }
