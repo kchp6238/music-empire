@@ -16,6 +16,13 @@ const BG_ART = {
   ceo_big: { Icon: Building2, grad: 'linear-gradient(135deg,#2A2A3A,#15151F)', color: '#B6BECC' },
   random: { Icon: Dices, grad: 'linear-gradient(135deg,#38203F,#191123)', color: '#C88BFF' },
 };
+
+// Themed photo per background (bundled). Revealed on hover.
+const BG_PHOTOS = import.meta.glob('../../assets/backgrounds/*.jpg', { eager: true, query: '?url', import: 'default' });
+function photoFor(id) {
+  const key = Object.keys(BG_PHOTOS).find((k) => k.endsWith(`/${id}.jpg`));
+  return key ? BG_PHOTOS[key] : null;
+}
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { useGameStore } from '../../state/useGameStore';
@@ -28,6 +35,7 @@ export function CharacterCreation() {
   const switchSave = useGameStore((s) => s.switchSave);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [hoveredId, setHoveredId] = useState(null);
 
   const nameReady = artistNameInput.trim().length > 0;
 
@@ -71,14 +79,19 @@ export function CharacterCreation() {
       <div style={{ fontSize: 12, color: '#8B8496', marginBottom: 10 }}>시작 배경</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, opacity: busy || !nameReady ? 0.5 : 1, pointerEvents: busy ? 'none' : 'auto' }}>
         {BACKGROUNDS.map((bg) => (
-          <div key={bg.id} className="me-card" onClick={() => handleSelect(bg)} style={{ overflow: 'hidden' }}>
+          <div key={bg.id} className="me-card" onClick={() => handleSelect(bg)} style={{ overflow: 'hidden' }}
+            onMouseEnter={() => setHoveredId(bg.id)} onMouseLeave={() => setHoveredId((h) => (h === bg.id ? null : h))}>
             {(() => {
               const art = BG_ART[bg.id] || BG_ART.unknown;
               const Icon = art.Icon;
+              const photo = photoFor(bg.id);
+              const hovered = hoveredId === bg.id;
               return (
-                <div style={{ margin: '-16px -16px 12px', height: 64, background: art.grad, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ margin: '-16px -16px 12px', height: 74, background: art.grad, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(65% 130% at 50% 0%, ${art.color}26, transparent 70%)` }} />
-                  <Icon size={30} style={{ color: art.color, filter: `drop-shadow(0 2px 8px ${art.color}66)`, position: 'relative' }} />
+                  <Icon size={30} style={{ color: art.color, filter: `drop-shadow(0 2px 8px ${art.color}66)`, position: 'relative', opacity: hovered ? 0 : 1, transition: 'opacity .3s' }} />
+                  {photo && <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${photo})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: hovered ? 1 : 0, transform: hovered ? 'scale(1.06)' : 'scale(1)', transition: 'opacity .35s ease, transform 4s ease' }} />}
+                  {photo && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 50%, rgba(11,9,16,0.55))', opacity: hovered ? 1 : 0, transition: 'opacity .35s' }} />}
                 </div>
               );
             })()}

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Settings, Volume2, VolumeX, X, BookOpen } from 'lucide-react';
-import { useSettingsStore, THEMES } from '../../state/useSettingsStore';
+import { useSettingsStore, THEMES, RHYTHM_KEY_PRESETS } from '../../state/useSettingsStore';
 
 // A labelled on/off switch styled to match the app's pill/toggle look.
 function Toggle({ on, onChange, label, hint }) {
@@ -34,6 +34,8 @@ export function SettingsModal() {
   const setAnimations = useSettingsStore((s) => s.setAnimations);
   const theme = useSettingsStore((s) => s.theme);
   const setTheme = useSettingsStore((s) => s.setTheme);
+  const rhythmKeys = useSettingsStore((s) => s.rhythmKeys);
+  const setRhythmKeys = useSettingsStore((s) => s.setRhythmKeys);
   const openGuide = useSettingsStore((s) => s.openGuide);
 
   if (!settingsOpen) return null;
@@ -108,6 +110,27 @@ export function SettingsModal() {
                   <span className="block text-[12px] text-text font-medium truncate">{t.name}</span>
                   <span className="block text-[10px] text-faint truncate">{t.desc}</span>
                 </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} className="my-2" />
+
+        {/* rhythm-game keys */}
+        <div className="py-1">
+          <div className="text-[13px] text-text mb-0.5">리듬게임 키</div>
+          <div className="text-[10px] text-faint mb-2.5">무대 리듬게임 4레인에 쓸 키를 고르세요.</div>
+          <div className="flex flex-wrap gap-2">
+            {RHYTHM_KEY_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setRhythmKeys(p.id)}
+                aria-pressed={rhythmKeys === p.id}
+                className="cursor-pointer text-[12px] rounded-lg px-3 py-2 bg-transparent transition-colors"
+                style={{ border: `1px solid ${rhythmKeys === p.id ? 'var(--color-accent)' : 'rgba(255,255,255,0.1)'}`, background: rhythmKeys === p.id ? 'rgba(255,255,255,0.06)' : 'transparent', color: rhythmKeys === p.id ? 'var(--color-text)' : 'var(--color-muted)' }}
+              >
+                {p.name}
               </button>
             ))}
           </div>

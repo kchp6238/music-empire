@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Tone from 'tone';
+import { useSettingsStore, RHYTHM_KEY_PRESETS } from '../../state/useSettingsStore';
 
 // A 4-lane rhythm game that actually plays: a drum backbeat is scheduled on the
 // Web Audio clock and the falling notes are pinned to the same clock, so the
@@ -7,7 +8,6 @@ import * as Tone from 'tone';
 // / guitar / bell) — hitting notes performs a little riff over the beat. The
 // final performance (0..1) scales the music-show result.
 const LANES = 4;
-const KEYS = ['d', 'f', 'j', 'k'];
 const LANE = [
   { color: '#5FBF8F', name: '베이스', pitches: ['C2', 'G2', 'A2', 'E2'] },
   { color: '#8B7FD1', name: '신스', pitches: ['C4', 'E4', 'G4', 'A4'] },
@@ -21,6 +21,10 @@ const LEAD = 2.0;         // beats of count-in before the first note
 
 export function RhythmGame({ bpm = 110, onFinish, onCancel }) {
   const canvasRef = useRef(null);
+  const rhythmKeys = useSettingsStore((s) => s.rhythmKeys);
+  const preset = RHYTHM_KEY_PRESETS.find((p) => p.id === rhythmKeys) || RHYTHM_KEY_PRESETS[0];
+  const keys = preset.keys;
+  const labels = preset.labels;
   const [judge, setJudge] = useState('');
   const [combo, setCombo] = useState(0);
   const [done, setDone] = useState(false);
@@ -123,7 +127,7 @@ export function RhythmGame({ bpm = 110, onFinish, onCancel }) {
       }
     }
 
-    function onKey(e) { const i = KEYS.indexOf(e.key.toLowerCase()); if (i >= 0) { e.preventDefault(); hitLane(i); } }
+    function onKey(e) { const i = keys.indexOf(e.key.toLowerCase()); if (i >= 0) { e.preventDefault(); hitLane(i); } }
     function onPointer(e) {
       const r = canvas.getBoundingClientRect();
       const x = (e.clientX - r.left) / r.width * W;
@@ -195,7 +199,7 @@ export function RhythmGame({ bpm = 110, onFinish, onCancel }) {
       ctx2d.fillStyle = '#E8A33D'; ctx2d.fillRect(0, 0, W * prog, 4);
       // key hints
       ctx2d.fillStyle = 'rgba(255,255,255,0.25)'; ctx2d.font = '600 13px monospace'; ctx2d.textAlign = 'center';
-      for (let l = 0; l < LANES; l++) ctx2d.fillText(KEYS[l].toUpperCase(), l * laneW + laneW / 2, hitY + 40);
+      for (let l = 0; l < LANES; l++) ctx2d.fillText(labels[l], l * laneW + laneW / 2, hitY + 40);
 
       if (t >= endT) {
         disposed = true;
@@ -218,7 +222,7 @@ export function RhythmGame({ bpm = 110, onFinish, onCancel }) {
       canvas.removeEventListener('pointerdown', onPointer);
       setTimeout(() => nodes.forEach((n) => { try { n.dispose(); } catch { /* ignore */ } }), 50);
     };
-  }, [bpm, onFinish]);
+  }, [bpm, onFinish, keys, labels]);
 
   const jc = judge === 'PERFECT' ? '#4FD1C5' : judge === 'GOOD' ? '#E8A33D' : judge === 'MISS' ? '#C4576B' : '#8B8496';
 
@@ -226,7 +230,7 @@ export function RhythmGame({ bpm = 110, onFinish, onCancel }) {
     <div style={{ textAlign: 'center' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ fontSize: 13, fontWeight: 700 }}>🎵 무대 리듬</span>
-        <span style={{ fontSize: 11, color: 'var(--color-muted)' }}>D F J K · 레인 탭 · 박자에 맞춰!</span>
+        <span style={{ fontSize: 11, color: 'var(--color-muted)' }}>{preset.name} · 레인 탭 · 박자에 맞춰!</span>
       </div>
       <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
         <canvas ref={canvasRef} width={340} height={460} style={{ width: '100%', display: 'block', touchAction: 'none' }} />

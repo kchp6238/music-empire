@@ -19,7 +19,18 @@ export const THEMES = [
   { id: 'warm', name: '바이닐', desc: '따뜻한 아날로그', swatch: ['#C4622E', '#B8892F', '#241A12'] },
 ];
 const THEME_IDS = THEMES.map((t) => t.id);
-const DEFAULTS = { masterVolume: 80, uiSounds: true, animations: true, theme: 'classic' };
+
+// Selectable key layouts for the stage rhythm game (4 lanes).
+export const RHYTHM_KEY_PRESETS = [
+  { id: 'dfjk', name: 'D F J K', keys: ['d', 'f', 'j', 'k'], labels: ['D', 'F', 'J', 'K'] },
+  { id: 'qwer', name: 'Q W E R', keys: ['q', 'w', 'e', 'r'], labels: ['Q', 'W', 'E', 'R'] },
+  { id: 'asdf', name: 'A S D F', keys: ['a', 's', 'd', 'f'], labels: ['A', 'S', 'D', 'F'] },
+  { id: 'hjkl', name: 'H J K L', keys: ['h', 'j', 'k', 'l'], labels: ['H', 'J', 'K', 'L'] },
+  { id: 'arrows', name: '방향키 ←↓↑→', keys: ['arrowleft', 'arrowdown', 'arrowup', 'arrowright'], labels: ['←', '↓', '↑', '→'] },
+];
+const RHYTHM_KEY_IDS = RHYTHM_KEY_PRESETS.map((p) => p.id);
+
+const DEFAULTS = { masterVolume: 80, uiSounds: true, animations: true, theme: 'classic', rhythmKeys: 'dfjk' };
 
 function loadSettings() {
   try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; }
@@ -28,7 +39,7 @@ function loadSettings() {
 function persist(s) {
   try {
     localStorage.setItem(KEY, JSON.stringify({
-      masterVolume: s.masterVolume, uiSounds: s.uiSounds, animations: s.animations, theme: s.theme,
+      masterVolume: s.masterVolume, uiSounds: s.uiSounds, animations: s.animations, theme: s.theme, rhythmKeys: s.rhythmKeys,
     }));
   } catch { /* private mode / quota — settings just won't persist */ }
 }
@@ -77,6 +88,10 @@ export const useSettingsStore = create((set, get) => ({
   setTheme: (id) => {
     applyTheme(id);
     set({ theme: id });
+    persist(get());
+  },
+  setRhythmKeys: (id) => {
+    set({ rhythmKeys: RHYTHM_KEY_IDS.includes(id) ? id : 'dfjk' });
     persist(get());
   },
 
