@@ -1,4 +1,4 @@
-import { Disc3, LogOut, LibraryBig, Music2, SlidersHorizontal, ListMusic, Mic, Users, Handshake, Building2, Globe, Newspaper, Radio, HelpCircle, Settings } from 'lucide-react';
+import { Disc3, LogOut, LibraryBig, Music2, SlidersHorizontal, ListMusic, Mic, Users, Handshake, Building2, Globe, Newspaper, Radio, Map, HelpCircle, Settings } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { won } from '../../lib/utils';
 import { useAuthStore } from '../../state/useAuthStore';
@@ -8,6 +8,7 @@ import { useSettingsStore } from '../../state/useSettingsStore';
 // Icons let the tabs collapse to a thumb-reachable bottom bar on phones while
 // staying text labels on desktop.
 const TABS = [
+  { path: '/town', label: '마을', icon: Map },
   { path: '/studio', label: '스튜디오', icon: Music2 },
   { path: '/beatmaker', label: '비트', icon: SlidersHorizontal },
   { path: '/arrange', label: '편곡', icon: ListMusic },
