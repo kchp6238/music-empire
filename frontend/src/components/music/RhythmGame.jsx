@@ -54,7 +54,7 @@ export function RhythmGame({ bpm = 110, onFinish, onCancel }) {
     nodes.push(master, limiter, kick, snare, hat, ...laneInstr);
 
     // ---- timeline: drum backbeat + player notes, all in seconds from start ----
-    const bars = 5;
+    const bars = 12;
     const drumEvents = [];
     for (let b = 0; b < bars; b++) {
       const bar = LEAD * beat + b * 4 * beat;
